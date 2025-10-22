@@ -1,45 +1,42 @@
 workflows:
+  # iOS Build - Creates IPA artifact only (no App Store publishing)
   react-native-ios:
-    name: React Native iOS Build
+    name: React Native iOS Build (IPA artifact only)
     max_build_duration: 120
     instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: codemagic
     environment:
       ios_signing:
-        distribution_type: app_store
+        distribution_type: ad_hoc  # Ad-hoc for direct device installation
         bundle_identifier: com.localosapp
       vars:
-        # Xcode version
         XCODE_WORKSPACE: "LocalOSApp.xcworkspace"
         XCODE_SCHEME: "LocalOSApp"
-        # Bundle ID
-        BUNDLE_ID: "com.localosapp"
       node: 20.11.0
       xcode: 15.2
       cocoapods: default
     scripts:
       - name: Install npm dependencies
         script: |
+          cd LocalOSApp
           npm install
       - name: Install CocoaPods dependencies
         script: |
-          cd ios
+          cd LocalOSApp/ios
           bundle install
           bundle exec pod install
-          cd ..
-      - name: Set up code signing settings on Xcode project
+      - name: Set up code signing
         script: |
+          cd LocalOSApp
           xcode-project use-profiles
-      - name: Build iOS app
+      - name: Build iOS IPA
         script: |
+          cd LocalOSApp
           xcode-project build-ipa \
             --workspace ios/$XCODE_WORKSPACE \
             --scheme $XCODE_SCHEME
     artifacts:
-      - build/ios/ipa/*.ipa
+      - LocalOSApp/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       email:
@@ -48,23 +45,15 @@ workflows:
         notify:
           success: true
           failure: true
-      app_store_connect:
-        # Configuration for App Store Connect
-        auth: integration
-        # Submit to TestFlight
-        submit_to_testflight: true
-        # Submit to App Store
-        submit_to_app_store: false
 
+  # Android Build - Creates APK artifact only (no Play Store publishing)
   react-native-android:
-    name: React Native Android Build
+    name: React Native Android Build (APK artifact only)
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
       android_signing:
         - keystore_reference
-      groups:
-        - google_play
       vars:
         PACKAGE_NAME: "com.localosapp"
       node: 20.11.0
@@ -72,21 +61,22 @@ workflows:
     scripts:
       - name: Install npm dependencies
         script: |
+          cd LocalOSApp
           npm install
       - name: Set Android SDK location
         script: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/LocalOSApp/android/local.properties"
       - name: Build Android APK
         script: |
-          cd android
+          cd LocalOSApp/android
           ./gradlew assembleRelease
       - name: Build Android App Bundle
         script: |
-          cd android
+          cd LocalOSApp/android
           ./gradlew bundleRelease
     artifacts:
-      - android/app/build/outputs/**/*.apk
-      - android/app/build/outputs/**/*.aab
+      - LocalOSApp/android/app/build/outputs/**/*.apk
+      - LocalOSApp/android/app/build/outputs/**/*.aab
     publishing:
       email:
         recipients:
@@ -94,12 +84,8 @@ workflows:
         notify:
           success: true
           failure: true
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: true
 
-  # Development builds (no signing required)
+  # Development Build - For testing (no signing required)
   react-native-dev:
     name: React Native Development Build
     max_build_duration: 60
@@ -111,24 +97,24 @@ workflows:
     scripts:
       - name: Install npm dependencies
         script: |
+          cd LocalOSApp
           npm install
       - name: Run linter
         script: |
+          cd LocalOSApp
           npm run lint
       - name: Install iOS pods
         script: |
-          cd ios
+          cd LocalOSApp/ios
           bundle install
           bundle exec pod install
-          cd ..
-      - name: Build iOS (Debug)
+      - name: Build iOS Debug
         script: |
-          cd ios
+          cd LocalOSApp/ios
           xcodebuild -workspace LocalOSApp.xcworkspace \
             -scheme LocalOSApp \
             -configuration Debug \
             -sdk iphonesimulator \
             -derivedDataPath build
-          cd ..
     artifacts:
-      - ios/build/**/*.app
+      - LocalOSApp/ios/build/**/*.app
