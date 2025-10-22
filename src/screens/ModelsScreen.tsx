@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import DocumentPicker from 'react-native-document-picker';
 import {ModelInfo, DownloadStatus} from '../types';
 import {ModelStorageService} from '../services/ModelStorageService';
 import {LlamaService} from '../services/LlamaService';
@@ -242,6 +243,82 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     );
   };
 
+  const handleImportModel = async () => {
+    try {
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+      });
+
+      const file = result[0];
+
+      // Check if it's a GGUF file
+      if (!file.name?.endsWith('.gguf')) {
+        Alert.alert('Invalid File', 'Please select a .gguf model file');
+        return;
+      }
+
+      // Extract model name from filename
+      const modelName = file.name.replace('.gguf', '');
+
+      Alert.alert(
+        'Import Model',
+        `Import ${file.name}?\nSize: ${formatBytes(file.size || 0)}`,
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {
+            text: 'Import',
+            onPress: async () => {
+              try {
+                setLoadingModel('import');
+
+                // Copy file to app storage
+                const destPath = await ModelStorageService.copyModelToStorage(
+                  file.uri,
+                  file.name!,
+                );
+
+                // Create model info
+                const importedModel: ModelInfo = {
+                  id: `imported-${Date.now()}`,
+                  name: modelName,
+                  filename: file.name!,
+                  size: file.size || 0,
+                  quantization: 'Unknown',
+                  downloaded: true,
+                  localPath: destPath,
+                };
+
+                // Add to models list
+                setModels(prev => [...prev, importedModel]);
+
+                // Save to storage
+                await StorageService.saveDownloadedModels([...models, importedModel]);
+
+                // Update available space
+                const space = await ModelStorageService.getAvailableSpace();
+                setAvailableSpace(space);
+
+                Alert.alert('Success', 'Model imported successfully!');
+              } catch (error) {
+                console.error('Import failed:', error);
+                Alert.alert('Error', 'Failed to import model');
+              } finally {
+                setLoadingModel(null);
+              }
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        // User cancelled
+        return;
+      }
+      console.error('File picker error:', error);
+      Alert.alert('Error', 'Failed to open file picker');
+    }
+  };
+
   const renderModelCard = (model: ModelInfo) => {
     const downloadStatus = downloadingModels.get(model.id);
     const isLoading = loadingModel === model.id;
@@ -313,7 +390,15 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Models</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Models</Text>
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={handleImportModel}
+            disabled={loadingModel !== null}>
+            <Text style={styles.importButtonText}>Import from Files</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.storageInfo}>
           Available: {formatBytes(availableSpace)}
         </Text>
@@ -347,15 +432,31 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
   },
+  importButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  importButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   storageInfo: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
   content: {
     flex: 1,
