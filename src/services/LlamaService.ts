@@ -2,15 +2,18 @@
  * Service for managing llama.cpp model inference
  */
 import {initLlama, LlamaContext, releaseContext} from 'llama.rn';
-import {LlamaConfig, Message} from '../types';
+import {LlamaConfig, Message, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate} from '../utils/helpers';
+import {ToolService} from './ToolService';
 
 export class LlamaService {
   private static context: LlamaContext | null = null;
   private static currentModelPath: string | null = null;
   private static currentModelName: string | null = null;
   private static isInitialized: boolean = false;
+  private static toolsEnabled: boolean = false;
+  private static availableTools: Tool[] = [];
 
   /**
    * Initialize and load a model
@@ -238,6 +241,213 @@ export class LlamaService {
       console.error('Failed to count tokens:', error);
       // Rough estimate: ~4 characters per token
       return Math.ceil(text.length / 4);
+    }
+  }
+
+  /**
+   * Enable function calling with tools
+   */
+  static enableTools(tools?: Tool[]): void {
+    this.toolsEnabled = true;
+    if (tools) {
+      this.availableTools = tools;
+    } else {
+      // Use all registered tools from ToolService
+      ToolService.initialize();
+      this.availableTools = ToolService.getAllTools();
+    }
+    console.log(`Tools enabled: ${this.availableTools.length} tools available`);
+  }
+
+  /**
+   * Disable function calling
+   */
+  static disableTools(): void {
+    this.toolsEnabled = false;
+    this.availableTools = [];
+    console.log('Tools disabled');
+  }
+
+  /**
+   * Check if tools are enabled
+   */
+  static areToolsEnabled(): boolean {
+    return this.toolsEnabled;
+  }
+
+  /**
+   * Get system prompt with tool definitions for Llama 3.2
+   */
+  private static getToolSystemPrompt(): string {
+    if (!this.toolsEnabled || this.availableTools.length === 0) {
+      return '';
+    }
+
+    const toolDescriptions = this.availableTools
+      .map(tool => {
+        const params = tool.parameters
+          .map(p => {
+            const required = p.required ? ' (required)' : ' (optional)';
+            return `  - ${p.name}: ${p.type}${required} - ${p.description}`;
+          })
+          .join('\n');
+
+        return `## ${tool.name}\n${tool.description}\n\nParameters:\n${params || '  None'}`;
+      })
+      .join('\n\n');
+
+    return `You are a helpful AI assistant with access to the following tools:
+
+${toolDescriptions}
+
+When you need to use a tool, respond with ONLY a JSON object in this exact format:
+{
+  "tool": "tool_name",
+  "arguments": {
+    "param1": "value1"
+  }
+}
+
+After receiving tool results, provide your final answer to the user based on those results.
+
+IMPORTANT:
+- Use tools when the user asks for information you cannot answer directly
+- Output ONLY the JSON tool call, nothing else
+- Wait for tool results before providing your final answer
+- If you don't need a tool, respond normally`;
+  }
+
+  /**
+   * Chat completion with tool support
+   */
+  static async chatCompletionWithTools(
+    messages: Message[],
+    config: Partial<LlamaConfig> = {},
+    onToken?: (token: string) => void,
+    onToolUsage?: (stage: 'tool_call' | 'tool_result' | 'generating', toolName?: string) => void,
+  ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
+    if (!this.context || !this.currentModelName) {
+      throw new Error('Model not loaded');
+    }
+
+    if (!this.toolsEnabled) {
+      // No tools enabled, use regular chat completion
+      const response = await this.chatCompletion(messages, config, onToken);
+      return {response, usedTool: false};
+    }
+
+    try {
+      // Add system prompt with tool definitions
+      const systemMessage: Message = {
+        id: 'system-tools',
+        role: 'system',
+        content: this.getToolSystemPrompt(),
+        timestamp: Date.now(),
+      };
+
+      const messagesWithTools = [systemMessage, ...messages];
+
+      // First LLM call - check if it wants to use a tool
+      const firstResponse = await this.chatCompletion(
+        messagesWithTools,
+        config,
+        onToken,
+      );
+
+      // Try to parse tool call from response
+      const toolCallMatch = firstResponse.match(/\{[\s\S]*?"tool"[\s\S]*?\}/);
+
+      if (!toolCallMatch) {
+        // No tool call, return response as-is
+        return {response: firstResponse, usedTool: false};
+      }
+
+      try {
+        const toolCall = JSON.parse(toolCallMatch[0]);
+
+        if (!toolCall.tool || !ToolService.getTool(toolCall.tool)) {
+          // Invalid tool call, return original response
+          return {response: firstResponse, usedTool: false};
+        }
+
+        console.log('Tool call detected:', toolCall);
+
+        // Notify UI: tool is being called
+        if (onToolUsage) {
+          onToolUsage('tool_call', toolCall.tool);
+        }
+
+        // Execute the tool
+        const toolResult = await ToolService.executeTool({
+          id: `tool-${Date.now()}`,
+          name: toolCall.tool,
+          arguments: toolCall.arguments || {},
+        });
+
+        // Notify UI: tool result received
+        if (onToolUsage) {
+          onToolUsage('tool_result', toolCall.tool);
+        }
+
+        if (toolResult.error) {
+          // Tool execution failed
+          const errorMessage: Message = {
+            id: 'tool-error',
+            role: 'system',
+            content: `Tool execution failed: ${toolResult.error}`,
+            timestamp: Date.now(),
+          };
+
+          // Notify UI: generating final response
+          if (onToolUsage) {
+            onToolUsage('generating');
+          }
+
+          const finalResponse = await this.chatCompletion(
+            [...messagesWithTools, errorMessage],
+            config,
+            onToken,
+          );
+
+          return {
+            response: finalResponse,
+            usedTool: true,
+            toolName: toolCall.tool,
+          };
+        }
+
+        // Tool executed successfully, provide results to LLM for final answer
+        const toolResultMessage: Message = {
+          id: 'tool-result',
+          role: 'system',
+          content: `Tool "${toolCall.tool}" returned:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow provide a helpful answer to the user based on this information.`,
+          timestamp: Date.now(),
+        };
+
+        // Notify UI: generating final response
+        if (onToolUsage) {
+          onToolUsage('generating');
+        }
+
+        const finalResponse = await this.chatCompletion(
+          [...messagesWithTools, toolResultMessage],
+          config,
+          onToken,
+        );
+
+        return {
+          response: finalResponse,
+          usedTool: true,
+          toolName: toolCall.tool,
+        };
+      } catch (parseError) {
+        // Failed to parse tool call, return original response
+        console.error('Failed to parse tool call:', parseError);
+        return {response: firstResponse, usedTool: false};
+      }
+    } catch (error) {
+      console.error('Chat completion with tools error:', error);
+      throw error;
     }
   }
 }

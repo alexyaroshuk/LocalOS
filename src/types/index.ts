@@ -62,3 +62,38 @@ export interface AppState {
   isModelLoading: boolean;
   isGenerating: boolean;
 }
+
+// Tool/Function calling types
+export interface ToolParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description: string;
+  required?: boolean;
+  enum?: string[];
+}
+
+export interface Tool {
+  name: string;
+  description: string;
+  parameters: ToolParameter[];
+  execute: (args: Record<string, any>) => Promise<any>;
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, any>;
+}
+
+export interface ToolResult {
+  id: string;
+  name: string;
+  result: any;
+  error?: string;
+}
+
+// Extended message type to support tool calls
+export interface MessageWithTools extends Message {
+  tool_calls?: ToolCall[];
+  tool_result?: ToolResult;
+}
