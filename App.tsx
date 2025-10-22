@@ -18,10 +18,11 @@ import {
 } from 'react-native-safe-area-context';
 import {ChatScreen} from './src/screens/ChatScreen';
 import {ModelsScreen} from './src/screens/ModelsScreen';
+import {ToolTestScreen} from './src/screens/ToolTestScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 
-type Screen = 'chat' | 'models';
+type Screen = 'chat' | 'models' | 'tools';
 
 function App() {
   return (
@@ -86,11 +87,13 @@ function AppContent() {
           currentModel={currentModel}
           onModelSelect={handleModelSelect}
         />
-      ) : (
+      ) : currentScreen === 'models' ? (
         <ModelsScreen
           currentModel={currentModel}
           onModelLoaded={handleModelLoaded}
         />
+      ) : (
+        <ToolTestScreen />
       )}
 
       {/* Bottom Navigation */}
@@ -122,6 +125,21 @@ function AppContent() {
               currentScreen === 'models' && styles.navButtonTextActive,
             ]}>
             Models
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'tools' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('tools')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'tools' && styles.navButtonTextActive,
+            ]}>
+            Tools
           </Text>
         </TouchableOpacity>
       </View>

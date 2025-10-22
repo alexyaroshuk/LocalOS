@@ -1,7 +1,7 @@
 Project: LocalOS - Local AI Chat App
 Functions: Offline AI chat using llama.cpp via llama.rn bindings
 
-Requirements: ✅ Works completely offline. ✅ Uses local AI (llama.cpp). ✅ Based on PocketPal AI architecture (React Native + llama.rn). ✅ Requires 6GB+ RAM device.
+Requirements: ✅ Works completely offline. ✅ Uses local AI (llama.cpp). ✅ Based on PocketPal AI architecture (React Native + llama.rn). ✅ Requires 6GB+ RAM device. ✅ Function calling support for tools. ✅ Memory integration (Obsidian DB + Letta AI). ✅ Telegram bot integration.
 
 ## ✅ COMPLETED - Steps 1-3
 
@@ -102,7 +102,65 @@ npm run android
 3. Tap "Load" after download completes
 4. Go to "Chat" tab → Start chatting!
 
-## 🎯 Next Steps (Future Enhancements)
+## 🎯 ROADMAP - Phase 1-3
+
+### 🔧 Phase 1: Tool System & Function Calling ✅ COMPLETE
+**Goal**: Enable LLM to use tools (datetime, web search) via function calling
+
+- [x] Upgrade to Llama 3.2 3B Instruct (native function calling support)
+- [x] Create Tool interface & ToolService
+- [x] Implement system tools:
+  - [x] get_current_datetime - Returns current date/time
+  - [x] search_web - Web search capability (handles trending topics too)
+- [x] Update LlamaService for function calling
+- [x] Integrate tool execution in ChatScreen
+- [x] Build ToolTestScreen for testing
+
+**Model**: Llama 3.2 3B Instruct Q4_K_M (~2GB)
+**Download**: https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+
+### 🧠 Phase 2: Memory System (PLANNED)
+**Goal**: LLM can read/write memories using Obsidian DB + Letta AI
+
+- [ ] Set up local Obsidian vault structure
+- [ ] Implement ObsidianService (read/write markdown files)
+- [ ] Integrate Letta AI for memory management
+- [ ] Create memory tools:
+  - [ ] search_memory - Semantic search in memories
+  - [ ] save_memory - Store new information
+  - [ ] update_memory - Modify existing memories
+  - [ ] get_context - Retrieve relevant context
+- [ ] Add vector embeddings for RAG
+- [ ] Build MemoryScreen for browsing memories
+
+**Tech Stack**:
+- Local: react-native-fs + markdown parsing
+- Letta AI: REST API or SDK integration
+- Embeddings: Local model (e.g., all-MiniLM-L6-v2)
+
+### 💬 Phase 3: Telegram Integration (PLANNED)
+**Goal**: LLM responds to Telegram messages automatically
+
+- [ ] Set up Telegram Bot API
+- [ ] Implement TelegramService (polling/webhooks)
+- [ ] Create message handling pipeline:
+  - [ ] Receive messages
+  - [ ] Process with LLM + tools + memory
+  - [ ] Send responses
+- [ ] Add Telegram-specific tools:
+  - [ ] send_message
+  - [ ] get_chat_history
+  - [ ] set_typing_indicator
+- [ ] Build TelegramScreen for bot management
+- [ ] Add notification handling
+
+**Tech Stack**:
+- Telegram Bot API (node-telegram-bot-api or fetch)
+- Background task handling (react-native-background-task)
+
+---
+
+## 🎯 Future Enhancements (Beyond Phase 3)
 
 - [ ] Settings screen for advanced configuration
 - [ ] System prompt customization
@@ -113,7 +171,6 @@ npm run android
 - [ ] Dark mode theme
 - [ ] Token usage statistics
 - [ ] Model switching within chat
-- [ ] RAG (Retrieval Augmented Generation) support
 
 ## 📊 Technical Details
 

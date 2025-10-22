@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
+import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
 import {Message, ChatSession, ModelInfo} from '../types';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
@@ -39,12 +40,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     null,
   );
   const [streamingText, setStreamingText] = useState('');
+  const [toolsEnabled, setToolsEnabled] = useState(true); // Enable tools by default
+  const [toolUsageState, setToolUsageState] = useState<{
+    stage: 'thinking' | 'using_tool' | 'processing' | null;
+    toolName?: string;
+  }>({stage: null});
 
   const flatListRef = useRef<FlatList>(null);
 
-  // Load session on mount
+  // Load session on mount and enable tools
   useEffect(() => {
     loadSession();
+    // Enable tools when component mounts
+    if (toolsEnabled) {
+      LlamaService.enableTools();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -140,6 +150,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     setInputText('');
     setIsGenerating(true);
     setStreamingText('');
+    setToolUsageState({stage: null});
 
     try {
       // Get recent messages for context (limit to avoid exceeding context window)
@@ -147,28 +158,72 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         -MAX_CONTEXT_MESSAGES,
       );
 
-      // Generate response with streaming
+      // Generate response with tool support if enabled
       let fullResponse = '';
-      const response = await LlamaService.chatCompletion(
-        contextMessages,
-        {},
-        token => {
-          // Streaming callback
-          fullResponse += token;
-          setStreamingText(fullResponse);
-        },
-      );
+      let usedTool = false;
+      let toolName = '';
+
+      if (toolsEnabled && LlamaService.areToolsEnabled()) {
+        // Show "Thinking..." state
+        setToolUsageState({stage: 'thinking'});
+
+        // Use tool-enabled chat completion
+        const result = await LlamaService.chatCompletionWithTools(
+          contextMessages,
+          {},
+          token => {
+            // Streaming callback
+            fullResponse += token;
+            setStreamingText(fullResponse);
+          },
+          // Tool usage callback
+          (stage, tool) => {
+            if (stage === 'tool_call') {
+              setToolUsageState({stage: 'using_tool', toolName: tool});
+              setStreamingText(''); // Clear streaming text during tool use
+            } else if (stage === 'tool_result') {
+              setToolUsageState({stage: 'processing'});
+            } else if (stage === 'generating') {
+              setToolUsageState({stage: null});
+            }
+          },
+        );
+
+        fullResponse = result.response;
+        usedTool = result.usedTool || false;
+        toolName = result.toolName || '';
+      } else {
+        // Regular chat completion without tools
+        const response = await LlamaService.chatCompletion(
+          contextMessages,
+          {},
+          token => {
+            // Streaming callback
+            fullResponse += token;
+            setStreamingText(fullResponse);
+          },
+        );
+        fullResponse = response;
+      }
+
+      // Clear tool usage state
+      setToolUsageState({stage: null});
 
       // Create assistant message
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: response || fullResponse,
+        content: fullResponse,
         timestamp: Date.now(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
+
+      // Log tool usage
+      if (usedTool) {
+        console.log(`Tool used: ${toolName}`);
+      }
     } catch (error) {
       console.error('Generation error:', error);
       Alert.alert('Error', ERROR_MESSAGES.GENERATION_FAILED);
@@ -181,6 +236,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      setToolUsageState({stage: null});
     } finally {
       setIsGenerating(false);
     }
@@ -198,6 +254,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         },
       },
     ]);
+  };
+
+  const toggleTools = () => {
+    const newToolsState = !toolsEnabled;
+    setToolsEnabled(newToolsState);
+
+    if (newToolsState) {
+      LlamaService.enableTools();
+    } else {
+      LlamaService.disableTools();
+    }
+
+    Alert.alert(
+      'Tools ' + (newToolsState ? 'Enabled' : 'Disabled'),
+      newToolsState
+        ? 'AI can now use tools like getting current time, searching web, and checking X trends.'
+        : 'AI will respond without using tools.',
+    );
   };
 
   const renderMessage = ({item}: {item: Message}) => (
@@ -234,9 +308,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity onPress={handleClearChat}>
-          <Text style={styles.clearButton}>Clear</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
+            <Text
+              style={[
+                styles.toolsButtonText,
+                toolsEnabled && styles.toolsButtonActive,
+              ]}>
+              Tools {toolsEnabled ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleClearChat}>
+            <Text style={styles.clearButton}>Clear</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Messages */}
@@ -257,8 +342,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }
         ListFooterComponent={
           <>
+            {toolUsageState.stage && (
+              <ToolUsageIndicator
+                stage={toolUsageState.stage}
+                toolName={toolUsageState.toolName}
+              />
+            )}
             {renderStreamingMessage()}
-            {isGenerating && !streamingText && <TypingIndicator />}
+            {isGenerating && !streamingText && !toolUsageState.stage && (
+              <TypingIndicator />
+            )}
           </>
         }
       />
@@ -310,6 +403,11 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -319,6 +417,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#007AFF',
     marginTop: 2,
+  },
+  toolsButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F0F0F0',
+  },
+  toolsButtonText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  toolsButtonActive: {
+    color: '#34C759',
   },
   clearButton: {
     fontSize: 15,
