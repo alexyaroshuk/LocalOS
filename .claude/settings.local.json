@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npx react-native@latest init LocalOSApp --npm --skip-install)",
+      "Bash(npx @react-native-community/cli@latest init LocalOSApp --skip-install)",
+      "Bash(npm install)",
+      "Bash(npm install llama.rn react-native-fs @react-native-async-storage/async-storage)",
+      "Bash(npm install react-native-document-picker)",
+      "Bash(npm run lint)",
+      "Bash(wc -l src/**/*.{ts,tsx} App.tsx)",
+      "Bash(npm view llama.rn)",
+      "Bash(npm view llama.rn versions --json)",
+      "Read(//d/dev/projects/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
