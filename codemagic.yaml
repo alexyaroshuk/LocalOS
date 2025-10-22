@@ -1,6 +1,6 @@
 workflows:
   react-native-ios-release:
-    name: React Native iOS Release Build (No Signing - Simulator)
+    name: React Native iOS Release Build (No Signing - Device IPA)
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
@@ -19,30 +19,31 @@ workflows:
           cd ios
           bundle install
           bundle exec pod install
-      - name: Build iOS Release for Simulator
+      - name: Build iOS Release for Device
         script: |
           cd ios
           xcodebuild \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -sdk iphonesimulator \
-            -arch x86_64 \
+            -sdk iphoneos \
+            -arch arm64 \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
-      - name: Create Release App Archive
+      - name: Create IPA
         script: |
           cd ios
-          mkdir -p ../artifacts
-          cp -R build/Build/Products/Release-iphonesimulator/LocalOSApp.app ../artifacts/
+          mkdir -p ../artifacts/Payload
+          cp -R build/Build/Products/Release-iphoneos/LocalOSApp.app ../artifacts/Payload/
           cd ../artifacts
-          zip -r LocalOSApp-Release.app.zip LocalOSApp.app
+          zip -r LocalOSApp-Release.ipa Payload
+          rm -rf Payload
     artifacts:
-      - artifacts/*.zip
-      - ios/build/Build/Products/Release-iphonesimulator/*.app
+      - artifacts/*.ipa
+      - ios/build/Build/Products/Release-iphoneos/*.app
     publishing:
       email:
         recipients:
