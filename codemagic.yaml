@@ -6,7 +6,7 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       ios_signing:
-        distribution_type: ad_hoc  # Ad-hoc for direct device installation
+        distribution_type: development  # Development signing (works immediately, no device registration needed)
         bundle_identifier: com.localosapp
       vars:
         XCODE_WORKSPACE: "LocalOSApp.xcworkspace"
