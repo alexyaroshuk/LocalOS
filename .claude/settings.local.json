@@ -13,7 +13,8 @@
       "Bash(wc -l src/**/*.{ts,tsx} App.tsx)",
       "Bash(npm view llama.rn)",
       "Bash(npm view llama.rn versions --json)",
-      "Read(//d/dev/projects/**)"
+      "Read(//d/dev/projects/**)",
+      "Bash(pod install)"
     ],
     "deny": [],
     "ask": []
