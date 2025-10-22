@@ -1,13 +1,9 @@
 workflows:
-  # iOS Build - Creates IPA artifact only (no App Store publishing)
-  react-native-ios:
-    name: React Native iOS Build (IPA artifact only)
+  react-native-ios-debug:
+    name: React Native iOS Debug Build (No Signing)
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      ios_signing:
-        distribution_type: development  # Development signing (works immediately, no device registration needed)
-        bundle_identifier: com.localosapp
       vars:
         XCODE_WORKSPACE: "LocalOSApp.xcworkspace"
         XCODE_SCHEME: "LocalOSApp"
@@ -24,20 +20,27 @@ workflows:
           cd LocalOSApp/ios
           bundle install
           bundle exec pod install
-      - name: Set up code signing
+      - name: Build iOS Debug (Simulator)
         script: |
-          cd LocalOSApp
-          xcode-project use-profiles
-      - name: Build iOS IPA
+          cd LocalOSApp/ios
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -derivedDataPath build \
+            clean build
+      - name: Create Debug App Archive
         script: |
-          cd LocalOSApp
-          xcode-project build-ipa \
-            --workspace ios/$XCODE_WORKSPACE \
-            --scheme $XCODE_SCHEME
+          cd LocalOSApp/ios
+          mkdir -p ../../artifacts
+          cp -R build/Build/Products/Debug-iphonesimulator/LocalOSApp.app ../../artifacts/
+          cd ../../artifacts
+          zip -r LocalOSApp-Debug.app.zip LocalOSApp.app
     artifacts:
-      - LocalOSApp/build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - artifacts/*.zip
+      - LocalOSApp/ios/build/Build/Products/Debug-iphonesimulator/*.app
     publishing:
       email:
         recipients:
@@ -46,14 +49,11 @@ workflows:
           success: true
           failure: true
 
-  # Android Build - Creates APK artifact only (no Play Store publishing)
-  react-native-android:
-    name: React Native Android Build (APK artifact only)
+  react-native-android-debug:
+    name: React Native Android Debug Build
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      android_signing:
-        - keystore_reference
       vars:
         PACKAGE_NAME: "com.localosapp"
       node: 20.11.0
@@ -66,17 +66,12 @@ workflows:
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/LocalOSApp/android/local.properties"
-      - name: Build Android APK
+      - name: Build Android Debug APK
         script: |
           cd LocalOSApp/android
-          ./gradlew assembleRelease
-      - name: Build Android App Bundle
-        script: |
-          cd LocalOSApp/android
-          ./gradlew bundleRelease
+          ./gradlew assembleDebug
     artifacts:
       - LocalOSApp/android/app/build/outputs/**/*.apk
-      - LocalOSApp/android/app/build/outputs/**/*.aab
     publishing:
       email:
         recipients:
@@ -84,37 +79,3 @@ workflows:
         notify:
           success: true
           failure: true
-
-  # Development Build - For testing (no signing required)
-  react-native-dev:
-    name: React Native Development Build
-    max_build_duration: 60
-    instance_type: mac_mini_m1
-    environment:
-      node: 20.11.0
-      xcode: 15.2
-      cocoapods: default
-    scripts:
-      - name: Install npm dependencies
-        script: |
-          cd LocalOSApp
-          npm install
-      - name: Run linter
-        script: |
-          cd LocalOSApp
-          npm run lint
-      - name: Install iOS pods
-        script: |
-          cd LocalOSApp/ios
-          bundle install
-          bundle exec pod install
-      - name: Build iOS Debug
-        script: |
-          cd LocalOSApp/ios
-          xcodebuild -workspace LocalOSApp.xcworkspace \
-            -scheme LocalOSApp \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -derivedDataPath build
-    artifacts:
-      - LocalOSApp/ios/build/**/*.app
