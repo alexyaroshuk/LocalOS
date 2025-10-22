@@ -1,45 +1,50 @@
 workflows:
-  react-native-ios-debug:
-    name: React Native iOS Debug Build (No Signing)
+  react-native-ios-release:
+    name: React Native iOS Release Build
     max_build_duration: 120
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
+      groups:
+        - appstore_credentials
       vars:
         XCODE_WORKSPACE: "LocalOSApp.xcworkspace"
         XCODE_SCHEME: "LocalOSApp"
+        BUNDLE_ID: "com.localosapp"
       node: 20.11.0
-      xcode: 16.1
+      xcode: latest
       cocoapods: default
     scripts:
       - name: Install npm dependencies
         script: |
-          npm install
+          npm ci
       - name: Install CocoaPods dependencies
         script: |
           cd ios
           bundle install
           bundle exec pod install
-      - name: Build iOS Debug (Simulator)
+      - name: Set up keychain
         script: |
-          cd ios
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -derivedDataPath build \
-            clean build
-      - name: Create Debug App Archive
+          keychain initialize
+      - name: Fetch signing files
         script: |
-          cd ios
-          mkdir -p ../artifacts
-          cp -R build/Build/Products/Debug-iphonesimulator/*.app ../artifacts/ || true
-          cd ../artifacts
-          zip -r LocalOS-Debug.app.zip *.app
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_DEVELOPMENT \
+            --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Build iOS Release IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release
     artifacts:
-      - artifacts/*.zip
-      - ios/build/Build/Products/Debug-iphonesimulator/*.app
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       email:
         recipients:
@@ -48,29 +53,35 @@ workflows:
           success: true
           failure: true
 
-  react-native-android-debug:
-    name: React Native Android Debug Build
+  react-native-android-release:
+    name: React Native Android Release Build
     max_build_duration: 120
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
+      android_signing:
+        - keystore_reference
       vars:
         PACKAGE_NAME: "com.localosapp"
       node: 20.11.0
-      xcode: 16.1
       java: 17
     scripts:
       - name: Install npm dependencies
         script: |
-          npm install
+          npm ci
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      - name: Build Android Debug APK
+      - name: Build Android Release APK
         script: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
+      - name: Build Android App Bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
     artifacts:
       - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/**/*.aab
     publishing:
       email:
         recipients:
