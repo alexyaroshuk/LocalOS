@@ -66,27 +66,44 @@ export class AppleIntelligenceService {
    * Check if Apple Intelligence is available on this device
    */
   static async isAvailable(): Promise<boolean> {
+    console.log('  → Checking Apple Intelligence availability...');
+
     if (Platform.OS !== 'ios') {
+      console.log('  ✗ Platform is not iOS:', Platform.OS);
       return false;
     }
+
+    console.log('  ✓ Platform is iOS');
+    console.log('  ✓ iOS Version:', Platform.Version);
 
     if (!AppleLLM) {
-      console.log('❌ Apple Intelligence package not installed');
+      console.log('  ✗ Apple Intelligence package NOT loaded');
+      console.log('  → Package status: @react-native-ai/apple is not installed');
+      console.log('  → To install: npm install @react-native-ai/apple');
+      console.log('  → Then run: cd ios && pod install && cd ..');
       return false;
     }
 
+    console.log('  ✓ Apple Intelligence package loaded successfully');
+
     try {
+      console.log('  → Calling AppleLLM.isAvailable()...');
       const available = await AppleLLM.isAvailable();
+      console.log('  → Result:', available);
+
       if (available) {
-        console.log('✅ Apple Intelligence is available on this device');
+        console.log('  ✅ Apple Intelligence IS available on this device!');
+        console.log('  → Device meets all requirements (iOS 18+)');
       } else {
-        console.log(
-          '⚠️ Apple Intelligence not available (requires iOS 18+)',
-        );
+        console.log('  ✗ Apple Intelligence NOT available on this device');
+        console.log('  → Most likely: iOS version < 18');
+        console.log('  → Current iOS version:', Platform.Version);
+        console.log('  → Required: iOS 18.0 or higher');
       }
       return available;
-    } catch {
-      console.error('Error checking Apple Intelligence availability');
+    } catch (error) {
+      console.error('  ✗ Error checking Apple Intelligence availability');
+      console.error('  → Error:', error);
       return false;
     }
   }
