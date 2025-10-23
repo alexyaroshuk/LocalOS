@@ -296,37 +296,39 @@ export class LlamaService {
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant. You have access to tools that work behind the scenes.
+    return `You are a helpful AI assistant. You have access to tools, but should only use them when absolutely necessary.
 
 ## Available Tools:
 
 ${toolDescriptions}
 
-## CRITICAL TOOL USAGE RULES:
+## IMPORTANT: When to Use Tools vs. Respond Directly
 
-**ALWAYS use get_current_datetime for:**
-- "What day is today?"
-- "What's the date?"
-- "What time is it?"
-- "What's today's date?"
-- ANY question about the current time/date/day
+**DEFAULT BEHAVIOR: Respond directly from your knowledge**
 
-**ALWAYS use search_web for:**
-- "Search for [topic]"
-- "What's trending on [platform]?"
-- "Latest news about [topic]"
-- ANY question requiring current/real-time information
+Most questions can and should be answered without tools. ONLY use tools when:
 
-**NEVER use tools for:**
-- Greetings ("hi", "hello")
-- General knowledge ("What is React?", "Explain async/await")
-- Math or coding tasks
-- Opinions or explanations from your training data
+1. **Current time/date is explicitly requested:**
+   - "What day is today?" ➜ USE get_current_datetime
+   - "What time is it?" ➜ USE get_current_datetime
+   - "What's the date?" ➜ USE get_current_datetime
 
-## How Tool Calling Works:
+2. **Real-time information is explicitly requested:**
+   - "Search for [topic]" ➜ USE search_web
+   - "What's trending now?" ➜ USE search_web
+   - "Latest news" ➜ USE search_web
 
-**If a tool IS needed:**
-Output ONLY this JSON (nothing else):
+**DO NOT use tools for:**
+- Greetings: "Hi", "Hello", "How are you?" ➜ Respond directly
+- General knowledge: "What is React?", "Explain async/await", "What is AI?" ➜ Respond directly
+- Definitions: "What does X mean?" ➜ Respond directly
+- Explanations from training data ➜ Respond directly
+- Math, coding, or reasoning tasks ➜ Respond directly
+- Opinions or advice ➜ Respond directly
+
+## Tool Call Format:
+
+**ONLY when a tool is needed, output ONLY this JSON (nothing before or after):**
 {
   "tool": "tool_name",
   "arguments": {
@@ -334,17 +336,29 @@ Output ONLY this JSON (nothing else):
   }
 }
 
-Example: User asks "What day is today?"
-You respond: {"tool": "get_current_datetime", "arguments": {}}
-
-**If NO tool is needed:**
-Respond naturally and directly.
+**For all other cases, respond naturally in plain text.**
 
 ## After Tool Execution:
 
-When I give you tool results, answer naturally without mentioning the tool.
+When you receive tool results, incorporate them naturally into your response. Don't mention that you used a tool.`;
+  }
 
-REMEMBER: You do NOT know the current date/time. You MUST use get_current_datetime for any current time questions.`;
+  /**
+   * Filter out JSON tool calls from text
+   */
+  private static filterToolJson(text: string): string {
+    // Remove JSON tool call patterns from the response
+    const toolJsonPattern = /\{[\s\S]*?"tool"[\s\S]*?\}/g;
+    return text.replace(toolJsonPattern, '').trim();
+  }
+
+  /**
+   * Extract tool call from response
+   */
+  private static extractToolCall(text: string): string | null {
+    const toolJsonPattern = /\{[\s\S]*?"tool"[\s\S]*?\}/;
+    const match = toolJsonPattern.exec(text);
+    return match ? match[0] : null;
   }
 
   /**
@@ -382,23 +396,24 @@ REMEMBER: You do NOT know the current date/time. You MUST use get_current_dateti
       const firstResponse = await this.chatCompletion(
         messagesWithTools,
         config,
-        undefined, // No streaming callback during tool detection
       );
 
       // Try to parse tool call from response
-      const toolCallMatch = firstResponse.match(/\{[\s\S]*?"tool"[\s\S]*?\}/);
+      const toolCallMatch = this.extractToolCall(firstResponse);
 
       if (!toolCallMatch) {
-        // No tool call, return response as-is
-        return {response: firstResponse, usedTool: false};
+        // No tool call, filter any accidental JSON and return response
+        const cleanResponse = this.filterToolJson(firstResponse);
+        return {response: cleanResponse, usedTool: false};
       }
 
       try {
-        const toolCall = JSON.parse(toolCallMatch[0]);
+        const toolCall = JSON.parse(toolCallMatch);
 
         if (!toolCall.tool || !ToolService.getTool(toolCall.tool)) {
-          // Invalid tool call, return original response
-          return {response: firstResponse, usedTool: false};
+          // Invalid tool call, filter JSON and return response
+          const cleanResponse = this.filterToolJson(firstResponse);
+          return {response: cleanResponse, usedTool: false};
         }
 
         console.log('Tool call detected:', toolCall);
@@ -440,8 +455,11 @@ REMEMBER: You do NOT know the current date/time. You MUST use get_current_dateti
             onToken,
           );
 
+          // Filter out any JSON artifacts
+          const cleanResponse = this.filterToolJson(finalResponse);
+
           return {
-            response: finalResponse,
+            response: cleanResponse,
             usedTool: true,
             toolName: toolCall.tool,
           };
@@ -451,7 +469,7 @@ REMEMBER: You do NOT know the current date/time. You MUST use get_current_dateti
         const toolResultMessage: Message = {
           id: 'tool-result',
           role: 'system',
-          content: `The tool returned this information:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow answer the user's question naturally using this information. Don't mention that you used a tool - just integrate the information seamlessly into your response.`,
+          content: `The tool returned this information:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow answer the user's question naturally using this information. Don't mention that you used a tool - just integrate the information seamlessly into your response. DO NOT output any JSON in your response.`,
           timestamp: Date.now(),
         };
 
@@ -466,15 +484,19 @@ REMEMBER: You do NOT know the current date/time. You MUST use get_current_dateti
           onToken,
         );
 
+        // Filter out any JSON artifacts from final response
+        const cleanResponse = this.filterToolJson(finalResponse);
+
         return {
-          response: finalResponse,
+          response: cleanResponse,
           usedTool: true,
           toolName: toolCall.tool,
         };
       } catch (parseError) {
-        // Failed to parse tool call, return original response
+        // Failed to parse tool call, filter JSON and return response
         console.error('Failed to parse tool call:', parseError);
-        return {response: firstResponse, usedTool: false};
+        const cleanResponse = this.filterToolJson(firstResponse);
+        return {response: cleanResponse, usedTool: false};
       }
     } catch (error) {
       console.error('Chat completion with tools error:', error);

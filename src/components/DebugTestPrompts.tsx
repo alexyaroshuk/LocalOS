@@ -41,7 +41,8 @@ export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({
   onPromptSelect,
   disabled = false,
 }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  // Start expanded by default so users can see the prompts immediately
+  const [isExpanded, setIsExpanded] = React.useState(true);
 
   if (!isExpanded) {
     return (
