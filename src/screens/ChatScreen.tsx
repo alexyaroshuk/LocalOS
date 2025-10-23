@@ -331,6 +331,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         data={messages}
         renderItem={renderMessage}
         keyExtractor={item => item.id}
+        style={styles.messageList}
         contentContainerStyle={styles.messagesList}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -443,6 +444,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FF3B30',
     fontWeight: '500',
+  },
+  messageList: {
+    flex: 1,
   },
   messagesList: {
     paddingVertical: 8,

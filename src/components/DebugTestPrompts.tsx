@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    maxHeight: 300,
+    height: 250,
   },
   header: {
     flexDirection: 'row',

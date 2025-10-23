@@ -276,7 +276,8 @@ export class LlamaService {
   }
 
   /**
-   * Get system prompt with tool definitions for Llama 3.2
+   * Get system prompt with tool definitions
+   * Optimized for local models like Llama 3.2 and Phi-3
    */
   private static getToolSystemPrompt(): string {
     if (!this.toolsEnabled || this.availableTools.length === 0) {
@@ -287,60 +288,72 @@ export class LlamaService {
       .map(tool => {
         const params = tool.parameters
           .map(p => {
-            const required = p.required ? ' (required)' : ' (optional)';
-            return `  - ${p.name}: ${p.type}${required} - ${p.description}`;
+            const required = p.required ? 'REQUIRED' : 'OPTIONAL';
+            return `    - ${p.name} (${p.type}, ${required}): ${p.description}`;
           })
           .join('\n');
 
-        return `## ${tool.name}\n${tool.description}\n\nParameters:\n${params || '  None'}`;
+        return `{
+  "name": "${tool.name}",
+  "description": "${tool.description}",
+  "parameters": {
+${params || '    (none)'}
+  }
+}`;
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant. You have access to tools, but should only use them when absolutely necessary.
+    return `You are a helpful AI assistant with access to tools. You MUST use these tools when the user asks for information you cannot provide.
 
-## Available Tools:
+# AVAILABLE TOOLS
 
 ${toolDescriptions}
 
-## IMPORTANT: When to Use Tools vs. Respond Directly
+# CRITICAL RULES FOR TOOL USAGE
 
-**DEFAULT BEHAVIOR: Respond directly from your knowledge**
+YOU MUST CALL A TOOL WHEN:
+1. User asks "What day is today?" → MUST call get_current_datetime
+2. User asks "What time is it?" → MUST call get_current_datetime
+3. User asks "What's the date?" → MUST call get_current_datetime
+4. User asks about current events → MUST call search_web
+5. User asks to search for something → MUST call search_web
+6. User asks about a specific person/entity → MUST call search_web
+7. User asks "What's trending?" → MUST call search_web or get_x_trends
 
-Most questions can and should be answered without tools. ONLY use tools when:
+RESPOND NORMALLY (NO TOOL) WHEN:
+- User says greetings: "Hi", "Hello", "How are you?"
+- User asks general knowledge: "What is JavaScript?"
+- User asks for explanations: "Explain React"
+- User asks for advice or opinions
 
-1. **Current time/date is explicitly requested:**
-   - "What day is today?" ➜ USE get_current_datetime
-   - "What time is it?" ➜ USE get_current_datetime
-   - "What's the date?" ➜ USE get_current_datetime
+# HOW TO CALL A TOOL
 
-2. **Real-time information is explicitly requested:**
-   - "Search for [topic]" ➜ USE search_web
-   - "What's trending now?" ➜ USE search_web
-   - "Latest news" ➜ USE search_web
+When you need to call a tool, respond with ONLY this JSON format (NO other text):
 
-**DO NOT use tools for:**
-- Greetings: "Hi", "Hello", "How are you?" ➜ Respond directly
-- General knowledge: "What is React?", "Explain async/await", "What is AI?" ➜ Respond directly
-- Definitions: "What does X mean?" ➜ Respond directly
-- Explanations from training data ➜ Respond directly
-- Math, coding, or reasoning tasks ➜ Respond directly
-- Opinions or advice ➜ Respond directly
+{"tool": "tool_name", "arguments": {"param": "value"}}
 
-## Tool Call Format:
+EXAMPLES:
 
-**ONLY when a tool is needed, output ONLY this JSON (nothing before or after):**
-{
-  "tool": "tool_name",
-  "arguments": {
-    "param1": "value1"
-  }
-}
+User: "What day is today?"
+Assistant: {"tool": "get_current_datetime", "arguments": {}}
 
-**For all other cases, respond naturally in plain text.**
+User: "Search for Elon Musk"
+Assistant: {"tool": "search_web", "arguments": {"query": "Elon Musk"}}
 
-## After Tool Execution:
+User: "Who is the president?"
+Assistant: {"tool": "search_web", "arguments": {"query": "current president"}}
 
-When you receive tool results, incorporate them naturally into your response. Don't mention that you used a tool.`;
+User: "What is React?"
+Assistant: React is a JavaScript library for building user interfaces...
+
+# IMPORTANT NOTES
+
+- DO NOT say "I would call" or "I should call" - JUST OUTPUT THE JSON
+- DO NOT explain what you're doing - ONLY output the JSON
+- DO NOT add any text before or after the JSON
+- If unsure whether you know something, USE THE TOOL
+- Current date/time questions ALWAYS need the tool - you don't know what day it is
+- Person names you don't recognize ALWAYS need web search`;
   }
 
   /**
@@ -392,20 +405,40 @@ When you receive tool results, incorporate them naturally into your response. Do
       const messagesWithTools = [systemMessage, ...messages];
 
       // First LLM call - check if it wants to use a tool
+      // Use lower temperature for more structured/deterministic output
       // Don't stream to UI during tool detection phase
+      const toolDetectionConfig = {
+        ...config,
+        temperature: 0.1, // Lower temp for structured JSON output
+        topP: 0.9,
+      };
+
       const firstResponse = await this.chatCompletion(
         messagesWithTools,
-        config,
+        toolDetectionConfig,
       );
+
+      console.log('=== TOOL DETECTION DEBUG ===');
+      console.log('Temperature:', toolDetectionConfig.temperature, '(lower = more structured)');
+      console.log('Model raw output:', firstResponse);
+      console.log('Output length:', firstResponse.length);
 
       // Try to parse tool call from response
       const toolCallMatch = this.extractToolCall(firstResponse);
 
       if (!toolCallMatch) {
+        console.log('❌ NO TOOL CALL DETECTED');
+        console.log('Possible reasons:');
+        console.log('1. Model responded normally (expected for non-tool questions)');
+        console.log('2. Model said "I would call" instead of outputting JSON');
+        console.log('3. Model is not trained for tool calling (use a fine-tuned model)');
+        console.log('See MODELS_FOR_TOOL_CALLING.md for recommended models');
         // No tool call, filter any accidental JSON and return response
         const cleanResponse = this.filterToolJson(firstResponse);
         return {response: cleanResponse, usedTool: false};
       }
+
+      console.log('✅ TOOL CALL DETECTED:', toolCallMatch);
 
       try {
         const toolCall = JSON.parse(toolCallMatch);
