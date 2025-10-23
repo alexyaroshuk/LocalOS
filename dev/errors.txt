@@ -1,4 +1,4 @@
-Oct 24 00:07:56 iPhone-v2 ReportCrash[10938] <Notice>: ASI found [libc++abi.dylib] (sensitive) 'terminating due to uncaught exception of type facebook::jsi::JSError: ExceptionsManager.reportException raised an exception: Unhandled JS Exception: TypeError: Cannot read property 'create' of undefined, stack:
+Oct 24 00:16:23 iPhone-v2 ReportCrash[10938] <Notice>: ASI found [libc++abi.dylib] (sensitive) 'terminating due to uncaught exception of type facebook::jsi::JSError: ExceptionsManager.reportException raised an exception: Unhandled JS Exception: TypeError: Cannot read property 'create' of undefined, stack:
 anonymous@56001:39
 loadModuleImplementation@161:13
 guardedLoadModule@92:46
