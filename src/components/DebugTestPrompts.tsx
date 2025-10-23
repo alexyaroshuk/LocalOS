@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, ScrollView} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, ScrollView} from 'react-native';
 
 interface DebugTestPromptsProps {
   onPromptSelect: (prompt: string) => void;
