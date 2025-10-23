@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import DocumentPicker from 'react-native-document-picker';
+import {pick, types} from '@react-native-documents/picker';
 import {ModelInfo, DownloadStatus} from '../types';
 import {ModelStorageService} from '../services/ModelStorageService';
 import {LlamaService} from '../services/LlamaService';
@@ -245,9 +245,14 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
   const handleImportModel = async () => {
     try {
-      const result = await DocumentPicker.pick({
-        type: [DocumentPicker.types.allFiles],
+      const result = await pick({
+        type: [types.allFiles],
+        allowMultiSelection: false,
       });
+
+      if (!result || result.length === 0) {
+        return; // User cancelled
+      }
 
       const file = result[0];
 
@@ -310,10 +315,6 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         ],
       );
     } catch (error) {
-      if (DocumentPicker.isCancel(error)) {
-        // User cancelled
-        return;
-      }
       console.error('File picker error:', error);
       Alert.alert('Error', 'Failed to open file picker');
     }

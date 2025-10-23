@@ -296,25 +296,49 @@ export class LlamaService {
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant with access to the following tools:
+    return `You are a helpful AI assistant. You have access to tools that work behind the scenes, but only use them when absolutely necessary.
+
+## Available Tools:
 
 ${toolDescriptions}
 
-When you need to use a tool, respond with ONLY a JSON object in this exact format:
+## Tool Usage Guidelines:
+
+CRITICAL: Only use tools when you CANNOT answer the question with your existing knowledge.
+
+**When to USE tools:**
+- Questions about CURRENT time/date (you don't know what time it is NOW)
+- Questions requiring REAL-TIME web information (news, trends, current events)
+- Questions explicitly asking you to search or look something up
+
+**When to NOT use tools:**
+- General knowledge questions you can answer (history, science, how-to guides)
+- Conversational responses (greetings, opinions, explanations)
+- Questions about topics in your training data
+- Math, coding, or reasoning tasks
+
+## How Tool Calling Works:
+
+**If NO tool is needed:** Respond directly and naturally to the user.
+
+**If a tool IS needed:**
+1. Output ONLY this JSON format (nothing else, no explanation):
 {
   "tool": "tool_name",
   "arguments": {
     "param1": "value1"
   }
 }
-
-After receiving tool results, provide your final answer to the user based on those results.
+2. I will execute the tool and give you the results
+3. You will then answer the user's question naturally using those results
 
 IMPORTANT:
-- Use tools when the user asks for information you cannot answer directly
-- Output ONLY the JSON tool call, nothing else
-- Wait for tool results before providing your final answer
-- If you don't need a tool, respond normally`;
+- The user never sees the JSON or tool execution - it's all behind the scenes
+- When you get tool results, integrate them naturally into your answer
+- Don't mention the tool name or that you used a tool - just answer naturally
+- If unsure whether you need a tool, ask the user for clarification
+
+Think step-by-step: Can I answer this with my existing knowledge? If yes, answer directly. If no, use a tool.`;
   }
 
   /**
@@ -420,7 +444,7 @@ IMPORTANT:
         const toolResultMessage: Message = {
           id: 'tool-result',
           role: 'system',
-          content: `Tool "${toolCall.tool}" returned:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow provide a helpful answer to the user based on this information.`,
+          content: `The tool returned this information:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow answer the user's question naturally using this information. Don't mention that you used a tool - just integrate the information seamlessly into your response.`,
           timestamp: Date.now(),
         };
 
