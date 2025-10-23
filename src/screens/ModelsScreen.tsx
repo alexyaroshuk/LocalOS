@@ -256,18 +256,28 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       const file = result[0];
 
+      console.log('File picker result:', JSON.stringify(file, null, 2));
+
+      // Get filename from either name or uri
+      const fileName = file.name || file.uri?.split('/').pop() || '';
+
+      console.log('Extracted filename:', fileName);
+
       // Check if it's a GGUF file
-      if (!file.name?.endsWith('.gguf')) {
-        Alert.alert('Invalid File', 'Please select a .gguf model file');
+      if (!fileName.toLowerCase().endsWith('.gguf')) {
+        Alert.alert(
+          'Invalid File',
+          `Please select a .gguf model file.\n\nSelected: ${fileName || 'Unknown file'}`,
+        );
         return;
       }
 
       // Extract model name from filename
-      const modelName = file.name.replace('.gguf', '');
+      const modelName = fileName.replace(/\.gguf$/i, '');
 
       Alert.alert(
         'Import Model',
-        `Import ${file.name}?\nSize: ${formatBytes(file.size || 0)}`,
+        `Import ${fileName}?\nSize: ${formatBytes(file.size || 0)}`,
         [
           {text: 'Cancel', style: 'cancel'},
           {
@@ -279,14 +289,14 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                 // Copy file to app storage
                 const destPath = await ModelStorageService.copyModelToStorage(
                   file.uri,
-                  file.name!,
+                  fileName,
                 );
 
                 // Create model info
                 const importedModel: ModelInfo = {
                   id: `imported-${Date.now()}`,
                   name: modelName,
-                  filename: file.name!,
+                  filename: fileName,
                   size: file.size || 0,
                   quantization: 'Unknown',
                   downloaded: true,
