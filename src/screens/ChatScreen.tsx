@@ -10,11 +10,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
+import {LogViewerScreen} from './LogViewerScreen';
 import {Message, ChatSession, ModelInfo} from '../types';
 import {AIService} from '../services/AIService';
 import {StorageService} from '../services/StorageService';
@@ -48,6 +50,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   }>({stage: null});
   const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'none'>('none');
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
+  const [showLogs, setShowLogs] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -377,6 +380,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               Tools {toolsEnabled ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowLogs(true)}>
+            <Text style={styles.logsButton}>📋 Logs</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleClearChat}>
             <Text style={styles.clearButton}>Clear</Text>
           </TouchableOpacity>
@@ -448,6 +454,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Log Viewer Modal */}
+      <Modal
+        visible={showLogs}
+        animationType="slide"
+        onRequestClose={() => setShowLogs(false)}>
+        <LogViewerScreen onClose={() => setShowLogs(false)} />
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -513,6 +527,11 @@ const styles = StyleSheet.create({
   },
   toolsButtonActive: {
     color: '#34C759',
+  },
+  logsButton: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
   clearButton: {
     fontSize: 15,

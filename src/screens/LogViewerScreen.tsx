@@ -19,7 +19,11 @@ interface LogEntry {
   data?: any;
 }
 
-export const LogViewerScreen = () => {
+interface LogViewerScreenProps {
+  onClose?: () => void;
+}
+
+export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info'>(
     'all',
@@ -128,7 +132,14 @@ export const LogViewerScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>📋 Logs ({filteredLogs.length})</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>📋 Logs ({filteredLogs.length})</Text>
+          {onClose && (
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>✕ Close</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.diagnosticsButton}
@@ -239,10 +250,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#404040',
   },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 8,
+  },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  closeButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#3D3D3D',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
   },
   headerButtons: {
     flexDirection: 'row',

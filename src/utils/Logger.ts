@@ -33,7 +33,7 @@ class LoggerService {
       if (stored) {
         this.logs = JSON.parse(stored);
       }
-    } catch (error) {
+    } catch {
       // Ignore storage errors
     }
   }
@@ -48,7 +48,7 @@ class LoggerService {
       timeout = setTimeout(async () => {
         try {
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.logs));
-        } catch (error) {
+        } catch {
           // Ignore storage errors
         }
       }, 1000);
