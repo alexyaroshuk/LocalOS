@@ -14,6 +14,7 @@ import {
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
+import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {Message, ChatSession, ModelInfo} from '../types';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
@@ -354,6 +355,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             )}
           </>
         }
+      />
+
+      {/* Debug Test Prompts */}
+      <DebugTestPrompts
+        onPromptSelect={prompt => setInputText(prompt)}
+        disabled={isGenerating}
       />
 
       {/* Input */}
