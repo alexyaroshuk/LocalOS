@@ -73,7 +73,7 @@ export class AppleIntelligenceService {
       }
       return available;
     } catch (error) {
-      console.error('Error checking Apple Intelligence availability:', error);
+      console.error('Error checking Apple Intelligence availability');
       return false;
     }
   }
