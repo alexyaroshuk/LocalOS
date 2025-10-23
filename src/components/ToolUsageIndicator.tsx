@@ -29,12 +29,25 @@ export const ToolUsageIndicator: React.FC<ToolUsageIndicatorProps> = ({
     return () => clearInterval(interval);
   }, [fadeAnim]);
 
+  const getToolDisplayName = (name?: string): string => {
+    if (!name) return 'tool';
+
+    // Map tool names to user-friendly display names
+    const toolNameMap: {[key: string]: string} = {
+      'get_current_datetime': 'date & time',
+      'search_web': 'web search',
+      'get_x_trends': 'X trends',
+    };
+
+    return toolNameMap[name] || name.replace(/_/g, ' ');
+  };
+
   const getMessage = () => {
     switch (stage) {
       case 'thinking':
         return 'Thinking';
       case 'using_tool':
-        return toolName ? `Using ${toolName}` : 'Using tool';
+        return toolName ? `Using ${getToolDisplayName(toolName)}` : 'Using tool';
       case 'processing':
         return 'Processing results';
       default:
@@ -47,6 +60,10 @@ export const ToolUsageIndicator: React.FC<ToolUsageIndicatorProps> = ({
       case 'thinking':
         return '🤔';
       case 'using_tool':
+        // Show specific icons for different tools
+        if (toolName === 'search_web') return '🔍';
+        if (toolName === 'get_current_datetime') return '🕐';
+        if (toolName === 'get_x_trends') return '📱';
         return '🔧';
       case 'processing':
         return '⚙️';
@@ -68,7 +85,7 @@ export const ToolUsageIndicator: React.FC<ToolUsageIndicatorProps> = ({
           </Text>
           {toolName && stage === 'using_tool' && (
             <Text style={styles.toolName}>
-              {toolName.replace(/_/g, ' ')}
+              {getToolDisplayName(toolName)}
             </Text>
           )}
         </View>
