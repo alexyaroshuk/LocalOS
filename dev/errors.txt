@@ -1,181 +1,161 @@
- EXTRA_ARGS+=("--config-cmd" "'$NODE_BINARY' $NODE_ARGS '$REACT_NATIVE_DIR/cli.js' config")
-+ /usr/local/bin/node /Users/builder/clone/node_modules/react-native/scripts/bundle.js bundle --entry-file index.js --platform ios --dev false --reset-cache --bundle-output /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle --assets-dest /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app --minify false --config-cmd ''\''/usr/local/bin/node'\''  '\''/Users/builder/clone/node_modules/react-native/cli.js'\'' config'
-
-                        ▒▒▓▓▓▓▒▒
-                     ▒▓▓▓▒▒░░▒▒▓▓▓▒
-                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒
-                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓
-                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓
-                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓
-                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓
-                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓
-                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓
-                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒
-                     ▒▓▓▓▒░░░░▒▓▓▓▒
-                        ▒▒▓▓▓▓▒▒
-
-
- WARN  the transform cache was reset.
-                Welcome to Metro v0.83.3
-              Fast - Scalable - Integrated
-
-
-/Users/builder/clone/node_modules/metro/src/node-haste/DependencyGraph/ModuleResolution.js:172
-        throw new UnableToResolveError(
-              ^
-
-UnableToResolveError: Unable to resolve module react-native-apple-llm from /Users/builder/clone/src/services/AppleIntelligenceService.ts: react-native-apple-llm could not be found within the project or in these directories:
-  node_modules
-  37 |       AppleLLM = require('@react-native-ai/apple').default;
-  38 |     } catch {
-> 39 |       AppleLLM = require('react-native-apple-llm').default;
-     |                           ^
-  40 |     }
-  41 |   } catch (error) {
-  42 |     console.log(
-    at ModuleResolver.resolveDependency (/Users/builder/clone/node_modules/metro/src/node-haste/DependencyGraph/ModuleResolution.js:172:15)
-    at DependencyGraph.resolveDependency (/Users/builder/clone/node_modules/metro/src/node-haste/DependencyGraph.js:252:43)
-    ... 6 lines matching cause stack trace ...
-    at async Promise.all (index 7)
-    at async visit (/Users/builder/clone/node_modules/metro/src/DeltaBundler/buildSubgraph.js:90:5) {
-  type: 'UnableToResolveError',
-  originModulePath: '/Users/builder/clone/src/services/AppleIntelligenceService.ts',
-  targetModuleName: 'react-native-apple-llm',
-  cause: FailedToResolveNameError: Module does not exist in the Haste module map or in these directories:
-    /Users/builder/clone/src/services/node_modules
-    /Users/builder/clone/src/node_modules
-    /Users/builder/clone/node_modules
-    /Users/builder/node_modules
-    /Users/node_modules
-    /node_modules
-  
-      at Object.resolve (/Users/builder/clone/node_modules/metro-resolver/src/resolve.js:197:9)
-      at ModuleResolver.resolveDependency (/Users/builder/clone/node_modules/metro/src/node-haste/DependencyGraph/ModuleResolution.js:96:31)
-      at DependencyGraph.resolveDependency (/Users/builder/clone/node_modules/metro/src/node-haste/DependencyGraph.js:252:43)
-      at /Users/builder/clone/node_modules/metro/src/lib/transformHelpers.js:163:21
-      at resolveDependencies (/Users/builder/clone/node_modules/metro/src/DeltaBundler/buildSubgraph.js:43:25)
-      at visit (/Users/builder/clone/node_modules/metro/src/DeltaBundler/buildSubgraph.js:81:30)
-      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-      at async Promise.all (index 5)
-      at async visit (/Users/builder/clone/node_modules/metro/src/DeltaBundler/buildSubgraph.js:90:5)
-      at async Promise.all (index 7) {
-    dirPaths: [
-      '/Users/builder/clone/src/services/node_modules',
-      '/Users/builder/clone/src/node_modules',
-      '/Users/builder/clone/node_modules',
-      '/Users/builder/node_modules',
-      '/Users/node_modules',
-      '/node_modules'
-    ],
-    extraPaths: []
-  }
-}
-
-Node.js v20.11.0
-Command PhaseScriptExecution failed with a nonzero exit code
-
-GenerateDSYMFile /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app.dSYM /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app/LocalOSApp (in target 'LocalOSApp' from project 'LocalOSApp')
-    cd /Users/builder/clone/ios
-    /Applications/Xcode-16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app/LocalOSApp -o /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app.dSYM
-
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'fast_float' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTActionSheet' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'FBLazyVector' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'boost' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-timing' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RCTRequired' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-callinvoker' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsitracing' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'hermes-engine' from project 'Pods')
-warning: Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'Pods-LocalOSApp' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'LocalOSApp' from project 'LocalOSApp')
-warning: Run script build phase 'Bundle React Native code and images' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'LocalOSApp' from project 'LocalOSApp')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'react-native-safe-area-context' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'react-native-document-picker' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'llama-rn' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'glog-glog_privacy' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'glog' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'fmt' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'boost-boost_privacy' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'Yoga' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'SocketRocket' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'ReactCommon' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'ReactCodegen' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'ReactAppDependencyProvider' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-webperformancenativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-utils' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-runtimescheduler' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-runtimeexecutor' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-rendererdebug' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-renderercss' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-rendererconsistency' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-performancetimeline' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-performancecdpmetrics' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-perflogger' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-oscompat' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-microtasksnativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-logger' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsitooling' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsinspectortracing' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsinspectornetwork' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsinspectorcdp' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsinspector' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsiexecutor' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jsi' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-jserrorhandler' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-idlecallbacksnativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-hermes' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-graphics' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-featureflagsnativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-featureflags' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-domnativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-defaultsnativemodule' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-debug' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-cxxreact-React-cxxreact_privacy' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-cxxreact' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RuntimeHermes' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RuntimeCore' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RuntimeApple' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTVibration' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTText' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTSettings' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTRuntime' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTNetwork' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTLinking' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTImage' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTFabric' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
-note: Run script build phase '[CP-User] [RN]Check FBReactNativeSpec' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTBlob' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTAppDelegate' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-RCTAnimation' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-NativeModulesApple' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-Mapbuffer' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-ImageManager' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-FabricImage' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-FabricComponents' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-Fabric' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-CoreModules' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-Core-React-Core_privacy' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'React-Core' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RNFS' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RNCAsyncStorage-RNCAsyncStorage_resources' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RNCAsyncStorage' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RCTTypeSafety' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RCTDeprecation' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RCT-Folly-RCT-Folly_privacy' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'RCT-Folly' from project 'Pods')
-note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'DoubleConversion' from project 'Pods')
-** BUILD FAILED **
-
-
-The following build commands failed:
-	PhaseScriptExecution Bundle\ React\ Native\ code\ and\ images /Users/builder/clone/ios/build/Build/Intermediates.noindex/LocalOSApp.build/Release-iphoneos/LocalOSApp.build/Script-00DD1BFF1BD5951E006B06BC.sh (in target 'LocalOSApp' from project 'LocalOSApp')
-	Building workspace LocalOSApp with scheme LocalOSApp and configuration Release
-(2 failures)
-
-
-Build failed :|
-Step 4 script `Build iOS Release for Device` exited with status code 65
+[{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "eslint3",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'error' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 36,
+	"startColumn": 14,
+	"endLineNumber": 36,
+	"endColumn": 19,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "typescript",
+	"code": "2503",
+	"severity": 8,
+	"message": "Cannot find namespace 'NodeJS'.",
+	"source": "ts",
+	"startLineNumber": 45,
+	"startColumn": 18,
+	"endLineNumber": 45,
+	"endColumn": 24,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "eslint3",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'error' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 51,
+	"startColumn": 18,
+	"endLineNumber": 51,
+	"endColumn": 23,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'log' does not exist on type 'LogEntry'.",
+	"source": "ts",
+	"startLineNumber": 164,
+	"startColumn": 40,
+	"endLineNumber": 164,
+	"endColumn": 43,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S2933",
+	"severity": 4,
+	"message": "Member 'listeners' is never reassigned; mark it as `readonly`.",
+	"source": "sonarqube",
+	"startLineNumber": 21,
+	"startColumn": 3,
+	"endLineNumber": 21,
+	"endColumn": 20,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S7059",
+	"severity": 4,
+	"message": "Refactor this asynchronous operation outside of the constructor.",
+	"source": "sonarqube",
+	"startLineNumber": 24,
+	"startColumn": 5,
+	"endLineNumber": 24,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S2486",
+	"severity": 4,
+	"message": "Handle this exception or don't catch it at all.",
+	"source": "sonarqube",
+	"startLineNumber": 36,
+	"startColumn": 7,
+	"endLineNumber": 38,
+	"endColumn": 6,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S2933",
+	"severity": 4,
+	"message": "Member 'saveLogsToStorage' is never reassigned; mark it as `readonly`.",
+	"source": "sonarqube",
+	"startLineNumber": 44,
+	"startColumn": 3,
+	"endLineNumber": 44,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S2486",
+	"severity": 4,
+	"message": "Handle this exception or don't catch it at all.",
+	"source": "sonarqube",
+	"startLineNumber": 51,
+	"startColumn": 11,
+	"endLineNumber": 53,
+	"endColumn": 10,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S7735",
+	"severity": 4,
+	"message": "Unexpected negated condition.",
+	"source": "sonarqube",
+	"startLineNumber": 79,
+	"startColumn": 11,
+	"endLineNumber": 79,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S7728",
+	"severity": 4,
+	"message": "Use `for…of` instead of `.forEach(…)`.",
+	"source": "sonarqube",
+	"startLineNumber": 87,
+	"startColumn": 20,
+	"endLineNumber": 87,
+	"endColumn": 27,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/utils/Logger.ts",
+	"owner": "sonarlint",
+	"code": "typescript:S7728",
+	"severity": 4,
+	"message": "Use `for…of` instead of `.forEach(…)`.",
+	"source": "sonarqube",
+	"startLineNumber": 129,
+	"startColumn": 20,
+	"endLineNumber": 129,
+	"endColumn": 27,
+	"origin": "extHost1"
+}]

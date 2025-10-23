@@ -9,6 +9,7 @@ import {Platform} from 'react-native';
 import {LlamaService} from './LlamaService';
 import {AppleIntelligenceService} from './AppleIntelligenceService';
 import {Message, LlamaConfig} from '../types';
+import {Logger, LogSection} from '../utils/Logger';
 
 type AIBackend = 'apple' | 'llama' | 'none';
 
@@ -22,54 +23,53 @@ export class AIService {
    */
   static async initialize(): Promise<AIBackend> {
     if (this.initializationAttempted) {
-      console.log(`Already initialized with backend: ${this.currentBackend}`);
+      Logger.info(`Already initialized with backend: ${this.currentBackend}`);
       return this.currentBackend;
     }
 
     this.initializationAttempted = true;
 
-    console.log('==================================================');
-    console.log('🔍 AI BACKEND DETECTION');
-    console.log('==================================================');
-    console.log('Platform:', Platform.OS);
-    console.log('Platform Version:', Platform.Version);
-    console.log('--------------------------------------------------');
+    LogSection.start('🔍 AI BACKEND DETECTION');
+    Logger.info('Platform:', Platform.OS);
+    Logger.info('Platform Version:', Platform.Version);
+    LogSection.header('Detection Process');
 
     // Try Apple Intelligence first (iOS 18+ only)
     if (Platform.OS === 'ios') {
-      console.log('✓ Running on iOS - checking Apple Intelligence...');
+      Logger.info('✓ Running on iOS - checking Apple Intelligence...');
 
       try {
         const appleAvailable = await AppleIntelligenceService.isAvailable();
-        console.log('Apple Intelligence available?', appleAvailable);
+        Logger.info('Apple Intelligence available?', appleAvailable);
 
         if (appleAvailable) {
-          console.log('✓ Initializing Apple Intelligence...');
+          Logger.info('✓ Initializing Apple Intelligence...');
           await AppleIntelligenceService.initialize();
           this.currentBackend = 'apple';
-          console.log('==================================================');
-          console.log('✅ SUCCESS: Using Apple Intelligence (Neural Engine)');
-          console.log('==================================================');
+          LogSection.end();
+          Logger.log('✅ SUCCESS: Using Apple Intelligence (Neural Engine)');
+          LogSection.end();
           return 'apple';
         } else {
-          console.log('✗ Apple Intelligence not available on this device');
-          console.log('  Possible reasons:');
-          console.log('  1. iOS version < 18 (current:', Platform.Version, ')');
-          console.log('  2. Package not installed: @react-native-ai/apple');
-          console.log('  3. Device not supported');
+          Logger.warn('✗ Apple Intelligence not available on this device');
+          Logger.info('  Possible reasons:');
+          Logger.info('  1. iOS version < 18 (current: ' + Platform.Version + ')');
+          Logger.info('  2. Package not installed: @react-native-ai/apple');
+          Logger.info('  3. Device not supported');
         }
       } catch (error) {
-        console.log('✗ Apple Intelligence initialization failed');
-        console.error('Error details:', error);
+        Logger.error('✗ Apple Intelligence initialization failed');
+        Logger.error('Error details:', error);
       }
     } else {
-      console.log('✗ Not iOS - Apple Intelligence not available');
+      Logger.info('✗ Not iOS - Apple Intelligence not available');
     }
 
     // Fallback to Llama.cpp (works everywhere)
-    console.log('--------------------------------------------------');
-    console.log('⚠️  FALLBACK: Using Llama.cpp');
-    console.log('==================================================');
+    LogSection.header('Fallback');
+    Logger.warn('⚠️  FALLBACK: Using Llama.cpp');
+    Logger.info('Load a GGUF model from Models screen to start chatting');
+    LogSection.end();
     this.currentBackend = 'llama';
     return 'llama';
   }

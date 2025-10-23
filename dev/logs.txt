@@ -1,0 +1,19 @@
+
+> LocalOSApp@0.0.1 ios
+> react-native run-ios
+
+info A dev server is already running for this project on port 8081.
+error Command failed with exit code 1: xcodebuild -list -json
+'xcodebuild' is not recognized as an internal or external command,
+operable program or batch file.
+Error: Command failed with exit code 1: xcodebuild -list -json
+'xcodebuild' is not recognized as an internal or external command,
+operable program or batch file.
+    at makeError (D:\dev\projects\localOS\node_modules\execa\lib\error.js:60:11)
+    at module.exports.sync (D:\dev\projects\localOS\node_modules\execa\index.js:194:17)
+    at getInfo (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\tools\getInfo.js:62:41)
+    at getConfiguration (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\commands\buildCommand\getConfiguration.js:36:37)
+    at Object.func (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\commands\runCommand\createRun.js:126:52)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Command.handleAction (D:\dev\projects\localOS\node_modules\@react-native-community\cli\build\index.js:139:9)
+PS D:\dev\projects\localOS> 
