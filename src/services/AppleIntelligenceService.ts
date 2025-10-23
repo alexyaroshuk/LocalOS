@@ -28,21 +28,34 @@ interface AppleLLMResult {
 }
 
 // Dynamic import of Apple Intelligence module (iOS only)
+// Using a function to avoid Metro bundler trying to resolve at build time
 let AppleLLM: any = null;
 
-if (Platform.OS === 'ios') {
-  try {
-    // Try both package names
-    try {
-      AppleLLM = require('@react-native-ai/apple').default;
-    } catch {
-      AppleLLM = require('react-native-apple-llm').default;
-    }
-  } catch (error) {
-    console.log(
-      'Apple Intelligence package not installed. Run: npm install @react-native-ai/apple',
-    );
+function loadAppleLLM() {
+  if (Platform.OS !== 'ios') {
+    return null;
   }
+
+  try {
+    // Try to load the package using dynamic require
+    // Metro won't resolve this at build time because it's in a function
+    const pkg = '@react-native-ai/apple';
+    AppleLLM = require(pkg).default || require(pkg);
+    console.log('✅ Loaded @react-native-ai/apple');
+    return AppleLLM;
+  } catch {
+    console.log(
+      '⚠️ Apple Intelligence package not installed.',
+      'The app will use Llama.cpp instead.',
+      '\nTo enable Apple Intelligence, run: npm install @react-native-ai/apple',
+    );
+    return null;
+  }
+}
+
+// Try to load on module initialization (iOS only)
+if (Platform.OS === 'ios') {
+  loadAppleLLM();
 }
 
 export class AppleIntelligenceService {
@@ -72,7 +85,7 @@ export class AppleIntelligenceService {
         );
       }
       return available;
-    } catch (error) {
+    } catch {
       console.error('Error checking Apple Intelligence availability');
       return false;
     }
