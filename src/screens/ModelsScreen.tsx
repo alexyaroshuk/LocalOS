@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {pick, types} from '@react-native-documents/picker';
+import RNFS from 'react-native-fs';
 import {ModelInfo, DownloadStatus} from '../types';
 import {ModelStorageService} from '../services/ModelStorageService';
 import {LlamaService} from '../services/LlamaService';
@@ -62,11 +63,18 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
               ? ModelStorageService.getModelPath(model.filename)
               : undefined,
             ...savedInfo,
+            // Preserve original size if savedInfo has 0 (bug fix)
+            size: savedInfo?.size && savedInfo.size > 0 ? savedInfo.size : model.size,
           };
         }),
       );
 
-      setModels(updatedModels);
+      // Add imported models that are not in RECOMMENDED_MODELS
+      const importedModels = savedModels.filter(
+        saved => !RECOMMENDED_MODELS.some(rec => rec.id === saved.id),
+      );
+
+      setModels([...updatedModels, ...importedModels]);
 
       // Auto-load last used model if available
       const lastModel = await StorageService.loadCurrentModel();
@@ -292,12 +300,22 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   fileName,
                 );
 
+                // Get actual file size from copied file
+                let actualSize = file.size || 0;
+                try {
+                  const stat = await RNFS.stat(destPath);
+                  actualSize = parseInt(stat.size, 10);
+                  console.log('Actual file size:', actualSize);
+                } catch (err) {
+                  console.warn('Could not get file size, using picker size:', err);
+                }
+
                 // Create model info
                 const importedModel: ModelInfo = {
                   id: `imported-${Date.now()}`,
                   name: modelName,
                   filename: fileName,
-                  size: file.size || 0,
+                  size: actualSize,
                   quantization: 'Unknown',
                   downloaded: true,
                   localPath: destPath,

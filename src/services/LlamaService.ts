@@ -296,49 +296,55 @@ export class LlamaService {
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant. You have access to tools that work behind the scenes, but only use them when absolutely necessary.
+    return `You are a helpful AI assistant. You have access to tools that work behind the scenes.
 
 ## Available Tools:
 
 ${toolDescriptions}
 
-## Tool Usage Guidelines:
+## CRITICAL TOOL USAGE RULES:
 
-CRITICAL: Only use tools when you CANNOT answer the question with your existing knowledge.
+**ALWAYS use get_current_datetime for:**
+- "What day is today?"
+- "What's the date?"
+- "What time is it?"
+- "What's today's date?"
+- ANY question about the current time/date/day
 
-**When to USE tools:**
-- Questions about CURRENT time/date (you don't know what time it is NOW)
-- Questions requiring REAL-TIME web information (news, trends, current events)
-- Questions explicitly asking you to search or look something up
+**ALWAYS use search_web for:**
+- "Search for [topic]"
+- "What's trending on [platform]?"
+- "Latest news about [topic]"
+- ANY question requiring current/real-time information
 
-**When to NOT use tools:**
-- General knowledge questions you can answer (history, science, how-to guides)
-- Conversational responses (greetings, opinions, explanations)
-- Questions about topics in your training data
-- Math, coding, or reasoning tasks
+**NEVER use tools for:**
+- Greetings ("hi", "hello")
+- General knowledge ("What is React?", "Explain async/await")
+- Math or coding tasks
+- Opinions or explanations from your training data
 
 ## How Tool Calling Works:
 
-**If NO tool is needed:** Respond directly and naturally to the user.
-
 **If a tool IS needed:**
-1. Output ONLY this JSON format (nothing else, no explanation):
+Output ONLY this JSON (nothing else):
 {
   "tool": "tool_name",
   "arguments": {
     "param1": "value1"
   }
 }
-2. I will execute the tool and give you the results
-3. You will then answer the user's question naturally using those results
 
-IMPORTANT:
-- The user never sees the JSON or tool execution - it's all behind the scenes
-- When you get tool results, integrate them naturally into your answer
-- Don't mention the tool name or that you used a tool - just answer naturally
-- If unsure whether you need a tool, ask the user for clarification
+Example: User asks "What day is today?"
+You respond: {"tool": "get_current_datetime", "arguments": {}}
 
-Think step-by-step: Can I answer this with my existing knowledge? If yes, answer directly. If no, use a tool.`;
+**If NO tool is needed:**
+Respond naturally and directly.
+
+## After Tool Execution:
+
+When I give you tool results, answer naturally without mentioning the tool.
+
+REMEMBER: You do NOT know the current date/time. You MUST use get_current_datetime for any current time questions.`;
   }
 
   /**
@@ -372,10 +378,11 @@ Think step-by-step: Can I answer this with my existing knowledge? If yes, answer
       const messagesWithTools = [systemMessage, ...messages];
 
       // First LLM call - check if it wants to use a tool
+      // Don't stream to UI during tool detection phase
       const firstResponse = await this.chatCompletion(
         messagesWithTools,
         config,
-        onToken,
+        undefined, // No streaming callback during tool detection
       );
 
       // Try to parse tool call from response
