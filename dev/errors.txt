@@ -1,5 +1,29 @@
-r Failed to install the app. Command failed with exit code 1: gradlew.bat app:installDebug -PreactNativeDevServerPort=8081
-D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:21: error: cannot find symbol
-import com.facebook.react.bridge.GuardedResultAsyncTask; ^ symbol: class GuardedResultAsyncTask location: package com.facebook.react.bridge D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:232: error: cannot find symbol private static class ProcessDataTask extends GuardedResultAsyncTask<ReadableArray> { ^ symbol: class GuardedResultAsyncTask location: class RNDocumentPickerModule D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:226: error: cannot find symbol new ProcessDataTask(getReactApplicationContext(), uris, copyTo, promise).execute(); ^ symbol: method execute() location: class ProcessDataTask D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:246: error: method does not override or implement a method from a supertype @Override ^ D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:255: error: method does not override or implement a method from a supertype @Override ^ Note: Some input files use or override a deprecated API. Note: Recompile with -Xlint:deprecation for details. 5 errors FAILURE: Build failed with an exception. * What went wrong: Execution failed for task ':react-native-document-picker:compileDebugJavaWithJavac'. > Compilation failed; see the compiler output below. Note: Recompile with -Xlint:deprecation for details. D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:21: error: cannot find symbol import com.facebook.react.bridge.GuardedResultAsyncTask; ^ symbol: class GuardedResultAsyncTask location: package com.facebook.react.bridge D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:232: error: cannot find symbol private static class ProcessDataTask extends GuardedResultAsyncTask<ReadableArray> { ^ symbol: class GuardedResultAsyncTask location: class RNDocumentPickerModule Note: Some input files use or override a deprecated API. D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:246: error: method does not override or implement a method from a supertype @Override ^ D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:255: error: method does not override or implement a method from a supertype @Override ^ D:\dev\projects\localOS\node_modules\react-native-document-picker\android\src\main\java\com\reactnativedocumentpicker\RNDocumentPickerModule.java:226: error: cannot find symbol new ProcessDataTask(getReactApplicationContext(), uris, copyTo, promise).execute(); ^ symbol: method execute() location: class ProcessDataTask 5 errors * Try: > Check your code and dependencies to fix the compilation error(s) > Run with --scan to generate a Build Scan (Powered by Develocity). BUILD FAILED in 57s.
-info Run CLI with --verbose flag for more details.
-PS D:\dev\projects\localOS>
+Oct 24 00:07:56 iPhone-v2 ReportCrash[10938] <Notice>: ASI found [libc++abi.dylib] (sensitive) 'terminating due to uncaught exception of type facebook::jsi::JSError: ExceptionsManager.reportException raised an exception: Unhandled JS Exception: TypeError: Cannot read property 'create' of undefined, stack:
+anonymous@56001:39
+loadModuleImplementation@161:13
+guardedLoadModule@92:46
+metroRequire@41:91
+ChatScreen@52038:55
+renderWithHooks@9153:31
+updateFunctionComponent@10706:31
+beginWork@11120:38
+performUnitOfWork@12689:24
+workLoopSync@12593:54
+renderRootSync@12578:18
+performWorkOnRoot@12360:96
+performWorkOnRootViaSchedulerTask@8708:21
+
+
+Error: ExceptionsManager.reportException raised an exception: Unhandled JS Exception: TypeError: Cannot read property 'create' of undefined, stack:
+anonymous@56001:39
+loadModuleImplementation@161:13
+guardedLoadModule@92:46
+metroRequire@41:91
+ChatScreen@52038:55
+renderWithHooks@9153:31
+updateFunctionComponent@10706:31
+beginWork@11120:38
+performUnitOfWork@12689:24
+workLoopSync@12593:54
+renderRootSync@12578:18
+performWorkOnRoot@123<\M-b\M^@\M-&>'

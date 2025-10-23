@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   promptsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    marginHorizontal: -4,
   },
   promptButton: {
     backgroundColor: '#F0F4FF',
@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#007AFF',
+    margin: 4,
   },
   promptButtonDisabled: {
     backgroundColor: '#F5F5F5',
