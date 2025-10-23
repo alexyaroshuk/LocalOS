@@ -14,7 +14,8 @@
       "Bash(npm view llama.rn)",
       "Bash(npm view llama.rn versions --json)",
       "Read(//d/dev/projects/**)",
-      "Bash(pod install)"
+      "Bash(pod install)",
+      "Bash(adb devices)"
     ],
     "deny": [],
     "ask": []
