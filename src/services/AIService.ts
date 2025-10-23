@@ -28,25 +28,48 @@ export class AIService {
 
     this.initializationAttempted = true;
 
-    console.log('🔍 Detecting available AI backends...');
+    console.log('==================================================');
+    console.log('🔍 AI BACKEND DETECTION');
+    console.log('==================================================');
+    console.log('Platform:', Platform.OS);
+    console.log('Platform Version:', Platform.Version);
+    console.log('--------------------------------------------------');
 
     // Try Apple Intelligence first (iOS 18+ only)
     if (Platform.OS === 'ios') {
+      console.log('✓ Running on iOS - checking Apple Intelligence...');
+
       try {
         const appleAvailable = await AppleIntelligenceService.isAvailable();
+        console.log('Apple Intelligence available?', appleAvailable);
+
         if (appleAvailable) {
+          console.log('✓ Initializing Apple Intelligence...');
           await AppleIntelligenceService.initialize();
           this.currentBackend = 'apple';
-          console.log('✅ Using Apple Intelligence (Neural Engine)');
+          console.log('==================================================');
+          console.log('✅ SUCCESS: Using Apple Intelligence (Neural Engine)');
+          console.log('==================================================');
           return 'apple';
+        } else {
+          console.log('✗ Apple Intelligence not available on this device');
+          console.log('  Possible reasons:');
+          console.log('  1. iOS version < 18 (current:', Platform.Version, ')');
+          console.log('  2. Package not installed: @react-native-ai/apple');
+          console.log('  3. Device not supported');
         }
       } catch (error) {
-        console.log('Apple Intelligence initialization failed:', error);
+        console.log('✗ Apple Intelligence initialization failed');
+        console.error('Error details:', error);
       }
+    } else {
+      console.log('✗ Not iOS - Apple Intelligence not available');
     }
 
     // Fallback to Llama.cpp (works everywhere)
-    console.log('✅ Using Llama.cpp (requires manual model loading)');
+    console.log('--------------------------------------------------');
+    console.log('⚠️  FALLBACK: Using Llama.cpp');
+    console.log('==================================================');
     this.currentBackend = 'llama';
     return 'llama';
   }
