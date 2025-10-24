@@ -286,74 +286,64 @@ export class LlamaService {
       return '';
     }
 
-    // Convert tools to Pydantic-like schema format expected by the model
-    const toolSchemas = this.availableTools
-      .map(tool => {
-        const requiredParams = tool.parameters
-          .filter(p => p.required)
-          .map(p => `"${p.name}"`);
+    // Create JSON schema format (like Langchain's bind_tools)
+    const toolSchemas = this.availableTools.map(tool => {
+      const properties: Record<string, any> = {};
+      const required: string[] = [];
 
-        const paramProps = tool.parameters
-          .map(p => {
-            const typeMap: Record<string, string> = {
-              string: 'str',
-              number: 'int',
-              boolean: 'bool',
-              array: 'List[str]',
-              object: 'dict',
-            };
+      tool.parameters.forEach(p => {
+        properties[p.name] = {
+          type: p.type,
+          description: p.description,
+        };
+        if (p.required) {
+          required.push(p.name);
+        }
+      });
 
-            return `    "${p.name}": {
-      "type": "${typeMap[p.type] || 'str'}",
-      "description": "${p.description}"${p.required ? ', "required": true' : ''}
-    }`;
-          })
-          .join(',\n');
+      return {
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: 'object',
+          properties,
+          required: required.length > 0 ? required : undefined,
+        },
+      };
+    });
 
-        return `class ${tool.name}:
-    """${tool.description}"""
+    const toolsJson = JSON.stringify(toolSchemas, null, 2);
 
-    properties = {
-${paramProps}
-    }
-    required = [${requiredParams.join(', ')}]`;
-      })
-      .join('\n\n');
+    return `You have access to the following tools:
 
-    // Simplified tool descriptions
-    const toolList = this.availableTools
-      .map(tool => {
-        const params = tool.parameters
-          .map(p => `${p.name}: ${p.type}`)
-          .join(', ');
-        return `- ${tool.name}(${params}): ${tool.description}`;
-      })
-      .join('\n');
+${toolsJson}
 
-    return `You are an AI assistant with tool calling abilities. You have access to these tools:
+Use a tool by responding with JSON in this exact format:
+<function_call>
+{"name": "tool_name", "arguments": {"param": "value"}}
+</function_call>
 
-${toolList}
+CRITICAL RULES:
+1. You do NOT know the current date/time/day - you MUST call get_current_datetime
+2. When user asks "what time", "what day", "current date" → call get_current_datetime
+3. When user says "search", "find", "look up" → call search_web
+4. Do NOT make up or guess current information
+5. Only use tools when user needs real-time data
 
-CRITICAL INSTRUCTIONS:
-- When user asks about current time/date/day → MUST use get_current_datetime tool
-- When user says "search" or "find" → MUST use search_web tool
-- You do NOT know what the current time is - you MUST call the tool
+Examples:
 
-OUTPUT FORMAT when calling a tool - output ONLY this, nothing else:
-<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>
+User: "what time is it now"
+Assistant: <function_call>
+{"name": "get_current_datetime", "arguments": {}}
+</function_call>
 
-EXAMPLES:
+User: "search for react native tutorials"
+Assistant: <function_call>
+{"name": "search_web", "arguments": {"query": "react native tutorials"}}
+</function_call>
 
-Input: "what time is it now"
-Output: <function_call>{"name": "get_current_datetime", "arguments": {}}</function_call>
-
-Input: "search for python tutorials"
-Output: <function_call>{"name": "search_web", "arguments": {"query": "python tutorials"}}</function_call>
-
-Input: "hello how are you"
-Output: Hello! I'm doing well, thank you for asking. How can I help you today?
-
-Remember: Use the tool when the user needs REAL-TIME data. Don't guess or make up current time/date.`;
+User: "hello"
+Assistant: Hello! How can I help you today?`;
   }
 
   /**
