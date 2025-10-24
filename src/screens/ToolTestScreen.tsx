@@ -10,7 +10,9 @@ import {
   Platform,
 } from 'react-native';
 import {ToolService} from '../services/ToolService';
-import {Tool, ToolResult} from '../types';
+import {AIService} from '../services/AIService';
+import {Tool, ToolResult, Message} from '../types';
+import {generateId} from '../utils/helpers';
 
 export const ToolTestScreen: React.FC = () => {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -18,53 +20,106 @@ export const ToolTestScreen: React.FC = () => {
     new Map(),
   );
   const [loading, setLoading] = useState<Set<string>>(new Set());
+  const [backendInfo, setBackendInfo] = useState<string>('');
 
   useEffect(() => {
     // Initialize tool service and get all tools
     ToolService.initialize();
     setTools(ToolService.getAllTools());
+
+    // Get current backend info
+    const info = AIService.getBackendInfo();
+    setBackendInfo(`${info.backend} - ${info.modelName}`);
   }, []);
 
   const handleTestTool = async (tool: Tool) => {
     try {
       setLoading(prev => new Set(prev).add(tool.name));
 
-      // Prepare test arguments based on tool parameters
-      const testArgs: Record<string, any> = {};
-
-      for (const param of tool.parameters) {
-        if (param.required) {
-          // Provide default test values
-          switch (tool.name) {
-            case 'search_web':
-              testArgs.query = 'React Native';
-              break;
-            case 'get_x_trends':
-              testArgs.location = 'worldwide';
-              break;
-            // Add more cases as needed
-          }
-        }
+      // Check if tools are supported by current backend
+      if (!AIService.areToolsSupported()) {
+        Alert.alert(
+          'Tools Not Supported',
+          `Current backend (${AIService.getCurrentBackend()}) does not support tool calling. Switch to Llama backend to test tools.`
+        );
+        setLoading(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(tool.name);
+          return newSet;
+        });
+        return;
       }
 
-      console.log(`Testing tool: ${tool.name} with args:`, testArgs);
+      // Create test prompt that should trigger the tool
+      let testPrompt = '';
+      switch (tool.name) {
+        case 'getCurrentDateTime':
+          testPrompt = 'What is the current date and time?';
+          break;
+        case 'search_web':
+          testPrompt = 'Search the web for React Native tutorials';
+          break;
+        default:
+          testPrompt = `Use the ${tool.name} tool to help me`;
+      }
 
-      const result = await ToolService.executeTool({
-        id: `test-${Date.now()}`,
-        name: tool.name,
-        arguments: testArgs,
-      });
+      console.log(`Testing tool with AI backend: ${tool.name}`);
+      console.log(`Test prompt: "${testPrompt}"`);
 
-      setTestResults(prev => new Map(prev).set(tool.name, result));
+      // Create messages with system prompt
+      const messages: Message[] = [
+        {
+          id: generateId(),
+          role: 'system',
+          content: `You are testing tool calling. You MUST use the ${tool.name} tool to answer the user's question. Current time: ${new Date().toLocaleString()}`,
+          timestamp: Date.now(),
+        },
+        {
+          id: generateId(),
+          role: 'user',
+          content: testPrompt,
+          timestamp: Date.now(),
+        },
+      ];
 
-      if (result.error) {
-        Alert.alert('Tool Error', `${tool.name} failed: ${result.error}`);
+      // Call AI with tools enabled
+      const result = await AIService.chatCompletionWithTools(
+        messages,
+        [tool],
+        {},
+        undefined,
+        (stage, toolName) => {
+          console.log(`Tool stage: ${stage}, tool: ${toolName}`);
+        }
+      );
+
+      const toolResult: ToolResult = {
+        success: result.usedTool || false,
+        data: result.response,
+      };
+
+      setTestResults(prev => new Map(prev).set(tool.name, toolResult));
+
+      if (result.usedTool) {
+        Alert.alert(
+          'Tool Called! ✅',
+          `The AI successfully called ${result.toolName}.\n\nResponse: ${result.response.substring(0, 100)}...`
+        );
       } else {
-        Alert.alert('Tool Success', `${tool.name} executed successfully!`);
+        Alert.alert(
+          'Tool NOT Called ❌',
+          `The AI did not call the ${tool.name} tool. This indicates tool calling is not working with the current backend (${AIService.getCurrentBackend()}).`
+        );
       }
     } catch (error) {
       console.error(`Test error for ${tool.name}:`, error);
-      Alert.alert('Test Error', `Failed to test ${tool.name}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      Alert.alert('Test Error', `Failed to test ${tool.name}: ${errorMsg}`);
+
+      setTestResults(prev => new Map(prev).set(tool.name, {
+        success: false,
+        error: errorMsg,
+      }));
     } finally {
       setLoading(prev => {
         const newSet = new Set(prev);
@@ -140,19 +195,24 @@ export const ToolTestScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tool Testing</Text>
         <Text style={styles.headerSubtitle}>
-          {tools.length} tools available
+          {tools.length} tools available | Backend: {backendInfo}
         </Text>
       </View>
 
       <ScrollView style={styles.content}>
         <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>How to Test</Text>
+          <Text style={styles.infoTitle}>How Tool Testing Works</Text>
           <Text style={styles.infoText}>
-            Tap "Test Tool" on any tool below to execute it with sample data.
-            Results will appear below each tool.
+            Tests whether the current AI backend can actually call tools during generation.
           </Text>
           <Text style={styles.infoText}>
-            Note: Some tools like search_web require internet connection.
+            ⚠️ Apple Intelligence (apple) does NOT support tool calling yet.
+          </Text>
+          <Text style={styles.infoText}>
+            ✅ Llama.cpp (llama) DOES support tool calling.
+          </Text>
+          <Text style={styles.infoText}>
+            Current backend: <Text style={{fontWeight: 'bold'}}>{backendInfo}</Text>
           </Text>
         </View>
 
