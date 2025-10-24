@@ -7,7 +7,7 @@
 import {Platform} from 'react-native';
 import {Message} from '../types';
 import {apple} from '@react-native-ai/apple';
-import {generateText} from 'ai';
+import {generateText, streamText} from 'ai';
 import {Logger} from '../utils/Logger';
 
 // Type definitions for Apple Intelligence
@@ -19,7 +19,7 @@ interface AppleLLMConfig {
 }
 
 // Check if packages are available (functions are always defined if import succeeds)
-const isPackageAvailable = !!(apple && generateText);
+const isPackageAvailable = !!(apple && generateText && streamText);
 
 if (Platform.OS === 'ios') {
   console.log('✅ Loaded @react-native-ai/apple with AI SDK');
@@ -107,18 +107,24 @@ export class AppleIntelligenceService {
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
   ): Promise<string> {
-    if (!isPackageAvailable || !apple || !generateText) {
+    if (!isPackageAvailable || !apple || !generateText || !streamText) {
       const err = 'Apple Intelligence packages not available';
       Logger.error(err);
       throw new Error(err);
     }
 
     try {
-      // Convert messages to AI SDK format
+      // Convert messages to AI SDK format and add context
       const aiMessages = messages.map(msg => ({
         role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content,
       }));
+
+      // Add helpful context to system message
+      if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+        const currentDate = new Date();
+        aiMessages[0].content += `\n\nCurrent date/time: ${currentDate.toLocaleString()}. You run offline with no internet. Knowledge cutoff: early 2025. If asked about current events, politely acknowledge this limitation.`;
+      }
 
       console.log(
         `Generating response with Apple Intelligence (${messages.length} messages)`,
@@ -131,29 +137,51 @@ export class AppleIntelligenceService {
         hasOnToken: !!onToken,
       });
 
-      // DISABLE STREAMING - it doesn't work in React Native with AI SDK
-      // Always use generateText and return full response
-      console.log('Using generateText (streaming not supported in RN)...');
-      Logger.info('Calling Apple Intelligence generateText...');
+      if (onToken) {
+        // STREAMING mode - use the direct promise API
+        console.log('Using streamText for streaming...');
+        Logger.info('Calling Apple Intelligence streamText...');
 
-      const result = await generateText({
-        model: apple(),
-        messages: aiMessages,
-        temperature: config.temperature ?? 0.7,
-        topP: config.topP ?? 0.9,
-      });
+        const {textStream} = await streamText({
+          model: apple(),
+          messages: aiMessages,
+          temperature: config.temperature ?? 0.7,
+          topP: config.topP ?? 0.9,
+        });
 
-      Logger.info(`Got response: ${result.text.length} chars`);
-      console.log(
-        `✅ Apple Intelligence response complete (${result.text.length} chars)`,
-      );
+        let fullResponse = '';
 
-      // If onToken callback is provided, call it with full response
-      if (onToken && result.text) {
-        onToken(result.text);
+        // Iterate over the async stream
+        for await (const chunk of textStream) {
+          fullResponse += chunk;
+          onToken(chunk);
+        }
+
+        Logger.info(`Streaming complete: ${fullResponse.length} chars`);
+        console.log(
+          `✅ Apple Intelligence response complete (${fullResponse.length} chars)`,
+        );
+
+        return fullResponse;
+      } else {
+        // NON-STREAMING mode
+        console.log('Using generateText (no streaming callback)...');
+        Logger.info('Calling Apple Intelligence generateText...');
+
+        const result = await generateText({
+          model: apple(),
+          messages: aiMessages,
+          temperature: config.temperature ?? 0.7,
+          topP: config.topP ?? 0.9,
+        });
+
+        Logger.info(`Got response: ${result.text.length} chars`);
+        console.log(
+          `✅ Apple Intelligence response complete (${result.text.length} chars)`,
+        );
+
+        return result.text;
       }
-
-      return result.text;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
