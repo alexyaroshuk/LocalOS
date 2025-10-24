@@ -67,8 +67,8 @@ export function getChatTemplate(
 ): string {
   const modelLower = modelName.toLowerCase();
 
-  // Llama 3 / 3.1 / 3.2 format
-  if (modelLower.includes('llama-3') || modelLower.includes('llama3')) {
+  // Llama 3 / 3.1 / 3.2 format (matches llama-3, llama3, llama_3)
+  if (modelLower.includes('llama') && (modelLower.includes('3.') || modelLower.includes('3_') || modelLower.includes('3-') || modelLower.includes('3'))) {
     let prompt = '<|begin_of_text|>';
     for (const msg of messages) {
       prompt += `<|start_header_id|>${msg.role}<|end_header_id|>\n\n${msg.content}<|eot_id|>`;
