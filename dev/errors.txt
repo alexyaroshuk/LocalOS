@@ -1,12 +1,68 @@
-[2025-10-24T09:06:37.169Z] LOG   | 🔍 Running diagnostics...
-[2025-10-24T09:06:37.169Z] LOG   | Platform: | "ios"
-[2025-10-24T09:06:37.169Z] LOG   | Platform Version: | "26.0"
-[2025-10-24T09:06:37.169Z] LOG   | AI Backend: | "apple"
-[2025-10-24T09:06:37.169Z] LOG   | Model: | "Apple Intelligence (Neural Engine)"
-[2025-10-24T09:06:37.169Z] LOG   | Ready: | true
-[2025-10-24T09:06:37.169Z] INFO  | Using Apple Intelligence - Ready to chat!
-[2025-10-24T09:06:37.169Z] LOG   | Diagnostics complete ✓
-[2025-10-24T09:08:01.115Z] INFO  | Already initialized with backend: apple
-[2025-10-24T09:17:08.463Z] INFO  | Generating with tools: 0 available
-[2025-10-24T09:17:09.464Z] ERROR | Apple Intelligence Tool Error: | "Property 'structuredClone' doesn't exist"
-[2025-10-24T09:17:09.464Z] ERROR | Stack trace: | "ReferenceError: Property 'structuredClone' doesn't exist\n    at ?anon_0__loop4 (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:86158:31)\n    at next (native)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:86166:17)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45003:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45017:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
+ode:internal/process/promises:289
+            triggerUncaughtException(err, true /* fromPromise */);
+            ^
+
+TransformError [SyntaxError]: /Users/builder/clone/node_modules/zod/v4/classic/external.js: Export namespace should be first transformed by `@babel/plugin-transform-export-namespace-from`.
+> 1 | export * as core from "../core/index.js";
+    |        ^^^^^^^^^
+  2 | export * from "./schemas.js";
+  3 | export * from "./checks.js";
+  4 | export * from "./errors.js";
+    at File.buildCodeFrameError (/Users/builder/clone/node_modules/@babel/core/lib/transformation/file/file.js:200:12)
+    at NodePath.buildCodeFrameError (/Users/builder/clone/node_modules/@babel/traverse/lib/path/index.js:118:21)
+    at assertExportSpecifier (/Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/normalize-and-load-metadata.js:97:16)
+    at /Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/normalize-and-load-metadata.js:190:9
+    at Array.forEach (<anonymous>)
+    at /Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/normalize-and-load-metadata.js:189:31
+    at Array.forEach (<anonymous>)
+    at getModuleMetadata (/Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/normalize-and-load-metadata.js:136:27)
+    at normalizeModuleAndLoadMetadata (/Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/normalize-and-load-metadata.js:46:7)
+    at rewriteModuleStatementsAndPrepareHeader (/Users/builder/clone/node_modules/@babel/helper-module-transforms/lib/index.js:77:54)
+    at PluginPass.exit (/Users/builder/clone/node_modules/@babel/plugin-transform-modules-commonjs/lib/index.js:141:83)
+    at newFn (/Users/builder/clone/node_modules/@babel/traverse/lib/visitors.js:172:14)
+    at NodePath._call (/Users/builder/clone/node_modules/@babel/traverse/lib/path/context.js:49:20)
+    at NodePath.call (/Users/builder/clone/node_modules/@babel/traverse/lib/path/context.js:39:18)
+    at NodePath.visit (/Users/builder/clone/node_modules/@babel/traverse/lib/path/context.js:96:8)
+    at TraversalContext.visitQueue (/Users/builder/clone/node_modules/@babel/traverse/lib/context.js:90:16)
+    at TraversalContext.visitSingle (/Users/builder/clone/node_modules/@babel/traverse/lib/context.js:66:19)
+    at TraversalContext.visit (/Users/builder/clone/node_modules/@babel/traverse/lib/context.js:113:19)
+    at traverseNode (/Users/builder/clone/node_modules/@babel/traverse/lib/traverse-node.js:131:17)
+    at traverse (/Users/builder/clone/node_modules/@babel/traverse/lib/index.js:53:34)
+    at transformFile (/Users/builder/clone/node_modules/@babel/core/lib/transformation/index.js:80:31)
+    at transformFile.next (<anonymous>)
+    at run (/Users/builder/clone/node_modules/@babel/core/lib/transformation/index.js:25:12)
+    at run.next (<anonymous>)
+    at /Users/builder/clone/node_modules/@babel/core/lib/transform-ast.js:23:33
+    at Generator.next (<anonymous>)
+    at evaluateSync (/Users/builder/clone/node_modules/gensync/index.js:251:28)
+    at sync (/Users/builder/clone/node_modules/gensync/index.js:89:14)
+    at stopHiding - secret - don't use this - v1 (/Users/builder/clone/node_modules/@babel/core/lib/errors/rewrite-stack-trace.js:47:12)
+    at transformFromAstSync (/Users/builder/clone/node_modules/@babel/core/lib/transform-ast.js:43:83)
+    at Object.transform (/Users/builder/clone/node_modules/@react-native/metro-babel-transformer/src/index.js:217:7)
+    at transformJSWithBabel (/Users/builder/clone/node_modules/metro-transform-worker/src/index.js:350:45)
+    at Object.transform (/Users/builder/clone/node_modules/metro-transform-worker/src/index.js:495:16)
+    at transformFile (/Users/builder/clone/node_modules/metro/src/DeltaBundler/Worker.flow.js:67:36)
+    at Object.transform (/Users/builder/clone/node_modules/metro/src/DeltaBundler/Worker.flow.js:42:10)
+    at execFunction (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:149:17)
+    at execHelper (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:137:5)
+    at execMethod (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:140:5)
+    at process.messageListener (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:44:7)
+    at process.emit (node:events:518:28)
+    at emit (node:internal/child_process:951:14) {
+  type: 'TransformError',
+  lineNumber: 0
+}
+
+Node.js v20.11.0
+Command PhaseScriptExecution failed with a nonzero exit code
+
+warning: Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
+warning: Run script build phase 'Bundle React Native code and images' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'LocalOSApp' from project 'LocalOSApp')
+note: Run script build phase '[CP-User] [RN]Check FBReactNativeSpec' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
+** BUILD FAILED **
+
+
+The following build commands failed:
+	PhaseScriptExecution Bundle\ React\ Native\ code\ and\ images /Users/builder/clone/ios/build/Build/Intermediates.noindex/LocalOSApp.build/Release-iphoneos/LocalOSApp.build/Script-00DD1BFF1BD5951E006B06BC.sh (in target 'LocalOSApp' from project 'LocalOSApp')
+	Building workspace LocalOSApp with scheme LocalOSApp and configuration Release
+(2 failures)
