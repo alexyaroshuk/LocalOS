@@ -22,11 +22,8 @@ interface AppleLLMConfig {
 // Define tools for Apple Intelligence
 const getCurrentDateTimeTool = tool({
   description: 'Get the current date and time. Use this when the user asks about the current date, time, day of the week, or any time-related queries.',
-  parameters: z.object({
-    // Empty parameters - this tool takes no arguments
-  }),
-  // @ts-ignore - AI SDK v5 tool() type inference issue, but this matches the documentation
-  execute: async (_args: Record<string, never>) => {
+  parameters: z.object({}),
+  execute: async () => {
     const now = new Date();
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
@@ -56,7 +53,6 @@ const searchWebTool = tool({
   parameters: z.object({
     query: z.string().describe('The search query to look up'),
   }),
-  // @ts-ignore - AI SDK v5 tool() type inference issue, but this matches the documentation
   execute: async ({query}: {query: string}) => {
     try {
       const encodedQuery = encodeURIComponent(query);
@@ -253,7 +249,7 @@ export class AppleIntelligenceService {
         console.log('Using streamText for streaming...');
         Logger.info('Calling Apple Intelligence streamText...');
 
-        const {textStream} = await streamText({
+        const result = await streamText({
           model: appleBase(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
@@ -262,10 +258,19 @@ export class AppleIntelligenceService {
 
         let fullResponse = '';
 
-        // Iterate over the async stream
-        for await (const chunk of textStream) {
-          fullResponse += chunk;
-          onToken(chunk);
+        try {
+          // Iterate over the async stream with error handling
+          for await (const chunk of result.textStream) {
+            fullResponse += chunk;
+            onToken(chunk);
+          }
+        } catch (streamError) {
+          console.error('Streaming error, falling back to full text:', streamError);
+          // If streaming fails, get the full text
+          fullResponse = await result.text;
+          if (fullResponse) {
+            onToken(fullResponse);
+          }
         }
 
         Logger.info(`Streaming complete: ${fullResponse.length} chars`);
@@ -355,7 +360,7 @@ export class AppleIntelligenceService {
       if (onToken) {
         console.log('Using streamText with tools...');
 
-        const stream = await streamText({
+        const result = await streamText({
           model: apple(),
           messages: aiMessages,
           tools: {
@@ -370,17 +375,26 @@ export class AppleIntelligenceService {
         let usedTool = false;
         let toolName: string | undefined;
 
-        // Stream the response
-        for await (const chunk of stream.textStream) {
-          fullResponse += chunk;
-          onToken(chunk);
+        try {
+          // Stream the response with error handling
+          for await (const chunk of result.textStream) {
+            fullResponse += chunk;
+            onToken(chunk);
+          }
+        } catch (streamError) {
+          console.error('Tool streaming error, falling back to full text:', streamError);
+          // If streaming fails, get the full text
+          fullResponse = await result.text;
+          if (fullResponse) {
+            onToken(fullResponse);
+          }
         }
 
         Logger.info(`Streaming complete: ${fullResponse.length} chars`);
 
         // Check tool calls after streaming completes
-        const resolvedToolCalls = await stream.toolCalls;
-        const resolvedToolResults = await stream.toolResults;
+        const resolvedToolCalls = await result.toolCalls;
+        const resolvedToolResults = await result.toolResults;
 
         if (resolvedToolCalls && resolvedToolCalls.length > 0) {
           Logger.info(`Tools called: ${resolvedToolCalls.length}`);
