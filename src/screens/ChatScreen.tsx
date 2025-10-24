@@ -12,6 +12,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
@@ -36,6 +37,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   currentModel,
   onModelSelect,
 }) => {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -279,7 +281,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       }
     } catch (error) {
       console.error('Generation error:', error);
-      Alert.alert('Error', ERROR_MESSAGES.GENERATION_FAILED);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+      });
+
+      const errorMsg = error instanceof Error ? error.message : ERROR_MESSAGES.GENERATION_FAILED;
+      Alert.alert('Error', errorMsg);
 
       // Add error message
       const errorMessage: Message = {
@@ -354,7 +363,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {paddingTop: Math.max(insets.top, 16)}]}>
         <View style={styles.headerLeft}>
           <View style={styles.modelInfoRow}>
             <Text style={styles.headerTitle}>{backendInfo}</Text>
