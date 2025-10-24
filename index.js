@@ -5,6 +5,14 @@
 // Polyfills for AI SDK - must be imported before anything else
 import 'web-streams-polyfill/polyfill';
 
+// Polyfill for structuredClone (required by AI SDK)
+if (typeof global.structuredClone === 'undefined') {
+  global.structuredClone = function structuredClone(obj) {
+    // Simple deep clone implementation
+    return JSON.parse(JSON.stringify(obj));
+  };
+}
+
 import { AppRegistry } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
