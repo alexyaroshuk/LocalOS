@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Switch,
+  TextInput,
 } from 'react-native';
 import {ToolService} from '../services/ToolService';
 import {AIService} from '../services/AIService';
@@ -25,11 +26,14 @@ export const ToolTestScreen: React.FC = () => {
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
   const [useLangchain, setUseLangchain] = useState(true);
+  const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
+  const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
 
   useEffect(() => {
     // Initialize tool service and get all tools
     ToolService.initialize();
-    setTools(ToolService.getAllTools());
+    const allTools = ToolService.getAllTools();
+    setTools(allTools);
 
     // Enable tools for testing
     AIService.enableTools();
@@ -42,7 +46,32 @@ export const ToolTestScreen: React.FC = () => {
 
     // Get initial Langchain mode state
     setUseLangchain(LlamaService.isLangchainMode());
+
+    // Check availability for all tools
+    checkAllToolsAvailability(allTools);
   }, []);
+
+  const checkAllToolsAvailability = async (toolsList: Tool[]) => {
+    const availabilityMap = new Map<string, {available: boolean; reason?: string}>();
+
+    for (const tool of toolsList) {
+      if (tool.checkAvailability) {
+        try {
+          const result = await tool.checkAvailability();
+          availabilityMap.set(tool.name, result);
+        } catch (error) {
+          availabilityMap.set(tool.name, {
+            available: false,
+            reason: 'Availability check failed',
+          });
+        }
+      } else {
+        availabilityMap.set(tool.name, {available: true});
+      }
+    }
+
+    setToolAvailability(availabilityMap);
+  };
 
   const handleToggleLangchain = (value: boolean) => {
     setUseLangchain(value);
@@ -58,37 +87,38 @@ export const ToolTestScreen: React.FC = () => {
     try {
       Logger.info(`Direct tool execution test: ${toolName}`);
 
-      if (toolName === 'search_web') {
-        const searchTool = ToolService.getTool('search_web');
-        if (!searchTool) {
-          Alert.alert('Error', 'search_web tool not found');
-          return;
-        }
-
-        const result = await searchTool.execute({query: 'React Native tutorials'});
-        Logger.info('Direct search result:', result);
-
-        Alert.alert(
-          'Direct Tool Execution Result',
-          JSON.stringify(result, null, 2),
-          [{text: 'OK'}]
-        );
-      } else if (toolName === 'get_current_datetime') {
-        const dateTool = ToolService.getTool('get_current_datetime');
-        if (!dateTool) {
-          Alert.alert('Error', 'get_current_datetime tool not found');
-          return;
-        }
-
-        const result = await dateTool.execute({});
-        Logger.info('Direct datetime result:', result);
-
-        Alert.alert(
-          'Direct Tool Execution Result',
-          JSON.stringify(result, null, 2),
-          [{text: 'OK'}]
-        );
+      const tool = ToolService.getTool(toolName);
+      if (!tool) {
+        Alert.alert('Error', `${toolName} tool not found`);
+        return;
       }
+
+      // Get manual parameters or use defaults
+      const params = toolParams.get(toolName) || {};
+      const args: Record<string, any> = {};
+
+      // Build args from manual params or defaults
+      for (const param of tool.parameters) {
+        if (params[param.name]) {
+          args[param.name] = params[param.name];
+        } else if (param.required) {
+          // Use default value for required params if not provided
+          if (toolName === 'search_web' && param.name === 'query') {
+            args[param.name] = 'React Native tutorials';
+          }
+        }
+      }
+
+      Logger.info('Executing with args:', args);
+
+      const result = await tool.execute(args);
+      Logger.info('Direct tool result:', result);
+
+      Alert.alert(
+        'Direct Tool Execution Result',
+        JSON.stringify(result, null, 2),
+        [{text: 'OK'}]
+      );
     } catch (error) {
       Logger.error('Direct tool test error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : String(error));
@@ -190,11 +220,15 @@ export const ToolTestScreen: React.FC = () => {
   const renderToolCard = (tool: Tool) => {
     const isLoading = loading.has(tool.name);
     const result = testResults.get(tool.name);
+    const availability = toolAvailability.get(tool.name);
 
     return (
       <View key={tool.name} style={styles.toolCard}>
         <View style={styles.toolHeader}>
           <Text style={styles.toolName}>{tool.name}</Text>
+          {availability && !availability.available && (
+            <Text style={styles.unavailableBadge}>⚠ OFFLINE</Text>
+          )}
           {result && !result.error && (
             <Text style={styles.successBadge}>✓ PASSED</Text>
           )}
@@ -205,13 +239,35 @@ export const ToolTestScreen: React.FC = () => {
 
         <Text style={styles.toolDescription}>{tool.description}</Text>
 
+        {availability && !availability.available && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              ⚠️ {availability.reason || 'Tool not available'}
+            </Text>
+          </View>
+        )}
+
         {tool.parameters.length > 0 && (
           <View style={styles.parametersSection}>
-            <Text style={styles.parametersTitle}>Parameters:</Text>
+            <Text style={styles.parametersTitle}>Parameters (Manual Input):</Text>
             {tool.parameters.map(param => (
-              <Text key={param.name} style={styles.parameterText}>
-                • {param.name} ({param.type}){param.required ? ' *' : ''}: {param.description}
-              </Text>
+              <View key={param.name} style={styles.paramInputContainer}>
+                <Text style={styles.paramLabel}>
+                  {param.name}{param.required ? ' *' : ''}:
+                </Text>
+                <TextInput
+                  style={styles.paramInput}
+                  placeholder={`Enter ${param.name}`}
+                  value={toolParams.get(tool.name)?.[param.name] || ''}
+                  onChangeText={(text) => {
+                    const currentParams = toolParams.get(tool.name) || {};
+                    setToolParams(new Map(toolParams).set(tool.name, {
+                      ...currentParams,
+                      [param.name]: text,
+                    }));
+                  }}
+                />
+              </View>
             ))}
           </View>
         )}
@@ -436,6 +492,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+    marginLeft: 4,
+  },
+  unavailableBadge: {
+    backgroundColor: '#FF9500',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 4,
+  },
+  warningBox: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#856404',
+    fontWeight: '500',
   },
   toolDescription: {
     fontSize: 14,
@@ -453,13 +531,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   parameterText: {
     fontSize: 12,
     color: '#666',
     lineHeight: 18,
     marginBottom: 4,
+  },
+  paramInputContainer: {
+    marginBottom: 10,
+  },
+  paramLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  paramInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D1D6',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#000',
   },
   buttonRow: {
     flexDirection: 'row',
