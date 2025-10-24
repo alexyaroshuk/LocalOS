@@ -53,7 +53,7 @@ export const ToolTestScreen: React.FC = () => {
       // Create test prompt that should trigger the tool
       let testPrompt = '';
       switch (tool.name) {
-        case 'getCurrentDateTime':
+        case 'get_current_datetime':
           testPrompt = 'What is the current date and time?';
           break;
         case 'search_web':
@@ -206,13 +206,16 @@ export const ToolTestScreen: React.FC = () => {
             Tests whether the current AI backend can actually call tools during generation.
           </Text>
           <Text style={styles.infoText}>
-            ⚠️ Apple Intelligence (apple) does NOT support tool calling yet.
+            ⚠️ Apple Intelligence does NOT support tool calling (SDK limitation).
           </Text>
           <Text style={styles.infoText}>
-            ✅ Llama.cpp (llama) DOES support tool calling.
+            ✅ Llama DOES support tool calling (enable tools in Settings first).
           </Text>
           <Text style={styles.infoText}>
             Current backend: <Text style={{fontWeight: 'bold'}}>{backendInfo}</Text>
+          </Text>
+          <Text style={styles.infoText}>
+            Tools supported: <Text style={{fontWeight: 'bold'}}>{AIService.areToolsSupported() ? 'YES ✅' : 'NO ❌'}</Text>
           </Text>
         </View>
 
