@@ -120,15 +120,23 @@ export class AppleIntelligenceService {
       console.log(
         `Generating response with Apple Intelligence (${messages.length} messages)`,
       );
+      console.log('AI Messages:', JSON.stringify(aiMessages, null, 2));
+      console.log('Config:', {
+        temperature: config.temperature ?? 0.7,
+        topP: config.topP ?? 0.9,
+        hasOnToken: !!onToken,
+      });
 
       if (onToken) {
         // Streaming response
+        console.log('Using streamText...');
         const result = await streamText({
           model: apple(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
           topP: config.topP ?? 0.9,
         });
+        console.log('streamText result created');
 
         let fullResponse = '';
 
@@ -158,6 +166,17 @@ export class AppleIntelligenceService {
       }
     } catch (error) {
       console.error('Apple Intelligence generation error:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        type: typeof error,
+      });
+
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw new Error(`Apple Intelligence: ${error.message}`);
+      }
       throw error;
     }
   }
