@@ -27,9 +27,14 @@ export const ToolTestScreen: React.FC = () => {
     ToolService.initialize();
     setTools(ToolService.getAllTools());
 
+    // Enable tools for testing
+    AIService.enableTools();
+    console.log('🔧 Tools enabled for testing');
+
     // Get current backend info
     const info = AIService.getBackendInfo();
     setBackendInfo(`${info.backend} - ${info.modelName}`);
+    console.log('Tools supported?', AIService.areToolsSupported());
   }, []);
 
   const handleTestTool = async (tool: Tool) => {
@@ -66,14 +71,8 @@ export const ToolTestScreen: React.FC = () => {
       console.log(`Testing tool with AI backend: ${tool.name}`);
       console.log(`Test prompt: "${testPrompt}"`);
 
-      // Create messages with system prompt
+      // Create messages with very explicit system prompt for tool testing
       const messages: Message[] = [
-        {
-          id: generateId(),
-          role: 'system',
-          content: `You are testing tool calling. You MUST use the ${tool.name} tool to answer the user's question. Current time: ${new Date().toLocaleString()}`,
-          timestamp: Date.now(),
-        },
         {
           id: generateId(),
           role: 'user',
