@@ -6,6 +6,8 @@
 
 import {Platform} from 'react-native';
 import {Message} from '../types';
+import {apple} from '@react-native-ai/apple';
+import {generateText, streamText} from 'ai';
 
 // Type definitions for Apple Intelligence
 interface AppleLLMConfig {
@@ -15,45 +17,13 @@ interface AppleLLMConfig {
   topP?: number;
 }
 
-// Dynamic import of Apple Intelligence module (iOS only)
-let apple: any = null;
-let generateText: any = null;
-let streamText: any = null;
-let isPackageAvailable = false;
+// Check if packages are available
+const isPackageAvailable = !!(apple && generateText && streamText);
 
-function loadAppleAI() {
-  if (Platform.OS !== 'ios') {
-    return false;
-  }
-
-  try {
-    // Load the AI SDK provider and functions
-    const appleModule = require('@react-native-ai/apple');
-    apple = appleModule.apple;
-
-    const aiModule = require('ai');
-    generateText = aiModule.generateText;
-    streamText = aiModule.streamText;
-
-    console.log('✅ Loaded @react-native-ai/apple with AI SDK');
-    isPackageAvailable = true;
-    return true;
-  } catch (error) {
-    console.log(
-      '⚠️ Apple Intelligence package not installed.',
-      'The app will use Llama.cpp instead.',
-      '\nTo enable Apple Intelligence, run: npm install @react-native-ai/apple ai @ai-sdk/react',
-      '\nError:',
-      error,
-    );
-    isPackageAvailable = false;
-    return false;
-  }
-}
-
-// Try to load on module initialization (iOS only)
-if (Platform.OS === 'ios') {
-  loadAppleAI();
+if (Platform.OS === 'ios' && isPackageAvailable) {
+  console.log('✅ Loaded @react-native-ai/apple with AI SDK');
+} else if (Platform.OS === 'ios') {
+  console.log('⚠️ Apple Intelligence packages not available');
 }
 
 export class AppleIntelligenceService {
@@ -108,7 +78,7 @@ export class AppleIntelligenceService {
   /**
    * Initialize Apple Intelligence session
    */
-  static async initialize(config: AppleLLMConfig = {}): Promise<void> {
+  static async initialize(_config: AppleLLMConfig = {}): Promise<void> {
     if (this.isInitialized) {
       console.log('Apple Intelligence already initialized');
       return;
