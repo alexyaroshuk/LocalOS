@@ -206,9 +206,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
     try {
       // Get recent messages for context (limit to avoid exceeding context window)
-      const contextMessages = [...messages, userMessage].slice(
+      let contextMessages = [...messages, userMessage].slice(
         -MAX_CONTEXT_MESSAGES,
       );
+
+      // Add system prompt if not present
+      if (contextMessages.length === 0 || contextMessages[0].role !== 'system') {
+        const currentDate = new Date();
+        const systemPrompt: Message = {
+          id: generateId(),
+          role: 'system',
+          content: `You are a helpful AI assistant running locally on this device. Be concise and accurate.
+
+IMPORTANT CONTEXT:
+- Current date and time: ${currentDate.toLocaleString()}
+- Day of week: ${currentDate.toLocaleDateString('en-US', {weekday: 'long'})}
+- You have access to tools for: current time, web search
+- When asked about current time/date, use the information above or call the getCurrentDateTime tool
+- You run offline with knowledge cutoff in early 2025`,
+          timestamp: Date.now(),
+        };
+        contextMessages = [systemPrompt, ...contextMessages];
+      }
 
       // Generate response with tool support if enabled
       let fullResponse = '';
@@ -493,7 +512,8 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   headerTitle: {
     fontSize: 16,
