@@ -77,6 +77,7 @@ export interface Tool {
   description: string;
   parameters: ToolParameter[];
   execute: (args: Record<string, any>) => Promise<any>;
+  checkAvailability?: () => Promise<{available: boolean; reason?: string}>;
 }
 
 export interface ToolCall {
