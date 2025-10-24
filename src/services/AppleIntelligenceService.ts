@@ -6,8 +6,9 @@
 
 import {Platform} from 'react-native';
 import {Message} from '../types';
-import {apple} from '@react-native-ai/apple';
-import {generateText, streamText} from 'ai';
+import {createAppleProvider} from '@react-native-ai/apple';
+import {generateText, streamText, tool} from 'ai';
+import {z} from 'zod';
 import {Logger} from '../utils/Logger';
 
 // Type definitions for Apple Intelligence
@@ -18,11 +19,112 @@ interface AppleLLMConfig {
   topP?: number;
 }
 
-// Check if packages are available (functions are always defined if import succeeds)
+// Define tools for Apple Intelligence
+const getCurrentDateTimeTool = tool({
+  description: 'Get the current date and time. Use this when the user asks about the current date, time, day of the week, or any time-related queries.',
+  parameters: z.object({}),
+  // @ts-ignore - AI SDK v5 tool() type inference issue, but this matches the documentation
+  execute: async () => {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short',
+    };
+    const formatted = now.toLocaleString('en-US', options);
+    return {
+      datetime: now.toISOString(),
+      formatted,
+      timestamp: now.getTime(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      day: now.toLocaleDateString('en-US', {weekday: 'long'}),
+      date: now.toLocaleDateString('en-US'),
+      time: now.toLocaleTimeString('en-US'),
+    };
+  },
+});
+
+const searchWebTool = tool({
+  description: 'Search the web for information including current events, facts, trending topics, news, or any information that requires up-to-date knowledge.',
+  parameters: z.object({
+    query: z.string().describe('The search query to look up'),
+  }),
+  // @ts-ignore - AI SDK v5 tool() type inference issue, but this matches the documentation
+  execute: async ({query}: {query: string}) => {
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      const url = `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'LocalOSApp/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      let results: string[] = [];
+
+      if (data.Abstract) {
+        results.push(data.Abstract);
+      }
+
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        const topics = data.RelatedTopics
+          .filter((t: any) => t.Text)
+          .slice(0, 5)
+          .map((t: any) => t.Text);
+        results = [...results, ...topics];
+      }
+
+      if (results.length === 0) {
+        return {
+          success: false,
+          message: 'No results found. Try rephrasing your query.',
+          query,
+        };
+      }
+
+      return {
+        success: true,
+        query,
+        results,
+        source: 'DuckDuckGo',
+      };
+    } catch (error) {
+      console.error('Web search error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Search failed',
+        query,
+      };
+    }
+  },
+});
+
+// Create Apple provider with tools registered
+const apple = createAppleProvider({
+  availableTools: {
+    get_current_datetime: getCurrentDateTimeTool,
+    search_web: searchWebTool,
+  },
+});
+
+// Check if packages are available
 const isPackageAvailable = !!(apple && generateText && streamText);
 
 if (Platform.OS === 'ios') {
   console.log('✅ Loaded @react-native-ai/apple with AI SDK');
+  console.log('✅ Registered tools: get_current_datetime, search_web');
 }
 
 export class AppleIntelligenceService {
@@ -213,7 +315,7 @@ export class AppleIntelligenceService {
    */
   static async chatCompletionWithTools(
     messages: Message[],
-    tools: Array<any>,
+    _tools: Array<any>, // Ignored - tools are pre-registered in createAppleProvider
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
     onToolUsage?: (
@@ -234,47 +336,94 @@ export class AppleIntelligenceService {
         content: msg.content,
       }));
 
-      // Format tools for AI SDK
-      const aiTools = tools.reduce((acc, tool) => {
-        acc[tool.name] = {
-          description: tool.description,
-          parameters: tool.parameters,
+      console.log('Generating with Apple Intelligence tools...');
+      Logger.info('Generating with tools enabled (get_current_datetime, search_web)');
+
+      // Use streamText if onToken callback is provided
+      if (onToken) {
+        console.log('Using streamText with tools...');
+
+        const stream = await streamText({
+          model: apple(),
+          messages: aiMessages,
+          tools: {
+            get_current_datetime: getCurrentDateTimeTool,
+            search_web: searchWebTool,
+          },
+          temperature: config.temperature ?? 0.7,
+          topP: config.topP ?? 0.9,
+        });
+
+        let fullResponse = '';
+        let usedTool = false;
+        let toolName: string | undefined;
+
+        // Stream the response
+        for await (const chunk of stream.textStream) {
+          fullResponse += chunk;
+          onToken(chunk);
+        }
+
+        Logger.info(`Streaming complete: ${fullResponse.length} chars`);
+
+        // Check tool calls after streaming completes
+        const resolvedToolCalls = await stream.toolCalls;
+        const resolvedToolResults = await stream.toolResults;
+
+        if (resolvedToolCalls && resolvedToolCalls.length > 0) {
+          Logger.info(`Tools called: ${resolvedToolCalls.length}`);
+          usedTool = true;
+          toolName = resolvedToolCalls[0].toolName;
+          if (onToolUsage) {
+            onToolUsage('tool_call', toolName);
+          }
+        }
+
+        if (resolvedToolResults && resolvedToolResults.length > 0) {
+          Logger.info(`Tool results: ${JSON.stringify(resolvedToolResults)}`);
+          if (onToolUsage) {
+            onToolUsage('tool_result', toolName);
+          }
+        }
+
+        return {
+          response: fullResponse,
+          usedTool,
+          toolName,
         };
-        return acc;
-      }, {} as Record<string, any>);
+      } else {
+        // Non-streaming mode
+        console.log('Using generateText with tools...');
 
-      console.log(
-        `Generating with tools (${tools.length} tools available)...`,
-      );
-      Logger.info(`Generating with tools: ${tools.length} available`);
+        const result = await generateText({
+          model: apple(),
+          messages: aiMessages,
+          tools: {
+            get_current_datetime: getCurrentDateTimeTool,
+            search_web: searchWebTool,
+          },
+          temperature: config.temperature ?? 0.7,
+          topP: config.topP ?? 0.9,
+        });
 
-      // DISABLE STREAMING - use generateText for tools too
-      const result = await generateText({
-        model: apple(),
-        messages: aiMessages,
-        tools: aiTools,
-        temperature: config.temperature ?? 0.7,
-        topP: config.topP ?? 0.9,
-      });
+        Logger.info(`Generation complete: ${result.text.length} chars`);
 
-      let usedTool = false;
-      let toolName: string | undefined;
+        // Check if tools were used
+        const usedTool = result.toolCalls && result.toolCalls.length > 0;
+        const toolName = usedTool ? result.toolCalls[0].toolName : undefined;
 
-      // Tool calls would be in the response metadata
-      // TODO: Implement proper tool call handling with AI SDK v5
+        if (usedTool) {
+          Logger.info(`Tool used: ${toolName}`);
+          Logger.info(`Tool calls: ${JSON.stringify(result.toolCalls)}`);
+          Logger.info(`Tool results: ${JSON.stringify(result.toolResults)}`);
+        }
 
-      // If onToken callback is provided, call it with full response
-      if (onToken && result.text) {
-        onToken(result.text);
+        return {
+          response: result.text,
+          usedTool,
+          toolName,
+        };
       }
-
-      Logger.info(`Tool generation complete: ${result.text.length} chars`);
-
-      return {
-        response: result.text,
-        usedTool,
-        toolName,
-      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
