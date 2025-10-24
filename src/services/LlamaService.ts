@@ -315,16 +315,20 @@ YOU MUST CALL A TOOL WHEN:
 1. User asks "What day is today?" → MUST call get_current_datetime
 2. User asks "What time is it?" → MUST call get_current_datetime
 3. User asks "What's the date?" → MUST call get_current_datetime
-4. User asks about current events → MUST call search_web
-5. User asks to search for something → MUST call search_web
-6. User asks about a specific person/entity → MUST call search_web
-7. User asks "What's trending?" → MUST call search_web or get_x_trends
+4. User says "search" or "find" or "look up" → MUST call search_web
+5. User asks about current events or news → MUST call search_web
+6. User asks about trending topics → MUST call search_web
+7. User asks "Search the web for X" → MUST call search_web with query="X"
+8. User asks "Find information about X" → MUST call search_web with query="X"
+9. User asks about a specific person's current info → MUST call search_web
+10. User mentions needing up-to-date information → MUST call search_web
 
 RESPOND NORMALLY (NO TOOL) WHEN:
 - User says greetings: "Hi", "Hello", "How are you?"
-- User asks general knowledge: "What is JavaScript?"
-- User asks for explanations: "Explain React"
+- User asks general knowledge: "What is JavaScript?" (well-known concept)
+- User asks for explanations: "Explain React" (well-known concept)
 - User asks for advice or opinions
+- User asks about historical facts that don't need real-time data
 
 # HOW TO CALL A TOOL
 

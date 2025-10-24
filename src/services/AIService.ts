@@ -194,7 +194,7 @@ export class AIService {
    */
   static areToolsSupported(): boolean {
     if (this.currentBackend === 'apple') {
-      return true; // Apple Intelligence has native tool calling
+      return false; // Apple Intelligence does NOT support tool calling in current SDK
     } else if (this.currentBackend === 'llama') {
       return LlamaService.areToolsEnabled();
     }
@@ -208,7 +208,7 @@ export class AIService {
     if (this.currentBackend === 'llama') {
       LlamaService.enableTools(tools);
     }
-    // Apple Intelligence tools are always available (native support)
+    // Apple Intelligence does not support tools in current SDK version
   }
 
   /**

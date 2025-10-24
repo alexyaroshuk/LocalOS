@@ -325,147 +325,37 @@ export class AppleIntelligenceService {
   }
 
   /**
-   * Generate with tool calling (Apple Intelligence has native support!)
+   * Generate with tool calling
+   * NOTE: Apple Intelligence in current SDK version (@react-native-ai/apple@0.11.0)
+   * does NOT properly support tool calling. This method falls back to regular chat.
    */
   static async chatCompletionWithTools(
     messages: Message[],
-    _tools: Array<any>, // Ignored - tools are pre-registered in createAppleProvider
+    _tools: Array<any>,
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
-    onToolUsage?: (
+    _onToolUsage?: (
       stage: 'tool_call' | 'tool_result' | 'generating',
       toolName?: string,
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
-    if (!isPackageAvailable || !appleBase || !generateText) {
-      const err = 'Apple Intelligence packages not available';
-      Logger.error(err);
-      throw new Error(err);
-    }
+    console.warn('⚠️  Apple Intelligence does not support tool calling in current SDK version');
+    Logger.warn('Apple Intelligence tool calling is not supported - using regular chat');
 
-    // Get the Apple provider with tools
-    const apple = getAppleProviderWithTools();
+    // Fall back to regular chat completion
+    const response = await this.chatCompletion(messages, config, onToken);
 
-    try {
-      // Convert messages to AI SDK format
-      const aiMessages = messages.map(msg => ({
-        role: msg.role as 'system' | 'user' | 'assistant',
-        content: msg.content,
-      }));
+    return {
+      response,
+      usedTool: false,
+    };
+  }
 
-      console.log('Generating with Apple Intelligence tools...');
-      Logger.info('Generating with tools enabled (get_current_datetime, search_web)');
-
-      // Use streamText if onToken callback is provided
-      if (onToken) {
-        console.log('Using streamText with tools...');
-
-        const result = await streamText({
-          model: apple(),
-          messages: aiMessages,
-          tools: {
-            get_current_datetime: getCurrentDateTimeTool,
-            search_web: searchWebTool,
-          },
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
-
-        let fullResponse = '';
-        let usedTool = false;
-        let toolName: string | undefined;
-
-        try {
-          // Stream the response with error handling
-          for await (const chunk of result.textStream) {
-            fullResponse += chunk;
-            onToken(chunk);
-          }
-        } catch (streamError) {
-          console.error('Tool streaming error, falling back to full text:', streamError);
-          // If streaming fails, get the full text
-          fullResponse = await result.text;
-          if (fullResponse) {
-            onToken(fullResponse);
-          }
-        }
-
-        Logger.info(`Streaming complete: ${fullResponse.length} chars`);
-
-        // Check tool calls after streaming completes
-        const resolvedToolCalls = await result.toolCalls;
-        const resolvedToolResults = await result.toolResults;
-
-        if (resolvedToolCalls && resolvedToolCalls.length > 0) {
-          Logger.info(`Tools called: ${resolvedToolCalls.length}`);
-          usedTool = true;
-          toolName = resolvedToolCalls[0].toolName;
-          if (onToolUsage) {
-            onToolUsage('tool_call', toolName);
-          }
-        }
-
-        if (resolvedToolResults && resolvedToolResults.length > 0) {
-          Logger.info(`Tool results: ${JSON.stringify(resolvedToolResults)}`);
-          if (onToolUsage) {
-            onToolUsage('tool_result', toolName);
-          }
-        }
-
-        return {
-          response: fullResponse,
-          usedTool,
-          toolName,
-        };
-      } else {
-        // Non-streaming mode
-        console.log('Using generateText with tools...');
-
-        const result = await generateText({
-          model: apple(),
-          messages: aiMessages,
-          tools: {
-            get_current_datetime: getCurrentDateTimeTool,
-            search_web: searchWebTool,
-          },
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
-
-        Logger.info(`Generation complete: ${result.text.length} chars`);
-
-        // Check if tools were used
-        const usedTool = result.toolCalls && result.toolCalls.length > 0;
-        const toolName = usedTool ? result.toolCalls[0].toolName : undefined;
-
-        if (usedTool) {
-          Logger.info(`Tool used: ${toolName}`);
-          Logger.info(`Tool calls: ${JSON.stringify(result.toolCalls)}`);
-          Logger.info(`Tool results: ${JSON.stringify(result.toolResults)}`);
-        }
-
-        return {
-          response: result.text,
-          usedTool,
-          toolName,
-        };
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-
-      console.error('Apple Intelligence tool calling error:', error);
-      Logger.error('Apple Intelligence Tool Error:', errorMsg);
-      if (errorStack) {
-        Logger.error('Stack trace:', errorStack);
-      }
-
-      // Re-throw with more context
-      if (error instanceof Error) {
-        throw new Error(`Apple Intelligence (tools): ${error.message}`);
-      }
-      throw error;
-    }
+  /**
+   * Check if tools are supported (they are not for Apple Intelligence)
+   */
+  static areToolsSupported(): boolean {
+    return false;
   }
 
   /**

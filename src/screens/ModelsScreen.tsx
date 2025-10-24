@@ -370,7 +370,9 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   const renderModelCard = (model: ModelInfo) => {
     const downloadStatus = downloadingModels.get(model.id);
     const isLoading = loadingModel === model.id;
-    const isCurrent = currentModel?.id === model.id;
+    // Check both currentModel prop and that LlamaService has this model loaded
+    const isCurrent = currentModel?.id === model.id && LlamaService.isModelLoaded() &&
+                      LlamaService.getCurrentModel()?.name === model.name;
 
     return (
       <View key={model.id} style={styles.modelCard}>
