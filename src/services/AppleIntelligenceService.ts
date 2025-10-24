@@ -8,6 +8,7 @@ import {Platform} from 'react-native';
 import {Message} from '../types';
 import {apple} from '@react-native-ai/apple';
 import {generateText, streamText} from 'ai';
+import {Logger} from '../utils/Logger';
 
 // Type definitions for Apple Intelligence
 interface AppleLLMConfig {
@@ -120,6 +121,7 @@ export class AppleIntelligenceService {
       console.log(
         `Generating response with Apple Intelligence (${messages.length} messages)`,
       );
+      Logger.info(`Generating with Apple Intelligence (${messages.length} messages)`);
       console.log('AI Messages:', JSON.stringify(aiMessages, null, 2));
       console.log('Config:', {
         temperature: config.temperature ?? 0.7,
@@ -130,7 +132,7 @@ export class AppleIntelligenceService {
       if (onToken) {
         // Streaming response
         console.log('Using streamText...');
-        const result = await streamText({
+        const result = streamText({
           model: apple(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
@@ -140,10 +142,31 @@ export class AppleIntelligenceService {
 
         let fullResponse = '';
 
-        // Stream the text
-        for await (const textPart of result.textStream) {
-          fullResponse += textPart;
-          onToken(textPart);
+        // Stream the text - use the stream property directly
+        try {
+          const stream = await result;
+          for await (const textPart of stream.textStream) {
+            fullResponse += textPart;
+            onToken(textPart);
+          }
+        } catch (streamError) {
+          const streamErrMsg = streamError instanceof Error ? streamError.message : String(streamError);
+          console.error('Streaming error:', streamError);
+          Logger.error('Streaming failed:', streamErrMsg);
+          Logger.warn('Attempting fallback to full response...');
+
+          // Fallback: wait for full response
+          try {
+            const finalResult = await result;
+            fullResponse = finalResult.text || '';
+            if (fullResponse) {
+              onToken(fullResponse);
+              Logger.info('Fallback successful, got response');
+            }
+          } catch (fallbackError) {
+            Logger.error('Fallback also failed:', fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+            throw fallbackError;
+          }
         }
 
         console.log(
@@ -165,13 +188,22 @@ export class AppleIntelligenceService {
         return result.text;
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       console.error('Apple Intelligence generation error:', error);
       console.error('Error details:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        message: errorMsg,
+        stack: errorStack,
         name: error instanceof Error ? error.name : undefined,
         type: typeof error,
       });
+
+      // Log to Logger utility so it appears in logs screen
+      Logger.error('Apple Intelligence Error:', errorMsg);
+      if (errorStack) {
+        Logger.error('Stack trace:', errorStack);
+      }
 
       // Re-throw with more context
       if (error instanceof Error) {

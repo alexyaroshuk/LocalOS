@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Logger} from '../utils/Logger';
 import {AIService} from '../services/AIService';
 
@@ -24,6 +25,7 @@ interface LogViewerScreenProps {
 }
 
 export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
+  const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info'>(
     'all',
@@ -131,7 +133,7 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {paddingTop: Math.max(insets.top, 16)}]}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>📋 Logs ({filteredLogs.length})</Text>
           {onClose && (
