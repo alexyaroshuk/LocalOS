@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {Logger} from '../utils/Logger';
 import {
   View,
   Text,
@@ -10,9 +11,13 @@ import {
   Platform,
 } from 'react-native';
 import {ToolService} from '../services/ToolService';
+import {Logger} from '../utils/Logger';
 import {AIService} from '../services/AIService';
+import {Logger} from '../utils/Logger';
 import {Tool, ToolResult, Message} from '../types';
+import {Logger} from '../utils/Logger';
 import {generateId} from '../utils/helpers';
+import {Logger} from '../utils/Logger';
 
 export const ToolTestScreen: React.FC = () => {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -29,12 +34,12 @@ export const ToolTestScreen: React.FC = () => {
 
     // Enable tools for testing
     AIService.enableTools();
-    console.log('🔧 Tools enabled for testing');
+    Logger.info('🔧 Tools enabled for testing');
 
     // Get current backend info
     const info = AIService.getBackendInfo();
     setBackendInfo(`${info.backend} - ${info.modelName}`);
-    console.log('Tools supported?', AIService.areToolsSupported());
+    Logger.info('Tools supported?', AIService.areToolsSupported());
   }, []);
 
   const handleTestTool = async (tool: Tool) => {
@@ -68,8 +73,8 @@ export const ToolTestScreen: React.FC = () => {
           testPrompt = `Use the ${tool.name} tool to help me`;
       }
 
-      console.log(`Testing tool with AI backend: ${tool.name}`);
-      console.log(`Test prompt: "${testPrompt}"`);
+      Logger.info(`Testing tool with AI backend: ${tool.name}`);
+      Logger.info(`Test prompt: "${testPrompt}"`);
 
       // Create messages with very explicit system prompt for tool testing
       const messages: Message[] = [
@@ -88,7 +93,7 @@ export const ToolTestScreen: React.FC = () => {
         {},
         undefined,
         (stage, toolName) => {
-          console.log(`Tool stage: ${stage}, tool: ${toolName}`);
+          Logger.info(`Tool stage: ${stage}, tool: ${toolName}`);
         }
       );
 
@@ -111,7 +116,7 @@ export const ToolTestScreen: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error(`Test error for ${tool.name}:`, error);
+      Logger.error(`Test error for ${tool.name}:`, error);
       const errorMsg = error instanceof Error ? error.message : String(error);
       Alert.alert('Test Error', `Failed to test ${tool.name}: ${errorMsg}`);
 

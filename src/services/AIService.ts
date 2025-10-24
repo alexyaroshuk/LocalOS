@@ -6,10 +6,15 @@
  */
 
 import {Platform} from 'react-native';
+import {Logger} from '../utils/Logger';
 import {LlamaService} from './LlamaService';
+import {Logger} from '../utils/Logger';
 import {AppleIntelligenceService} from './AppleIntelligenceService';
+import {Logger} from '../utils/Logger';
 import {Message, LlamaConfig} from '../types';
+import {Logger} from '../utils/Logger';
 import {Logger, LogSection} from '../utils/Logger';
+import {Logger} from '../utils/Logger';
 
 type AIBackend = 'apple' | 'llama' | 'none';
 
@@ -241,7 +246,7 @@ export class AIService {
     }
     this.currentBackend = 'none';
     this.initializationAttempted = false;
-    console.log('✅ AI Service released');
+    Logger.info('✅ AI Service released');
   }
 
   /**
@@ -249,7 +254,7 @@ export class AIService {
    */
   static async switchBackend(backend: 'apple' | 'llama'): Promise<boolean> {
     Logger.info(`🔄 Switching to ${backend} backend...`);
-    console.log(`🔄 Attempting to switch to ${backend} backend...`);
+    Logger.info(`🔄 Attempting to switch to ${backend} backend...`);
 
     // Release current backend
     await this.release();
@@ -260,14 +265,14 @@ export class AIService {
     if (backend === 'apple') {
       if (Platform.OS !== 'ios') {
         Logger.error('Apple Intelligence only available on iOS');
-        console.error('Apple Intelligence only available on iOS');
+        Logger.error('Apple Intelligence only available on iOS');
         return false;
       }
 
       const available = await AppleIntelligenceService.isAvailable();
       if (!available) {
         Logger.error('Apple Intelligence not available on this device');
-        console.error('Apple Intelligence not available on this device');
+        Logger.error('Apple Intelligence not available on this device');
         // Fall back to llama
         this.currentBackend = 'llama';
         this.initializationAttempted = true;
@@ -278,13 +283,13 @@ export class AIService {
       this.currentBackend = 'apple';
       this.initializationAttempted = true;
       Logger.info('✅ Switched to Apple Intelligence');
-      console.log('✅ Switched to Apple Intelligence');
+      Logger.info('✅ Switched to Apple Intelligence');
       return true;
     } else {
       this.currentBackend = 'llama';
       this.initializationAttempted = true;
       Logger.info('✅ Switched to Llama.cpp');
-      console.log('✅ Switched to Llama.cpp');
+      Logger.info('✅ Switched to Llama.cpp');
       return true;
     }
   }
