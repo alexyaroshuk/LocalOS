@@ -357,6 +357,45 @@ IMPORTANT CONTEXT:
     Alert.alert('Tools ' + (newToolsState ? 'Enabled' : 'Disabled'), toolMessage);
   };
 
+  const switchBackend = async () => {
+    const targetBackend = aiBackend === 'apple' ? 'llama' : 'apple';
+
+    Alert.alert(
+      'Switch Backend',
+      `Switch to ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}?`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Switch',
+          onPress: async () => {
+            try {
+              const success = await AIService.switchBackend(targetBackend);
+              if (success) {
+                const info = AIService.getBackendInfo();
+                setAiBackend(targetBackend);
+                setBackendInfo(info.modelName);
+                Alert.alert(
+                  'Backend Switched',
+                  `Now using ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}`,
+                );
+              } else {
+                Alert.alert(
+                  'Switch Failed',
+                  targetBackend === 'apple'
+                    ? 'Apple Intelligence not available on this device'
+                    : 'Could not switch to Llama.cpp',
+                );
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to switch backend');
+              console.error('Backend switch error:', error);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderMessage = ({item}: {item: Message}) => (
     <ChatMessage message={item} />
   );
@@ -397,6 +436,11 @@ IMPORTANT CONTEXT:
           )}
         </View>
         <View style={styles.headerRight}>
+          <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
+            <Text style={styles.backendButtonText}>
+              {aiBackend === 'apple' ? '🔄 → Llama' : '🔄 → Apple'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
             <Text
               style={[
@@ -540,6 +584,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#007AFF',
     marginTop: 2,
+  },
+  backendButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+  },
+  backendButtonText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   toolsButton: {
     paddingHorizontal: 8,
