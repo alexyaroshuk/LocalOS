@@ -8,7 +8,7 @@ workflows:
         XCODE_WORKSPACE: "LocalOSApp.xcworkspace"
         XCODE_SCHEME: "LocalOSApp"
       node: 20.11.0
-      xcode: latest
+      xcode: 26
       cocoapods: default
     scripts:
       - name: Install npm dependencies

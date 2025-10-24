@@ -1,19 +1,131 @@
+wiftCompile normal arm64 Compiling\ AppleEmbeddingsImpl.swift,\ AppleLLMError.swift,\ AppleLLMImpl.swift,\ AppleSpeechImpl.swift,\ AppleTranscriptionImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/embeddings/AppleEmbeddingsImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/AppleLLMError.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/AppleLLMImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/speech/AppleSpeechImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift (in target 'AppleLLM' from project 'Pods')
+CompileSwift normal arm64 (in target 'AppleLLM' from project 'Pods')
+    cd /Users/builder/clone/ios/Pods
+    
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:89:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:89:
+#import "React/RCTRootViewDelegate.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTRootViewDelegate.h:28:41: warning: 'RCTRootView' is deprecated: This API will be removed along with the legacy architecture.
+- (void)rootViewDidChangeIntrinsicSize:(RCTRootView *)rootView;
+                                        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTRootView.h:50:1: note: 'RCTRootView' has been explicitly marked deprecated here
+__deprecated_msg("This API will be removed along with the legacy architecture.") @interface RCTRootView : UIView
+^
+/Applications/Xcode-16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk/usr/include/sys/cdefs.h:218:48: note: expanded from macro '__deprecated_msg'
+        #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+                                                      ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:100:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:100:
+#import "React/RCTSurfaceDelegate.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTSurfaceDelegate.h:24:18: warning: 'RCTSurface' is deprecated: This API will be removed along with the legacy architecture.
+- (void)surface:(RCTSurface *)surface didChangeStage:(RCTSurfaceStage)stage;
+                 ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTSurface.h:35:1: note: 'RCTSurface' has been explicitly marked deprecated here
+__deprecated_msg("This API will be removed along with the legacy architecture.") @interface RCTSurface
+^
+/Applications/Xcode-16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk/usr/include/sys/cdefs.h:218:48: note: expanded from macro '__deprecated_msg'
+        #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+                                                      ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:100:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:100:
+#import "React/RCTSurfaceDelegate.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTSurfaceDelegate.h:30:18: warning: 'RCTSurface' is deprecated: This API will be removed along with the legacy architecture.
+- (void)surface:(RCTSurface *)surface didChangeIntrinsicSize:(CGSize)intrinsicSize;
+                 ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTSurface.h:35:1: note: 'RCTSurface' has been explicitly marked deprecated here
+__deprecated_msg("This API will be removed along with the legacy architecture.") @interface RCTSurface
+^
+/Applications/Xcode-16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk/usr/include/sys/cdefs.h:218:48: note: expanded from macro '__deprecated_msg'
+        #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+                                                      ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:140:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:140:
+#import "React/RCTModalHostView.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTModalHostView.h:53:31: warning: 'RCTModalHostView' is deprecated: This API will be removed along with the legacy architecture.
+- (void)presentModalHostView:(RCTModalHostView *)modalHostView
+                              ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTModalHostView.h:21:16: note: 'RCTModalHostView' has been explicitly marked deprecated here
+__attribute__((deprecated("This API will be removed along with the legacy architecture.")))
+               ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:140:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:140:
+#import "React/RCTModalHostView.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTModalHostView.h:56:31: warning: 'RCTModalHostView' is deprecated: This API will be removed along with the legacy architecture.
+- (void)dismissModalHostView:(RCTModalHostView *)modalHostView
+                              ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTModalHostView.h:21:16: note: 'RCTModalHostView' has been explicitly marked deprecated here
+__attribute__((deprecated("This API will be removed along with the legacy architecture.")))
+               ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:146:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:146:
+#import "React/RCTShadowView+Internal.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTShadowView+Internal.h:16:40: warning: 'RCTRootShadowView' is deprecated: This API will be removed along with the legacy architecture.
+@property (nonatomic, weak, readwrite) RCTRootShadowView *rootView;
+                                       ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTRootShadowView.h:11:16: note: 'RCTRootShadowView' has been explicitly marked deprecated here
+__attribute__((deprecated("This API will be removed along with the legacy architecture.")))
+               ^
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+#import "React-Core-umbrella.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:168:9: note: in file included from /Users/builder/clone/ios/Pods/Headers/Public/React/React-Core-umbrella.h:168:
+#import "React/RCTScrollView.h"
+        ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTScrollView.h:73:50: warning: 'RCTScrollView' is deprecated: This API will be removed along with the legacy architecture.
+- (void)reactUpdateResponderOffsetForScrollView:(RCTScrollView *)scrollView;
+                                                 ^
+/Users/builder/clone/ios/Pods/Headers/Public/React-Core/React/RCTScrollView.h:20:16: note: 'RCTScrollView' has been explicitly marked deprecated here
+__attribute__((deprecated("This API will be removed along with the legacy architecture.")))
+               ^
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:17:57: error: cannot find type 'SpeechTranscriber' in scope
+  private func createTranscriber(for locale: Locale) -> SpeechTranscriber {
+                                                        ^~~~~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:18:18: error: cannot find 'SpeechTranscriber' in scope
+    let preset = SpeechTranscriber.Preset.timeIndexedTranscriptionWithAlternatives
+                 ^~~~~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:30:14: error: cannot find 'SpeechTranscriber' in scope
+      return SpeechTranscriber.isAvailable
+             ^~~~~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:43:45: error: cannot find 'SpeechTranscriber' in scope
+          guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
+                                            ^~~~~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:50:30: error: cannot find 'AssetInventory' in scope
+          let status = await AssetInventory.status(forModules: [transcriber])
+                             ^~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:56:41: error: cannot find 'AssetInventory' in scope
+            if let request = try? await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                                        ^~~~~~~~~~~~~~
+/Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift:95:28: error: cannot find 'SpeechAnalyzer' in scope
+            let analyzer = SpeechAnalyzer(modules: [transcriber])
+                           ^~~~~~~~~~~~~~
 
-> LocalOSApp@0.0.1 ios
-> react-native run-ios
 
-info A dev server is already running for this project on port 8081.
-error Command failed with exit code 1: xcodebuild -list -json
-'xcodebuild' is not recognized as an internal or external command,
-operable program or batch file.
-Error: Command failed with exit code 1: xcodebuild -list -json
-'xcodebuild' is not recognized as an internal or external command,
-operable program or batch file.
-    at makeError (D:\dev\projects\localOS\node_modules\execa\lib\error.js:60:11)
-    at module.exports.sync (D:\dev\projects\localOS\node_modules\execa\index.js:194:17)
-    at getInfo (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\tools\getInfo.js:62:41)
-    at getConfiguration (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\commands\buildCommand\getConfiguration.js:36:37)
-    at Object.func (D:\dev\projects\localOS\node_modules\@react-native-community\cli-platform-apple\build\commands\runCommand\createRun.js:126:52)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async Command.handleAction (D:\dev\projects\localOS\node_modules\@react-native-community\cli\build\index.js:139:9)
-PS D:\dev\projects\localOS> 
+
+
+                The following build commands failed:
+	CompileSwift normal arm64 (in target 'AppleLLM' from project 'Pods')
+	SwiftCompile normal arm64 Compiling\ AppleEmbeddingsImpl.swift,\ AppleLLMError.swift,\ AppleLLMImpl.swift,\ AppleSpeechImpl.swift,\ AppleTranscriptionImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/embeddings/AppleEmbeddingsImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/AppleLLMError.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/AppleLLMImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/speech/AppleSpeechImpl.swift /Users/builder/clone/node_modules/@react-native-ai/apple/ios/transcription/AppleTranscriptionImpl.swift (in target 'AppleLLM' from project 'Pods')
+	Building workspace LocalOSApp with scheme LocalOSApp and configuration Release
+(3 failures)
+
+
+Build failed :|
+Step 4 script `Build iOS Release for Device` exited with status code 65           
