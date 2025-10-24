@@ -231,17 +231,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
       // Add system prompt if not present
       if (contextMessages.length === 0 || contextMessages[0].role !== 'system') {
-        const currentDate = new Date();
         const systemPrompt: Message = {
           id: generateId(),
           role: 'system',
           content: `You are a helpful AI assistant running locally on this device. Be concise and accurate.
 
-IMPORTANT CONTEXT:
-- Current date and time: ${currentDate.toLocaleString()}
-- Day of week: ${currentDate.toLocaleDateString('en-US', {weekday: 'long'})}
-- You have access to tools for: current time, web search
-- When asked about current time/date, use the information above or call the getCurrentDateTime tool
+IMPORTANT:
+- You have access to tools for: current time/date, web search
+- You do NOT know the current date or time - use the get_current_datetime tool when asked
 - You run offline with knowledge cutoff in early 2025`,
           timestamp: Date.now(),
         };
