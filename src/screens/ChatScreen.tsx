@@ -12,7 +12,6 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
@@ -37,7 +36,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   currentModel,
   onModelSelect,
 }) => {
-  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -363,7 +361,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       {/* Header */}
-      <View style={[styles.header, {paddingTop: Math.max(insets.top, 16)}]}>
+      <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.modelInfoRow}>
             <Text style={styles.headerTitle}>{backendInfo}</Text>
