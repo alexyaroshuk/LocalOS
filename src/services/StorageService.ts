@@ -149,6 +149,52 @@ export class StorageService {
   }
 
   /**
+   * Save recently used models (max 5)
+   */
+  static async addRecentModel(model: ModelInfo): Promise<void> {
+    try {
+      const recentModels = await this.loadRecentModels();
+
+      // Remove if already exists (to move to front)
+      const filtered = recentModels.filter(m => m.id !== model.id);
+
+      // Add to front
+      const updated = [model, ...filtered].slice(0, 5); // Keep max 5
+
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.RECENT_MODELS,
+        JSON.stringify(updated),
+      );
+    } catch (error) {
+      console.error('Failed to save recent model:', error);
+    }
+  }
+
+  /**
+   * Load recently used models
+   */
+  static async loadRecentModels(): Promise<ModelInfo[]> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.RECENT_MODELS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Failed to load recent models:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clear recent models history
+   */
+  static async clearRecentModels(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.RECENT_MODELS);
+    } catch (error) {
+      console.error('Failed to clear recent models:', error);
+    }
+  }
+
+  /**
    * Clear all app data
    */
   static async clearAll(): Promise<void> {

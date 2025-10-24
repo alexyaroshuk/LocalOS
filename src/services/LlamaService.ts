@@ -362,7 +362,20 @@ Assistant: React is a JavaScript library for building user interfaces...
   private static filterToolJson(text: string): string {
     // Remove JSON tool call patterns from the response
     const toolJsonPattern = /\{[\s\S]*?"tool"[\s\S]*?\}/g;
-    return text.replace(toolJsonPattern, '').trim();
+    let cleaned = text.replace(toolJsonPattern, '').trim();
+
+    // Remove standalone closing braces that might be left over
+    cleaned = cleaned.replace(/^\s*\}\s*$/, '').trim();
+
+    // Remove any remaining JSON-like fragments at the start/end
+    cleaned = cleaned.replace(/^\s*[\{\}]\s*/g, '').replace(/\s*[\{\}]\s*$/g, '').trim();
+
+    // If the result is empty or just punctuation, return a friendly message
+    if (!cleaned || /^[\s\{\}\[\],.:;!?-]*$/.test(cleaned)) {
+      return '';
+    }
+
+    return cleaned;
   }
 
   /**
@@ -502,7 +515,7 @@ Assistant: React is a JavaScript library for building user interfaces...
         const toolResultMessage: Message = {
           id: 'tool-result',
           role: 'system',
-          content: `The tool returned this information:\n${JSON.stringify(toolResult.result, null, 2)}\n\nNow answer the user's question naturally using this information. Don't mention that you used a tool - just integrate the information seamlessly into your response. DO NOT output any JSON in your response.`,
+          content: `TOOL RESULTS:\n${JSON.stringify(toolResult.result, null, 2)}\n\n=== IMPORTANT INSTRUCTIONS ===\nNow answer the user's original question naturally using the information above. You MUST:\n1. Write a complete, helpful response in natural language\n2. DO NOT output any JSON, braces {}, or brackets []\n3. DO NOT just repeat the tool data - explain it naturally\n4. DO NOT output single characters like "}" or "{"\n5. Write at least 1-2 sentences explaining the answer\n\nRespond now in natural language:`,
           timestamp: Date.now(),
         };
 
@@ -519,6 +532,12 @@ Assistant: React is a JavaScript library for building user interfaces...
 
         // Filter out any JSON artifacts from final response
         const cleanResponse = this.filterToolJson(finalResponse);
+
+        // If the response is empty after filtering, the tool was likely used but no text was generated
+        // This can happen if the model only outputs the tool JSON
+        if (!cleanResponse) {
+          console.log('⚠️  Model generated empty response after using tool. Tool result was processed but no text was generated.');
+        }
 
         return {
           response: cleanResponse,

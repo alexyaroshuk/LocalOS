@@ -27,6 +27,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   onModelLoaded,
 }) => {
   const [models, setModels] = useState<ModelInfo[]>(RECOMMENDED_MODELS);
+  const [recentModels, setRecentModels] = useState<ModelInfo[]>([]);
   const [downloadingModels, setDownloadingModels] = useState<
     Map<string, DownloadStatus>
   >(new Map());
@@ -49,6 +50,18 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       // Load saved model info
       const savedModels = await StorageService.loadDownloadedModels();
+
+      // Load recent models
+      const recent = await StorageService.loadRecentModels();
+
+      // Verify recent models still exist
+      const validRecentModels = await Promise.all(
+        recent.map(async model => {
+          const exists = await ModelStorageService.modelExists(model.filename);
+          return exists ? {...model, downloaded: true} : null;
+        }),
+      );
+      setRecentModels(validRecentModels.filter(m => m !== null) as ModelInfo[]);
 
       // Check which models are actually downloaded
       const updatedModels = await Promise.all(
@@ -203,6 +216,12 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       await LlamaService.loadModel(model.localPath, model.name);
 
       await StorageService.saveCurrentModel(model);
+      await StorageService.addRecentModel(model);
+
+      // Update recent models list
+      const recent = await StorageService.loadRecentModels();
+      setRecentModels(recent);
+
       onModelLoaded(model);
 
       Alert.alert('Success', `${model.name} loaded successfully!`);
@@ -434,7 +453,18 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       </View>
 
       <ScrollView style={styles.content}>
-        <Text style={styles.sectionTitle}>Recommended Models</Text>
+        {recentModels.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Recent Models</Text>
+            <Text style={styles.sectionSubtitle}>
+              Quick access to recently used models
+            </Text>
+            {recentModels.map(renderModelCard)}
+            <View style={styles.sectionDivider} />
+          </>
+        )}
+
+        <Text style={styles.sectionTitle}>All Models</Text>
         {models.map(renderModelCard)}
 
         <View style={styles.infoSection}>
@@ -495,7 +525,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#666',
     marginBottom: 12,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 20,
   },
   modelCard: {
     backgroundColor: '#FFFFFF',
