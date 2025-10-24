@@ -54,6 +54,47 @@ export const ToolTestScreen: React.FC = () => {
     );
   };
 
+  const handleDirectToolTest = async (toolName: string) => {
+    try {
+      Logger.info(`Direct tool execution test: ${toolName}`);
+
+      if (toolName === 'search_web') {
+        const searchTool = ToolService.getTool('search_web');
+        if (!searchTool) {
+          Alert.alert('Error', 'search_web tool not found');
+          return;
+        }
+
+        const result = await searchTool.execute({query: 'React Native tutorials'});
+        Logger.info('Direct search result:', result);
+
+        Alert.alert(
+          'Direct Tool Execution Result',
+          JSON.stringify(result, null, 2),
+          [{text: 'OK'}]
+        );
+      } else if (toolName === 'get_current_datetime') {
+        const dateTool = ToolService.getTool('get_current_datetime');
+        if (!dateTool) {
+          Alert.alert('Error', 'get_current_datetime tool not found');
+          return;
+        }
+
+        const result = await dateTool.execute({});
+        Logger.info('Direct datetime result:', result);
+
+        Alert.alert(
+          'Direct Tool Execution Result',
+          JSON.stringify(result, null, 2),
+          [{text: 'OK'}]
+        );
+      }
+    } catch (error) {
+      Logger.error('Direct tool test error:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const handleTestTool = async (tool: Tool) => {
     try {
       setLoading(prev => new Set(prev).add(tool.name));
@@ -112,6 +153,7 @@ export const ToolTestScreen: React.FC = () => {
       const toolResult: ToolResult = {
         success: result.usedTool || false,
         data: result.response,
+        result: result, // Store full result for display
       };
 
       setTestResults(prev => new Map(prev).set(tool.name, toolResult));
@@ -119,12 +161,12 @@ export const ToolTestScreen: React.FC = () => {
       if (result.usedTool) {
         Alert.alert(
           'Tool Called! ✅',
-          `The AI successfully called ${result.toolName}.\n\nResponse: ${result.response.substring(0, 100)}...`
+          `The AI successfully called ${result.toolName}.\n\nFull response:\n${result.response}`
         );
       } else {
         Alert.alert(
           'Tool NOT Called ❌',
-          `The AI did not call the ${tool.name} tool. This indicates tool calling is not working with the current backend (${AIService.getCurrentBackend()}).`
+          `The AI did not call the ${tool.name} tool.\n\nResponse: ${result.response}`
         );
       }
     } catch (error) {
@@ -174,19 +216,27 @@ export const ToolTestScreen: React.FC = () => {
           </View>
         )}
 
-        <TouchableOpacity
-          style={[
-            styles.testButton,
-            isLoading && styles.testButtonDisabled,
-          ]}
-          onPress={() => handleTestTool(tool)}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={styles.testButtonText}>Test Tool</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[
+              styles.testButton,
+              isLoading && styles.testButtonDisabled,
+            ]}
+            onPress={() => handleTestTool(tool)}
+            disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.testButtonText}>Test with AI</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.directTestButton}
+            onPress={() => handleDirectToolTest(tool.name)}>
+            <Text style={styles.directTestButtonText}>Direct Call</Text>
+          </TouchableOpacity>
+        </View>
 
         {result && (
           <View style={styles.resultSection}>
@@ -411,18 +461,36 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 4,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
   testButton: {
+    flex: 1,
     backgroundColor: '#007AFF',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
   testButtonDisabled: {
     backgroundColor: '#CCCCCC',
   },
   testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  directTestButton: {
+    flex: 1,
+    backgroundColor: '#34C759',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  directTestButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
