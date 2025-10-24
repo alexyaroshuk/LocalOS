@@ -236,10 +236,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           role: 'system',
           content: `You are a helpful AI assistant running locally on this device. Be concise and accurate.
 
-IMPORTANT:
-- You have access to tools for: current time/date, web search
-- You do NOT know the current date or time - use the get_current_datetime tool when asked
-- You run offline with knowledge cutoff in early 2025`,
+CRITICAL RULES:
+- You have access to tools: get_current_datetime and search_web
+- When user asks about current time/date → USE get_current_datetime tool
+- When user asks about news/headlines/trending/search → USE search_web tool
+- DO NOT say "I don't have access" - YOU HAVE TOOLS
+- DO NOT refuse to answer about current events - USE THE SEARCH TOOL`,
           timestamp: Date.now(),
         };
         contextMessages = [systemPrompt, ...contextMessages];

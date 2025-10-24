@@ -4,7 +4,7 @@
 import {initLlama, LlamaContext, releaseContext} from 'llama.rn';
 import {LlamaConfig, Message, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
-import {getChatTemplate} from '../utils/helpers';
+import {getChatTemplate, generateId} from '../utils/helpers';
 import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
 
@@ -345,14 +345,29 @@ export class LlamaService {
 
 ${toolsJson}
 
-When you need to call a tool, use this EXACT format with the EXACT tool names above:
-[tool_name(param="value")]
+ABSOLUTE MANDATORY RULES:
+If user says ANY of these words, you MUST call search_web immediately:
+"search", "find", "news", "latest", "headlines", "trending", "about", "what's happening", "current events"
 
-Examples of when to call tools (use EXACT tool names):
+DO NOT say "I don't have access" - YOU HAVE THE SEARCH TOOL
+DO NOT answer from memory - USE THE TOOL
+DO NOT refuse - CALL THE TOOL NOW
+
+Format: [tool_name(param="value")]
+
+EXAMPLES - Learn these patterns:
 User: "What time is it?" → [get_current_datetime()]
-User: "What's in the headlines?" → [search_web(query="headlines today")]
+User: "Latest headlines" → [search_web(query="headlines today")]
+User: "News about Trump" → [search_web(query="Trump news")]
+User: "Latest news about canada" → [search_web(query="canada news")]
+User: "What's trending on Twitter" → [search_web(query="Twitter trending")]
+User: "Search for React Native" → [search_web(query="React Native")]
 User: "Find React tutorials" → [search_web(query="React tutorials")]
-User: "What's happening with AI?" → [search_web(query="AI news")]`;
+User: "What's on the news" → [search_web(query="latest news")]
+User: "Latest news about biden" → [search_web(query="biden news")]
+User: "What's happening with AI" → [search_web(query="AI news")]
+User: "Search for Trump Canada" → [search_web(query="Trump Canada")]
+User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
@@ -374,14 +389,29 @@ User: "What's happening with AI?" → [search_web(query="AI news")]`;
 
 ${toolList}
 
-When you need to call a function, respond with this EXACT pythonic format:
-[function_name(param="value")]
+ABSOLUTE MANDATORY RULES:
+If user says ANY of these words, you MUST call search_web immediately:
+"search", "find", "news", "latest", "headlines", "trending", "about", "what's happening", "current events"
 
-Examples of when to call tools:
+DO NOT say "I don't have access" - YOU HAVE THE SEARCH TOOL
+DO NOT answer from memory - USE THE TOOL
+DO NOT refuse - CALL THE TOOL NOW
+
+Format: [function_name(param="value")]
+
+EXAMPLES - Learn these patterns:
 User: "What time is it?" → [get_current_datetime()]
-User: "What's in the headlines?" → [search_web(query="headlines today")]
+User: "Latest headlines" → [search_web(query="headlines today")]
+User: "News about Trump" → [search_web(query="Trump news")]
+User: "Latest news about canada" → [search_web(query="canada news")]
+User: "What's trending on Twitter" → [search_web(query="Twitter trending")]
+User: "Search for React Native" → [search_web(query="React Native")]
 User: "Find React tutorials" → [search_web(query="React tutorials")]
-User: "What's happening with AI?" → [search_web(query="AI news")]`;
+User: "What's on the news" → [search_web(query="latest news")]
+User: "Latest news about biden" → [search_web(query="biden news")]
+User: "What's happening with AI" → [search_web(query="AI news")]
+User: "Search for Trump Canada" → [search_web(query="Trump Canada")]
+User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
@@ -475,6 +505,59 @@ User: "What's happening with AI?" → [search_web(query="AI news")]`;
       Logger.info('👤 User prompt:', userMessage.content);
     }
 
+    // LAYER 2: TRIGGER WORD DETECTION - Bypass model if trigger words detected
+    if (userMessage) {
+      const lowerContent = userMessage.content.toLowerCase();
+      const triggerWords = ['search', 'find', 'news', 'latest', 'headlines', 'trending', "what's happening", 'current events'];
+
+      const hasTrigger = triggerWords.some(word => lowerContent.includes(word));
+
+      if (hasTrigger && this.availableTools.some(t => t.name === 'search_web')) {
+        Logger.info('🔧 TRIGGER DETECTED - Forcing search_web call, bypassing model');
+
+        // Extract query from user message
+        let query = userMessage.content;
+        // Remove common prefixes
+        query = query.replace(/^(search|find|look up|get|show me|tell me about)\s+(for\s+)?(the\s+)?/i, '').trim();
+        // If query is too generic, use original
+        if (query.length < 3) {
+          query = userMessage.content;
+        }
+
+        Logger.info(`📝 Extracted query: "${query}"`);
+
+        // Call search_web directly
+        onToolUsage?.('tool_call', 'search_web');
+
+        const toolResult = await ToolService.executeTool({
+          id: generateId(),
+          name: 'search_web',
+          arguments: {query},
+        });
+
+        Logger.info('🔧 Tool execution result:', toolResult);
+
+        onToolUsage?.('tool_result', 'search_web');
+
+        // Format results for user
+        let responseText = '';
+        if (toolResult.result && toolResult.result.success) {
+          responseText = `Here's what I found searching for "${query}":\n\n`;
+          if (toolResult.result.results) {
+            responseText += toolResult.result.results.join('\n\n');
+          }
+        } else {
+          responseText = `I tried to search for "${query}" but got no results. ${toolResult.error || ''}`;
+        }
+
+        return {
+          response: responseText,
+          usedTool: true,
+          toolName: 'search_web',
+        };
+      }
+    }
+
     try {
       // Add system prompt with tool definitions
       const systemMessage: Message = {
@@ -512,6 +595,69 @@ User: "What's happening with AI?" → [search_web(query="AI news")]`;
 
       if (!toolCallMatch) {
         Logger.info('❌ NO TOOL CALL DETECTED');
+
+        // LAYER 3: REFUSAL OVERRIDE - Check if model refused and force tool call
+        const refusalPhrases = [
+          "i don't have access",
+          "i don't have real-time",
+          'knowledge cutoff',
+          'check reputable sources',
+          'i cannot provide',
+          "i don't have information about current",
+          'my training data',
+        ];
+
+        const lowerResponse = firstResponse.toLowerCase();
+        const isRefusal = refusalPhrases.some(phrase => lowerResponse.includes(phrase));
+
+        if (isRefusal && userMessage) {
+          const lowerContent = userMessage.content.toLowerCase();
+          const searchKeywords = ['news', 'latest', 'headlines', 'trending', 'search', 'find'];
+          const shouldSearch = searchKeywords.some(word => lowerContent.includes(word));
+
+          if (shouldSearch && this.availableTools.some(t => t.name === 'search_web')) {
+            Logger.warn('⚠️ Model refused - Overriding with forced search_web call');
+
+            // Extract query from user message
+            let query = userMessage.content;
+            query = query.replace(/^(search|find|look up|get|show me|tell me about)\s+(for\s+)?(the\s+)?/i, '').trim();
+            if (query.length < 3) {
+              query = userMessage.content;
+            }
+
+            Logger.info(`📝 Override query: "${query}"`);
+
+            // Force call search_web
+            onToolUsage?.('tool_call', 'search_web');
+
+            const toolResult = await ToolService.executeTool({
+              id: generateId(),
+              name: 'search_web',
+              arguments: {query},
+            });
+
+            Logger.info('🔧 Override tool result:', toolResult);
+            onToolUsage?.('tool_result', 'search_web');
+
+            // Format results
+            let responseText = '';
+            if (toolResult.result && toolResult.result.success) {
+              responseText = `Here's what I found searching for "${query}":\n\n`;
+              if (toolResult.result.results) {
+                responseText += toolResult.result.results.join('\n\n');
+              }
+            } else {
+              responseText = `I tried to search for "${query}" but got no results. ${toolResult.error || ''}`;
+            }
+
+            return {
+              response: responseText,
+              usedTool: true,
+              toolName: 'search_web',
+            };
+          }
+        }
+
         // No tool call, filter any accidental JSON and return response
         const cleanResponse = this.filterToolJson(firstResponse);
         return {response: cleanResponse, usedTool: false};
