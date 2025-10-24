@@ -21,15 +21,18 @@ import {ModelsScreen} from './src/screens/ModelsScreen';
 import {ToolTestScreen} from './src/screens/ToolTestScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
+import {ErrorBoundary} from './src/components/ErrorBoundary';
 
 type Screen = 'chat' | 'models' | 'tools';
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
-      <AppContent />
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+        <AppContent />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -32,6 +32,8 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
+            DWARF_DSYM_FOLDER_PATH=build/dSYMs \
             clean build
       - name: Create IPA
         script: |
@@ -44,6 +46,7 @@ workflows:
     artifacts:
       - artifacts/*.ipa
       - ios/build/Build/Products/Release-iphoneos/*.app
+      - ios/build/dSYMs/*.dSYM
     publishing:
       email:
         recipients:
