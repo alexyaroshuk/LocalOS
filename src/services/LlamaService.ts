@@ -345,32 +345,13 @@ export class LlamaService {
 
 ${toolsJson}
 
-Use a tool by responding with JSON in this exact format:
+CRITICAL RULES:
+1. You do NOT know the current date or time - you MUST use get_current_datetime
+2. You do NOT have real-time web access - you MUST use search_web for any search queries
+3. When you need to use a tool, output:
 <function_call>
 {"name": "tool_name", "arguments": {"param": "value"}}
-</function_call>
-
-CRITICAL RULES:
-1. You do NOT know the current date/time/day - you MUST call get_current_datetime
-2. When user asks "what time", "what day", "current date" → call get_current_datetime
-3. When user says "search", "find", "look up" → call search_web
-4. Do NOT make up or guess current information
-5. Only use tools when user needs real-time data
-
-Examples:
-
-User: "what time is it now"
-Assistant: <function_call>
-{"name": "get_current_datetime", "arguments": {}}
-</function_call>
-
-User: "search for react native tutorials"
-Assistant: <function_call>
-{"name": "search_web", "arguments": {"query": "react native tutorials"}}
-</function_call>
-
-User: "hello"
-Assistant: Hello! How can I help you today?`;
+</function_call>`;
   }
 
   /**
@@ -392,26 +373,11 @@ Assistant: Hello! How can I help you today?`;
 
 ${toolList}
 
-CRITICAL INSTRUCTIONS:
-- When user asks about current time/date/day → MUST use get_current_datetime tool
-- When user says "search" or "find" → MUST use search_web tool
-- You do NOT know what the current time is - you MUST call the tool
-
-OUTPUT FORMAT when calling a tool - output ONLY this, nothing else:
-<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>
-
-EXAMPLES:
-
-Input: "what time is it now"
-Output: <function_call>{"name": "get_current_datetime", "arguments": {}}</function_call>
-
-Input: "search for python tutorials"
-Output: <function_call>{"name": "search_web", "arguments": {"query": "python tutorials"}}</function_call>
-
-Input: "hello how are you"
-Output: Hello! I'm doing well, thank you for asking. How can I help you today?
-
-Remember: Use the tool when the user needs REAL-TIME data. Don't guess or make up current time/date.`;
+CRITICAL RULES:
+1. You do NOT know the current date or time - MUST use get_current_datetime
+2. You do NOT have real-time web access - MUST use search_web for search queries
+3. When using a tool, output:
+<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>`;
   }
 
   /**
