@@ -1,83 +1,104 @@
-[2025-10-24T10:54:07.768Z] LOG   | ==================================================
-[2025-10-24T10:54:07.768Z] LOG   | 🔍 AI BACKEND DETECTION
-[2025-10-24T10:54:07.768Z] LOG   | ==================================================
-[2025-10-24T10:54:07.768Z] INFO  | Platform: | "ios"
-[2025-10-24T10:54:07.768Z] INFO  | Platform Version: | "26.0"
-[2025-10-24T10:54:07.768Z] LOG   | --------------------------------------------------
-[2025-10-24T10:54:07.768Z] LOG   | Detection Process
-[2025-10-24T10:54:07.768Z] LOG   | --------------------------------------------------
-[2025-10-24T10:54:07.768Z] INFO  | ✓ Running on iOS - checking Apple Intelligence...
-[2025-10-24T10:54:07.769Z] INFO  | Apple Intelligence available? | true
-[2025-10-24T10:54:07.769Z] INFO  | ✓ Initializing Apple Intelligence...
-[2025-10-24T10:54:07.769Z] LOG   | ==================================================
-[2025-10-24T10:54:07.769Z] LOG   | ✅ SUCCESS: Using Apple Intelligence (Neural Engine)
-[2025-10-24T10:54:07.769Z] LOG   | ==================================================
-[2025-10-24T10:54:17.519Z] LOG   | ==================================================
-[2025-10-24T10:54:17.519Z] LOG   | 🔍 AI BACKEND DETECTION
-[2025-10-24T10:54:17.519Z] LOG   | ==================================================
-[2025-10-24T10:54:17.519Z] INFO  | Platform: | "ios"
-[2025-10-24T10:54:17.519Z] INFO  | Platform Version: | "26.0"
-[2025-10-24T10:54:17.519Z] LOG   | --------------------------------------------------
-[2025-10-24T10:54:17.519Z] LOG   | Detection Process
-[2025-10-24T10:54:17.519Z] LOG   | --------------------------------------------------
-[2025-10-24T10:54:17.519Z] INFO  | ✓ Running on iOS - checking Apple Intelligence...
-[2025-10-24T10:54:17.557Z] INFO  | Apple Intelligence available? | true
-[2025-10-24T10:54:17.557Z] INFO  | ✓ Initializing Apple Intelligence...
-[2025-10-24T10:54:17.558Z] LOG   | ==================================================
-[2025-10-24T10:54:17.558Z] LOG   | ✅ SUCCESS: Using Apple Intelligence (Neural Engine)
-[2025-10-24T10:54:17.558Z] LOG   | ==================================================
-[2025-10-24T10:54:17.559Z] INFO  | Generating with Apple Intelligence (8 messages)
-[2025-10-24T10:54:17.559Z] INFO  | Calling Apple Intelligence streamText...
-[2025-10-24T10:54:17.560Z] ERROR | Apple Intelligence Error: | "Object is not async iterable"
-[2025-10-24T10:54:17.560Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56519:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56782:52)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
-[2025-10-24T10:55:40.700Z] INFO  | Already initialized with backend: apple
-[2025-10-24T10:55:42.580Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T10:55:42.619Z] ERROR | Apple Intelligence Tool Error: | "Object is not async iterable"
-[2025-10-24T10:55:42.619Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56519:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56900:53)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
-[2025-10-24T10:56:02.768Z] INFO  | Generating with Apple Intelligence (12 messages)
-[2025-10-24T10:56:02.768Z] INFO  | Calling Apple Intelligence streamText...
-[2025-10-24T10:56:02.806Z] ERROR | Apple Intelligence Error: | "Object is not async iterable"
-[2025-10-24T10:56:02.806Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56519:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56782:52)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
-[2025-10-24T10:56:43.812Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T10:56:43.821Z] ERROR | Apple Intelligence Tool Error: | "Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T10:56:43.821Z] ERROR | Stack trace: | "Error: Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T10:56:47.242Z] INFO  | Already initialized with backend: apple
-[2025-10-24T10:56:51.765Z] LOG   | ==================================================
-[2025-10-24T10:56:51.765Z] LOG   | 🔍 AI BACKEND DETECTION
-[2025-10-24T10:56:51.765Z] LOG   | ==================================================
-[2025-10-24T10:56:51.765Z] INFO  | Platform: | "ios"
-[2025-10-24T10:56:51.765Z] INFO  | Platform Version: | "26.0"
-[2025-10-24T10:56:51.765Z] LOG   | --------------------------------------------------
-[2025-10-24T10:56:51.765Z] LOG   | Detection Process
-[2025-10-24T10:56:51.765Z] LOG   | --------------------------------------------------
-[2025-10-24T10:56:51.765Z] INFO  | ✓ Running on iOS - checking Apple Intelligence...
-[2025-10-24T10:56:51.766Z] INFO  | Apple Intelligence available? | true
-[2025-10-24T10:56:51.766Z] INFO  | ✓ Initializing Apple Intelligence...
-[2025-10-24T10:56:51.766Z] LOG   | ==================================================
-[2025-10-24T10:56:51.766Z] LOG   | ✅ SUCCESS: Using Apple Intelligence (Neural Engine)
-[2025-10-24T10:56:51.766Z] LOG   | ==================================================
-[2025-10-24T10:57:00.710Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T10:57:00.719Z] ERROR | Apple Intelligence Tool Error: | "Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T10:57:00.719Z] ERROR | Stack trace: | "Error: Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T11:10:17.939Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T11:10:17.974Z] ERROR | Apple Intelligence Tool Error: | "Object is not async iterable"
-[2025-10-24T11:10:17.974Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56532:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56924:53)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
-[2025-10-24T11:10:22.114Z] INFO  | 🔄 Switching to llama backend...
-[2025-10-24T11:10:22.114Z] INFO  | ✅ Switched to Llama.cpp
-[2025-10-24T11:10:52.000Z] INFO  | Already initialized with backend: llama
-[2025-10-24T11:11:08.961Z] INFO  | Already initialized with backend: llama
-[2025-10-24T11:11:21.613Z] INFO  | 🔄 Switching to apple backend...
-[2025-10-24T11:11:21.616Z] INFO  | ✅ Switched to Apple Intelligence
-[2025-10-24T11:11:25.117Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T11:11:25.131Z] ERROR | Apple Intelligence Tool Error: | "Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T11:11:25.131Z] ERROR | Stack trace: | "Error: Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T11:11:35.431Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T11:11:35.441Z] ERROR | Apple Intelligence Tool Error: | "Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T11:11:35.441Z] ERROR | Stack trace: | "Error: Invalid schema: Unsupported schema type: unknown. Supported types: object, array, string, number, integer, boolean"
-[2025-10-24T11:11:40.412Z] INFO  | Already initialized with backend: apple
-[2025-10-24T11:13:30.927Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T11:13:30.968Z] ERROR | Apple Intelligence Tool Error: | "Object is not async iterable"
-[2025-10-24T11:13:30.968Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56532:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56924:53)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
-[2025-10-24T11:13:33.590Z] INFO  | Generating with tools enabled (get_current_datetime, search_web)
-[2025-10-24T11:13:33.627Z] ERROR | Apple Intelligence Tool Error: | "Object is not async iterable"
-[2025-10-24T11:13:33.627Z] ERROR | Stack trace: | "TypeError: Object is not async iterable\n    at _asyncIterator (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56532:329)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:56924:53)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45010:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45024:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
+ [[ -n '' ]]
++ EXTRA_ARGS+=("--config-cmd" "'$NODE_BINARY' $NODE_ARGS '$REACT_NATIVE_DIR/cli.js' config")
++ /usr/local/bin/node /Users/builder/clone/node_modules/react-native/scripts/bundle.js bundle --entry-file index.js --platform ios --dev false --reset-cache --bundle-output /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle --assets-dest /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app --minify false --config-cmd ''\''/usr/local/bin/node'\''  '\''/Users/builder/clone/node_modules/react-native/cli.js'\'' config'
+
+                        ▒▒▓▓▓▓▒▒
+                     ▒▓▓▓▒▒░░▒▒▓▓▓▒
+                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒
+                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓
+                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓
+                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓
+                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓
+                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒
+                     ▒▓▓▓▒░░░░▒▓▓▓▒
+                        ▒▒▓▓▓▓▒▒
+
+
+ WARN  the transform cache was reset.
+                Welcome to Metro v0.83.3
+              Fast - Scalable - Integrated
+
+
+node:internal/process/promises:289
+            triggerUncaughtException(err, true /* fromPromise */);
+            ^
+
+TransformError [SyntaxError]: /Users/builder/clone/src/screens/ToolTestScreen.tsx: Identifier 'Logger' has already been declared. (14:8)
+
+  12 | } from 'react-native';
+  13 | import {ToolService} from '../services/ToolService';
+> 14 | import {Logger} from '../utils/Logger';
+     |         ^
+  15 | import {AIService} from '../services/AIService';
+  16 | import {Logger} from '../utils/Logger';
+  17 | import {Tool, ToolResult, Message} from '../types';
+    at constructor (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:367:19)
+    at TypeScriptParserMixin.raise (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:6630:19)
+    at TypeScriptScopeHandler.declareName (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:4899:21)
+    at TypeScriptParserMixin.declareNameFromIdentifier (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:7594:16)
+    at TypeScriptParserMixin.checkIdentifier (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:7590:12)
+    at TypeScriptParserMixin.checkLVal (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:7529:12)
+    at TypeScriptParserMixin.finishImportSpecifier (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14275:10)
+    at TypeScriptParserMixin.parseImportSpecifier (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14432:17)
+    at TypeScriptParserMixin.parseImportSpecifier (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:10171:18)
+    at TypeScriptParserMixin.parseNamedImportSpecifiers (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14411:36)
+    at TypeScriptParserMixin.parseImportSpecifiersAndAfter (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14251:37)
+    at TypeScriptParserMixin.parseImport (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14244:17)
+    at TypeScriptParserMixin.parseImport (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:9441:26)
+    at TypeScriptParserMixin.parseStatementContent (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:12885:27)
+    at TypeScriptParserMixin.parseStatementContent (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:9532:18)
+    at TypeScriptParserMixin.parseStatementLike (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:12776:17)
+    at TypeScriptParserMixin.parseModuleItem (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:12753:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:13325:36)
+    at TypeScriptParserMixin.parseBlockBody (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:13318:10)
+    at TypeScriptParserMixin.parseProgram (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:12634:10)
+    at TypeScriptParserMixin.parseTopLevel (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:12624:25)
+    at TypeScriptParserMixin.parse (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14501:10)
+    at TypeScriptParserMixin.parse (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:10149:18)
+    at parse (/Users/builder/clone/node_modules/@babel/parser/lib/index.js:14514:26)
+    at parser (/Users/builder/clone/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at parse (/Users/builder/clone/node_modules/@babel/core/lib/parse.js:25:37)
+    at parse.next (<anonymous>)
+    at evaluateSync (/Users/builder/clone/node_modules/gensync/index.js:251:28)
+    at sync (/Users/builder/clone/node_modules/gensync/index.js:89:14)
+    at stopHiding - secret - don't use this - v1 (/Users/builder/clone/node_modules/@babel/core/lib/errors/rewrite-stack-trace.js:47:12)
+    at parseSync (/Users/builder/clone/node_modules/@babel/core/lib/parse.js:40:72)
+    at Object.transform (/Users/builder/clone/node_modules/@react-native/metro-babel-transformer/src/index.js:208:11)
+    at transformJSWithBabel (/Users/builder/clone/node_modules/metro-transform-worker/src/index.js:350:45)
+    at Object.transform (/Users/builder/clone/node_modules/metro-transform-worker/src/index.js:495:16)
+    at transformFile (/Users/builder/clone/node_modules/metro/src/DeltaBundler/Worker.flow.js:67:36)
+    at Object.transform (/Users/builder/clone/node_modules/metro/src/DeltaBundler/Worker.flow.js:42:10)
+    at execFunction (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:149:17)
+    at execHelper (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:137:5)
+    at execMethod (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:140:5)
+    at process.messageListener (/Users/builder/clone/node_modules/jest-worker/build/workers/processChild.js:44:7)
+    at process.emit (node:events:518:28)
+    at emit (node:internal/child_process:951:14)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+  type: 'TransformError',
+  snippet: undefined,
+  lineNumber: 14,
+  column: 8,
+  filename: 'src/screens/ToolTestScreen.tsx'
+}
+
+Node.js v20.11.0
+Command PhaseScriptExecution failed with a nonzero exit code
+
+warning: Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
+note: Run script build phase '[CP-User] [RN]Check FBReactNativeSpec' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
+warning: Run script build phase 'Bundle React Native code and images' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'LocalOSApp' from project 'LocalOSApp')
+** BUILD FAILED **
+
+
+The following build commands failed:
+	PhaseScriptExecution Bundle\ React\ Native\ code\ and\ images /Users/builder/clone/ios/build/Build/Intermediates.noindex/LocalOSApp.build/Release-iphoneos/LocalOSApp.build/Script-00DD1BFF1BD5951E006B06BC.sh (in target 'LocalOSApp' from project 'LocalOSApp')
+	Building workspace LocalOSApp with scheme LocalOSApp and configuration Release
+(2 failures)
+
+
+Build failed :|
+Step 4 script `Build iOS Release for Device` exited with status code 65

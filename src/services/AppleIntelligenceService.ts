@@ -5,7 +5,6 @@
  */
 
 import {Platform} from 'react-native';
-import {Logger} from '../utils/Logger';
 import {Message} from '../types';
 import {createAppleProvider, apple as appleBase} from '@react-native-ai/apple';
 import {generateText, streamText, tool} from 'ai';

@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import {Logger} from '../utils/Logger';
 import {
   View,
   Text,
@@ -11,11 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import {ToolService} from '../services/ToolService';
-import {Logger} from '../utils/Logger';
 import {AIService} from '../services/AIService';
-import {Logger} from '../utils/Logger';
 import {Tool, ToolResult, Message} from '../types';
-import {Logger} from '../utils/Logger';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
 
