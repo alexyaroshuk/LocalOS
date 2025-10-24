@@ -6,15 +6,10 @@
  */
 
 import {Platform} from 'react-native';
-import {Logger} from '../utils/Logger';
 import {LlamaService} from './LlamaService';
-import {Logger} from '../utils/Logger';
 import {AppleIntelligenceService} from './AppleIntelligenceService';
-import {Logger} from '../utils/Logger';
 import {Message, LlamaConfig} from '../types';
-import {Logger} from '../utils/Logger';
 import {Logger, LogSection} from '../utils/Logger';
-import {Logger} from '../utils/Logger';
 
 type AIBackend = 'apple' | 'llama' | 'none';
 
