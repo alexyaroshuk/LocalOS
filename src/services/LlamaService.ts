@@ -345,12 +345,14 @@ export class LlamaService {
 
 ${toolsJson}
 
-When you need to call a function, respond with this EXACT pythonic format:
-[function_name(param="value")]
+When you need to call a tool, use this EXACT format with the EXACT tool names above:
+[tool_name(param="value")]
 
-Examples:
-- Get current time: [get_current_datetime()]
-- Search web: [search_web(query="React Native")]`;
+Examples of when to call tools (use EXACT tool names):
+User: "What time is it?" → [get_current_datetime()]
+User: "What's in the headlines?" → [search_web(query="headlines today")]
+User: "Find React tutorials" → [search_web(query="React tutorials")]
+User: "What's happening with AI?" → [search_web(query="AI news")]`;
   }
 
   /**
@@ -375,9 +377,11 @@ ${toolList}
 When you need to call a function, respond with this EXACT pythonic format:
 [function_name(param="value")]
 
-Examples:
-- Get current time: [get_current_datetime()]
-- Search web: [search_web(query="tutorials")]`;
+Examples of when to call tools:
+User: "What time is it?" → [get_current_datetime()]
+User: "What's in the headlines?" → [search_web(query="headlines today")]
+User: "Find React tutorials" → [search_web(query="React tutorials")]
+User: "What's happening with AI?" → [search_web(query="AI news")]`;
   }
 
   /**
@@ -508,10 +512,6 @@ Examples:
 
       if (!toolCallMatch) {
         Logger.info('❌ NO TOOL CALL DETECTED');
-        Logger.debug('Possible reasons:');
-        Logger.debug('1. Model responded normally (expected for non-tool questions)');
-        Logger.debug('2. Model said "I would call" instead of outputting JSON');
-        Logger.debug('3. Model is not trained for tool calling');
         // No tool call, filter any accidental JSON and return response
         const cleanResponse = this.filterToolJson(firstResponse);
         return {response: cleanResponse, usedTool: false};

@@ -171,12 +171,12 @@ export class ToolService {
     return {
       name: 'search_web',
       description:
-        'Search the web for information including current events, facts, trending topics, news, or any information that requires up-to-date knowledge. Can be used to find trending topics on social media, news sites, etc.',
+        'Call this to search for: current events, news, headlines, tutorials, documentation, "what\'s happening", "find X", "search X", or any topic the user asks about.',
       parameters: [
         {
           name: 'query',
           type: 'string',
-          description: 'The search query to look up. Examples: "React Native", "trending topics today", "what\'s trending on Twitter"',
+          description: 'The search query',
           required: true,
         },
       ],
