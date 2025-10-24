@@ -7,7 +7,7 @@
 import {Platform} from 'react-native';
 import {Message} from '../types';
 import {apple} from '@react-native-ai/apple';
-import {generateText, streamText} from 'ai';
+import {generateText} from 'ai';
 import {Logger} from '../utils/Logger';
 
 // Type definitions for Apple Intelligence
@@ -19,7 +19,7 @@ interface AppleLLMConfig {
 }
 
 // Check if packages are available (functions are always defined if import succeeds)
-const isPackageAvailable = true;
+const isPackageAvailable = !!(apple && generateText);
 
 if (Platform.OS === 'ios') {
   console.log('✅ Loaded @react-native-ai/apple with AI SDK');
@@ -107,8 +107,10 @@ export class AppleIntelligenceService {
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
   ): Promise<string> {
-    if (!isPackageAvailable || !apple || !generateText || !streamText) {
-      throw new Error('Apple Intelligence not available');
+    if (!isPackageAvailable || !apple || !generateText) {
+      const err = 'Apple Intelligence packages not available';
+      Logger.error(err);
+      throw new Error(err);
     }
 
     try {
@@ -129,64 +131,29 @@ export class AppleIntelligenceService {
         hasOnToken: !!onToken,
       });
 
-      if (onToken) {
-        // Streaming response
-        console.log('Using streamText...');
-        const result = streamText({
-          model: apple(),
-          messages: aiMessages,
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
-        console.log('streamText result created');
+      // DISABLE STREAMING - it doesn't work in React Native with AI SDK
+      // Always use generateText and return full response
+      console.log('Using generateText (streaming not supported in RN)...');
+      Logger.info('Calling Apple Intelligence generateText...');
 
-        let fullResponse = '';
+      const result = await generateText({
+        model: apple(),
+        messages: aiMessages,
+        temperature: config.temperature ?? 0.7,
+        topP: config.topP ?? 0.9,
+      });
 
-        // Stream the text - use the stream property directly
-        try {
-          const stream = await result;
-          for await (const textPart of stream.textStream) {
-            fullResponse += textPart;
-            onToken(textPart);
-          }
-        } catch (streamError) {
-          const streamErrMsg = streamError instanceof Error ? streamError.message : String(streamError);
-          console.error('Streaming error:', streamError);
-          Logger.error('Streaming failed:', streamErrMsg);
-          Logger.warn('Attempting fallback to full response...');
+      Logger.info(`Got response: ${result.text.length} chars`);
+      console.log(
+        `✅ Apple Intelligence response complete (${result.text.length} chars)`,
+      );
 
-          // Fallback: wait for full response
-          try {
-            const finalResult = await result;
-            fullResponse = finalResult.text || '';
-            if (fullResponse) {
-              onToken(fullResponse);
-              Logger.info('Fallback successful, got response');
-            }
-          } catch (fallbackError) {
-            Logger.error('Fallback also failed:', fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
-            throw fallbackError;
-          }
-        }
-
-        console.log(
-          `✅ Apple Intelligence response complete (${fullResponse.length} chars)`,
-        );
-        return fullResponse;
-      } else {
-        // Non-streaming response
-        const result = await generateText({
-          model: apple(),
-          messages: aiMessages,
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
-
-        console.log(
-          `✅ Apple Intelligence response complete (${result.text.length} chars)`,
-        );
-        return result.text;
+      // If onToken callback is provided, call it with full response
+      if (onToken && result.text) {
+        onToken(result.text);
       }
+
+      return result.text;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
@@ -226,8 +193,10 @@ export class AppleIntelligenceService {
       toolName?: string,
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
-    if (!isPackageAvailable || !apple || !generateText || !streamText) {
-      throw new Error('Apple Intelligence not available');
+    if (!isPackageAvailable || !apple || !generateText) {
+      const err = 'Apple Intelligence packages not available';
+      Logger.error(err);
+      throw new Error(err);
     }
 
     try {
@@ -249,60 +218,49 @@ export class AppleIntelligenceService {
       console.log(
         `Generating with tools (${tools.length} tools available)...`,
       );
+      Logger.info(`Generating with tools: ${tools.length} available`);
 
-      if (onToken) {
-        // Streaming with tools
-        const result = await streamText({
-          model: apple(),
-          messages: aiMessages,
-          tools: aiTools,
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
+      // DISABLE STREAMING - use generateText for tools too
+      const result = await generateText({
+        model: apple(),
+        messages: aiMessages,
+        tools: aiTools,
+        temperature: config.temperature ?? 0.7,
+        topP: config.topP ?? 0.9,
+      });
 
-        let fullResponse = '';
-        let usedTool = false;
-        let toolName: string | undefined;
+      let usedTool = false;
+      let toolName: string | undefined;
 
-        // Stream the text
-        for await (const textPart of result.textStream) {
-          fullResponse += textPart;
-          onToken(textPart);
-        }
+      // Tool calls would be in the response metadata
+      // TODO: Implement proper tool call handling with AI SDK v5
 
-        // Tool calls would be in the response metadata
-        // For now, we'll just return the text response
-        // TODO: Implement proper tool call handling with AI SDK v5
-
-        return {
-          response: fullResponse,
-          usedTool,
-          toolName,
-        };
-      } else {
-        // Non-streaming with tools
-        const result = await generateText({
-          model: apple(),
-          messages: aiMessages,
-          tools: aiTools,
-          temperature: config.temperature ?? 0.7,
-          topP: config.topP ?? 0.9,
-        });
-
-        let usedTool = false;
-        let toolName: string | undefined;
-
-        // Tool calls would be in the response metadata
-        // TODO: Implement proper tool call handling with AI SDK v5
-
-        return {
-          response: result.text,
-          usedTool,
-          toolName,
-        };
+      // If onToken callback is provided, call it with full response
+      if (onToken && result.text) {
+        onToken(result.text);
       }
+
+      Logger.info(`Tool generation complete: ${result.text.length} chars`);
+
+      return {
+        response: result.text,
+        usedTool,
+        toolName,
+      };
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       console.error('Apple Intelligence tool calling error:', error);
+      Logger.error('Apple Intelligence Tool Error:', errorMsg);
+      if (errorStack) {
+        Logger.error('Stack trace:', errorStack);
+      }
+
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw new Error(`Apple Intelligence (tools): ${error.message}`);
+      }
       throw error;
     }
   }
