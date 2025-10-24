@@ -1,16 +1,13 @@
 /**
  * Apple Intelligence Service
  * Wrapper for Apple's on-device Foundation Models (iOS 18+)
+ * Uses Vercel AI SDK with @react-native-ai/apple provider
  */
 
 import {Platform} from 'react-native';
 import {Message} from '../types';
 
 // Type definitions for Apple Intelligence
-interface AppleLLMSession {
-  id: string;
-}
-
 interface AppleLLMConfig {
   systemPrompt?: string;
   temperature?: number;
@@ -18,49 +15,49 @@ interface AppleLLMConfig {
   topP?: number;
 }
 
-interface AppleLLMResult {
-  text: string;
-  toolCalls?: Array<{
-    id: string;
-    name: string;
-    arguments: any;
-  }>;
-}
-
 // Dynamic import of Apple Intelligence module (iOS only)
-// Using a function to avoid Metro bundler trying to resolve at build time
-let AppleLLM: any = null;
+let apple: any = null;
+let generateText: any = null;
+let streamText: any = null;
+let isPackageAvailable = false;
 
-function loadAppleLLM() {
+function loadAppleAI() {
   if (Platform.OS !== 'ios') {
-    return null;
+    return false;
   }
 
   try {
-    // Try to load the package using dynamic require
-    // Metro won't resolve this at build time because it's in a function
-    const pkg = '@react-native-ai/apple';
-    AppleLLM = require(pkg).default || require(pkg);
-    console.log('✅ Loaded @react-native-ai/apple');
-    return AppleLLM;
-  } catch {
+    // Load the AI SDK provider and functions
+    const appleModule = require('@react-native-ai/apple');
+    apple = appleModule.apple;
+
+    const aiModule = require('ai');
+    generateText = aiModule.generateText;
+    streamText = aiModule.streamText;
+
+    console.log('✅ Loaded @react-native-ai/apple with AI SDK');
+    isPackageAvailable = true;
+    return true;
+  } catch (error) {
     console.log(
       '⚠️ Apple Intelligence package not installed.',
       'The app will use Llama.cpp instead.',
-      '\nTo enable Apple Intelligence, run: npm install @react-native-ai/apple',
+      '\nTo enable Apple Intelligence, run: npm install @react-native-ai/apple ai @ai-sdk/react',
+      '\nError:',
+      error,
     );
-    return null;
+    isPackageAvailable = false;
+    return false;
   }
 }
 
 // Try to load on module initialization (iOS only)
 if (Platform.OS === 'ios') {
-  loadAppleLLM();
+  loadAppleAI();
 }
 
 export class AppleIntelligenceService {
-  private static session: AppleLLMSession | null = null;
-  private static isInitializing: boolean = false;
+  private static isInitialized: boolean = false;
 
   /**
    * Check if Apple Intelligence is available on this device
@@ -76,10 +73,10 @@ export class AppleIntelligenceService {
     console.log('  ✓ Platform is iOS');
     console.log('  ✓ iOS Version:', Platform.Version);
 
-    if (!AppleLLM) {
+    if (!isPackageAvailable || !apple) {
       console.log('  ✗ Apple Intelligence package NOT loaded');
       console.log('  → Package status: @react-native-ai/apple is not installed');
-      console.log('  → To install: npm install @react-native-ai/apple');
+      console.log('  → To install: npm install @react-native-ai/apple ai @ai-sdk/react');
       console.log('  → Then run: cd ios && pod install && cd ..');
       return false;
     }
@@ -87,20 +84,20 @@ export class AppleIntelligenceService {
     console.log('  ✓ Apple Intelligence package loaded successfully');
 
     try {
-      console.log('  → Calling AppleLLM.isAvailable()...');
-      const available = await AppleLLM.isAvailable();
-      console.log('  → Result:', available);
+      // Check iOS version - Apple Intelligence requires iOS 18+
+      const iosVersion = parseFloat(String(Platform.Version));
+      console.log('  → iOS version:', iosVersion);
 
-      if (available) {
+      if (iosVersion >= 18) {
         console.log('  ✅ Apple Intelligence IS available on this device!');
         console.log('  → Device meets all requirements (iOS 18+)');
+        return true;
       } else {
         console.log('  ✗ Apple Intelligence NOT available on this device');
-        console.log('  → Most likely: iOS version < 18');
-        console.log('  → Current iOS version:', Platform.Version);
+        console.log('  → iOS version < 18 (current: ' + iosVersion + ')');
         console.log('  → Required: iOS 18.0 or higher');
+        return false;
       }
-      return available;
     } catch (error) {
       console.error('  ✗ Error checking Apple Intelligence availability');
       console.error('  → Error:', error);
@@ -112,41 +109,24 @@ export class AppleIntelligenceService {
    * Initialize Apple Intelligence session
    */
   static async initialize(config: AppleLLMConfig = {}): Promise<void> {
-    if (this.session) {
-      console.log('Apple Intelligence session already initialized');
+    if (this.isInitialized) {
+      console.log('Apple Intelligence already initialized');
       return;
     }
 
-    if (this.isInitializing) {
-      console.log('Apple Intelligence initialization in progress...');
-      return;
-    }
-
-    if (!AppleLLM) {
+    if (!isPackageAvailable || !apple) {
       throw new Error('Apple Intelligence package not available');
     }
 
-    this.isInitializing = true;
-
     try {
-      console.log('Initializing Apple Intelligence session...');
-
-      const sessionConfig = {
-        systemPrompt:
-          config.systemPrompt ||
-          'You are a helpful AI assistant running locally on this device. Be concise and accurate.',
-        temperature: config.temperature ?? 0.7,
-        maxTokens: config.maxTokens ?? 512,
-        topP: config.topP ?? 0.9,
-      };
-
-      this.session = await AppleLLM.createSession(sessionConfig);
-      console.log('✅ Apple Intelligence session initialized');
+      console.log('Initializing Apple Intelligence with AI SDK...');
+      // The AI SDK doesn't require explicit session initialization
+      // Just mark as initialized
+      this.isInitialized = true;
+      console.log('✅ Apple Intelligence initialized');
     } catch (error) {
       console.error('Failed to initialize Apple Intelligence:', error);
       throw error;
-    } finally {
-      this.isInitializing = false;
     }
   }
 
@@ -158,49 +138,57 @@ export class AppleIntelligenceService {
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
   ): Promise<string> {
-    if (!this.session) {
-      await this.initialize(config);
-    }
-
-    if (!AppleLLM || !this.session) {
-      throw new Error('Apple Intelligence not initialized');
+    if (!isPackageAvailable || !apple || !generateText || !streamText) {
+      throw new Error('Apple Intelligence not available');
     }
 
     try {
-      const formattedMessages = messages.map(msg => ({
-        role: msg.role === 'system' ? 'system' : msg.role,
+      // Convert messages to AI SDK format
+      const aiMessages = messages.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content,
       }));
 
       console.log(
-        `Generating response with Apple Intelligence (${formattedMessages.length} messages)`,
+        `Generating response with Apple Intelligence (${messages.length} messages)`,
       );
 
       if (onToken) {
         // Streaming response
+        const result = await streamText({
+          model: apple(),
+          messages: aiMessages,
+          temperature: config.temperature ?? 0.7,
+          maxTokens: config.maxTokens ?? 512,
+          topP: config.topP ?? 0.9,
+        });
+
         let fullResponse = '';
-        await AppleLLM.generateStream(
-          this.session,
-          formattedMessages,
-          (token: string) => {
-            fullResponse += token;
-            onToken(token);
-          },
-        );
+
+        // Stream the text
+        for await (const textPart of result.textStream) {
+          fullResponse += textPart;
+          onToken(textPart);
+        }
+
         console.log(
           `✅ Apple Intelligence response complete (${fullResponse.length} chars)`,
         );
         return fullResponse;
       } else {
         // Non-streaming response
-        const response = await AppleLLM.generate(
-          this.session,
-          formattedMessages,
-        );
+        const result = await generateText({
+          model: apple(),
+          messages: aiMessages,
+          temperature: config.temperature ?? 0.7,
+          maxTokens: config.maxTokens ?? 512,
+          topP: config.topP ?? 0.9,
+        });
+
         console.log(
-          `✅ Apple Intelligence response complete (${response.length} chars)`,
+          `✅ Apple Intelligence response complete (${result.text.length} chars)`,
         );
-        return response;
+        return result.text;
       }
     } catch (error) {
       console.error('Apple Intelligence generation error:', error);
@@ -221,57 +209,98 @@ export class AppleIntelligenceService {
       toolName?: string,
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
-    if (!this.session) {
-      await this.initialize(config);
-    }
-
-    if (!AppleLLM || !this.session) {
-      throw new Error('Apple Intelligence not initialized');
+    if (!isPackageAvailable || !apple || !generateText || !streamText) {
+      throw new Error('Apple Intelligence not available');
     }
 
     try {
-      const formattedMessages = messages.map(msg => ({
-        role: msg.role,
+      // Convert messages to AI SDK format
+      const aiMessages = messages.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content,
       }));
 
-      // Format tools for Apple Intelligence
-      const formattedTools = tools.map(tool => ({
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters,
-      }));
+      // Format tools for AI SDK
+      const aiTools = tools.reduce((acc, tool) => {
+        acc[tool.name] = {
+          description: tool.description,
+          parameters: tool.parameters,
+        };
+        return acc;
+      }, {} as Record<string, any>);
 
       console.log(
         `Generating with tools (${tools.length} tools available)...`,
       );
 
-      const result: AppleLLMResult = await AppleLLM.generateWithTools(
-        this.session,
-        formattedMessages,
-        formattedTools,
-        onToken,
-      );
+      if (onToken) {
+        // Streaming with tools
+        const result = await streamText({
+          model: apple(),
+          messages: aiMessages,
+          tools: aiTools,
+          temperature: config.temperature ?? 0.7,
+          maxTokens: config.maxTokens ?? 512,
+          topP: config.topP ?? 0.9,
+        });
 
-      if (result.toolCalls && result.toolCalls.length > 0) {
-        const toolCall = result.toolCalls[0];
-        console.log(`✅ Tool called: ${toolCall.name}`);
+        let fullResponse = '';
+        let usedTool = false;
+        let toolName: string | undefined;
 
-        if (onToolUsage) {
-          onToolUsage('tool_call', toolCall.name);
+        // Stream the text
+        for await (const textPart of result.textStream) {
+          fullResponse += textPart;
+          onToken(textPart);
+        }
+
+        // Check for tool calls
+        const finalResult = await result.response;
+        if (finalResult.toolCalls && finalResult.toolCalls.length > 0) {
+          usedTool = true;
+          toolName = finalResult.toolCalls[0].toolName;
+          console.log(`✅ Tool called: ${toolName}`);
+
+          if (onToolUsage) {
+            onToolUsage('tool_call', toolName);
+          }
+        }
+
+        return {
+          response: fullResponse,
+          usedTool,
+          toolName,
+        };
+      } else {
+        // Non-streaming with tools
+        const result = await generateText({
+          model: apple(),
+          messages: aiMessages,
+          tools: aiTools,
+          temperature: config.temperature ?? 0.7,
+          maxTokens: config.maxTokens ?? 512,
+          topP: config.topP ?? 0.9,
+        });
+
+        let usedTool = false;
+        let toolName: string | undefined;
+
+        if (result.toolCalls && result.toolCalls.length > 0) {
+          usedTool = true;
+          toolName = result.toolCalls[0].toolName;
+          console.log(`✅ Tool called: ${toolName}`);
+
+          if (onToolUsage) {
+            onToolUsage('tool_call', toolName);
+          }
         }
 
         return {
           response: result.text,
-          usedTool: true,
-          toolName: toolCall.name,
+          usedTool,
+          toolName,
         };
       }
-
-      return {
-        response: result.text,
-        usedTool: false,
-      };
     } catch (error) {
       console.error('Apple Intelligence tool calling error:', error);
       throw error;
@@ -281,8 +310,8 @@ export class AppleIntelligenceService {
   /**
    * Check if session is initialized
    */
-  static isInitialized(): boolean {
-    return this.session !== null;
+  static isInitializedCheck(): boolean {
+    return this.isInitialized;
   }
 
   /**
@@ -300,14 +329,11 @@ export class AppleIntelligenceService {
    * Release session and free resources
    */
   static async release(): Promise<void> {
-    if (this.session && AppleLLM) {
-      try {
-        await AppleLLM.releaseSession(this.session);
-        this.session = null;
-        console.log('✅ Apple Intelligence session released');
-      } catch (error) {
-        console.error('Error releasing Apple Intelligence session:', error);
-      }
+    try {
+      this.isInitialized = false;
+      console.log('✅ Apple Intelligence session released');
+    } catch (error) {
+      console.error('Error releasing Apple Intelligence session:', error);
     }
   }
 }
