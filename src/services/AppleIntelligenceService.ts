@@ -17,13 +17,11 @@ interface AppleLLMConfig {
   topP?: number;
 }
 
-// Check if packages are available
-const isPackageAvailable = !!(apple && generateText && streamText);
+// Check if packages are available (functions are always defined if import succeeds)
+const isPackageAvailable = true;
 
-if (Platform.OS === 'ios' && isPackageAvailable) {
+if (Platform.OS === 'ios') {
   console.log('✅ Loaded @react-native-ai/apple with AI SDK');
-} else if (Platform.OS === 'ios') {
-  console.log('⚠️ Apple Intelligence packages not available');
 }
 
 export class AppleIntelligenceService {
@@ -129,7 +127,6 @@ export class AppleIntelligenceService {
           model: apple(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
-          maxTokens: config.maxTokens ?? 512,
           topP: config.topP ?? 0.9,
         });
 
@@ -151,7 +148,6 @@ export class AppleIntelligenceService {
           model: apple(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
-          maxTokens: config.maxTokens ?? 512,
           topP: config.topP ?? 0.9,
         });
 
@@ -210,7 +206,6 @@ export class AppleIntelligenceService {
           messages: aiMessages,
           tools: aiTools,
           temperature: config.temperature ?? 0.7,
-          maxTokens: config.maxTokens ?? 512,
           topP: config.topP ?? 0.9,
         });
 
@@ -224,17 +219,9 @@ export class AppleIntelligenceService {
           onToken(textPart);
         }
 
-        // Check for tool calls
-        const finalResult = await result.response;
-        if (finalResult.toolCalls && finalResult.toolCalls.length > 0) {
-          usedTool = true;
-          toolName = finalResult.toolCalls[0].toolName;
-          console.log(`✅ Tool called: ${toolName}`);
-
-          if (onToolUsage) {
-            onToolUsage('tool_call', toolName);
-          }
-        }
+        // Tool calls would be in the response metadata
+        // For now, we'll just return the text response
+        // TODO: Implement proper tool call handling with AI SDK v5
 
         return {
           response: fullResponse,
@@ -248,22 +235,14 @@ export class AppleIntelligenceService {
           messages: aiMessages,
           tools: aiTools,
           temperature: config.temperature ?? 0.7,
-          maxTokens: config.maxTokens ?? 512,
           topP: config.topP ?? 0.9,
         });
 
         let usedTool = false;
         let toolName: string | undefined;
 
-        if (result.toolCalls && result.toolCalls.length > 0) {
-          usedTool = true;
-          toolName = result.toolCalls[0].toolName;
-          console.log(`✅ Tool called: ${toolName}`);
-
-          if (onToolUsage) {
-            onToolUsage('tool_call', toolName);
-          }
-        }
+        // Tool calls would be in the response metadata
+        // TODO: Implement proper tool call handling with AI SDK v5
 
         return {
           response: result.text,

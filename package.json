@@ -20,7 +20,8 @@
     "react": "19.1.1",
     "react-native": "0.82.1",
     "react-native-fs": "^2.20.0",
-    "react-native-safe-area-context": "^5.5.2"
+    "react-native-safe-area-context": "^5.5.2",
+    "web-streams-polyfill": "^4.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

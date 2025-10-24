@@ -18,7 +18,9 @@
       "Bash(adb devices)",
       "Bash(npm install @react-native-ai/apple ai @ai-sdk/react)",
       "Bash(npm view @react-native-ai/apple versions --json)",
-      "Bash(npm view @react-native-ai/apple@0.11.0)"
+      "Bash(npm view @react-native-ai/apple@0.11.0)",
+      "Bash(npm install web-streams-polyfill)",
+      "Bash(npx tsc --noEmit)"
     ],
     "deny": [],
     "ask": []
