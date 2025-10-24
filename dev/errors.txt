@@ -1,94 +1,12 @@
-Starting compilation in watch mode...
-
-src/screens/ModelsScreen.tsx:307:41 - error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
-
-307                   actualSize = parseInt(stat.size, 10);
-                                            ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:21:31 - error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead? 
-
-21 const isPackageAvailable = !!(apple && generateText && streamText);
-                                 ~~~~~
-
-src/services/AppleIntelligenceService.ts:21:40 - error TS2774: This condition will always return true since this function is always defined. Did you mean to call it instead? 
-
-21 const isPackageAvailable = !!(apple && generateText && streamText);
-                                          ~~~~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:132:11 - error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { model: LanguageModel; tools?: ToolSet | undefined; ... 18 more ...; _internal?: { ...; } | undefined; }'.
-
-132           maxTokens: config.maxTokens ?? 512,
-              ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:154:11 - error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { model: LanguageModel; tools?: ToolSet | undefined; ... 13 more ...; _internal?: { ...; } | undefined; }'.
-
-154           maxTokens: config.maxTokens ?? 512,
-              ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:213:11 - error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { model: LanguageModel; tools?: any; toolChoice?: ToolChoice<...> | undefined; ... 17 more ...; _internal?: { ...; } | undefined; }'.
-
-213           maxTokens: config.maxTokens ?? 512,
-              ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:229:25 - error TS2339: Property 'toolCalls' does not exist on type 'LanguageModelResponseMetadata & { messages: ResponseMessage[]; }'.
-
-229         if (finalResult.toolCalls && finalResult.toolCalls.length > 0) {
-                            ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:229:50 - error TS2339: Property 'toolCalls' does not exist on type 'LanguageModelResponseMetadata & { messages: ResponseMessage[]; }'.
-
-229         if (finalResult.toolCalls && finalResult.toolCalls.length > 0) {
-                                                     ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:231:34 - error TS2339: Property 'toolCalls' does not exist on type 'LanguageModelResponseMetadata & { messages: ResponseMessage[]; }'.
-
-231           toolName = finalResult.toolCalls[0].toolName;
-                                     ~~~~~~~~~
-
-src/services/AppleIntelligenceService.ts:251:11 - error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { model: LanguageModel; tools?: any; toolChoice?: ToolChoice<...> | undefined; ... 12 more ...; _internal?: { ...; } | undefined; }'.
-
-251           maxTokens: config.maxTokens ?? 512,
-              ~~~~~~~~~
-
-src/services/LlamaService.ts:4:34 - error TS2305: Module '"llama.rn"' has no exported member 'releaseContext'.
-
-4 import {initLlama, LlamaContext, releaseContext} from 'llama.rn';
-                                   ~~~~~~~~~~~~~~
-
-src/services/LlamaService.ts:126:11 - error TS2353: Object literal may only specify known properties, and 'repeat_penalty' does not exist in type 'CompletionParams'.
-
-126           repeat_penalty: llamaConfig.repeatPenalty,
-              ~~~~~~~~~~~~~~
-
-src/services/ModelStorageService.ts:57:23 - error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
-
-57       return parseInt(stat.size, 10);
-                         ~~~~~~~~~
-
-src/services/ToolService.ts:183:7 - error TS2322: Type '(args: { query: string; }) => Promise<{ success: boolean; message: string; query: string; results?: undefined; source?: undefined; error?: undefined; } | { success: boolean; query: string; results: string[]; source: string; message?: undefined; error?: undefined; } | { ...; }>' is not assignable to type '(args: Record<string, any>) => Promise<any>'.
-  Types of parameters 'args' and 'args' are incompatible.
-    Property 'query' is missing in type 'Record<string, any>' but required in type '{ query: string; }'.
-
-183       execute: async (args: {query: string}) => {
-          ~~~~~~~
-
-  src/services/ToolService.ts:183:30
-    183       execute: async (args: {query: string}) => {
-                                     ~~~~~
-    'query' is declared here.
-  src/types/index.ts:79:3
-    79   execute: (args: Record<string, any>) => Promise<any>;
-         ~~~~~~~
-    The expected type comes from property 'execute' which is declared here on type 'Tool'
-
-src/utils/Logger.ts:45:18 - error TS2503: Cannot find namespace 'NodeJS'.
-
-45     let timeout: NodeJS.Timeout;
-                    ~~~~~~
-
-src/utils/Logger.ts:164:40 - error TS2339: Property 'log' does not exist on type 'LogEntry'.
-
-164     return this.logs.filter(log => log.log === level);
-                                           ~~~
-
-[4:21:05 PM] Found 16 errors. Watching for file changes.
+[2025-10-24T09:06:37.169Z] LOG   | 🔍 Running diagnostics...
+[2025-10-24T09:06:37.169Z] LOG   | Platform: | "ios"
+[2025-10-24T09:06:37.169Z] LOG   | Platform Version: | "26.0"
+[2025-10-24T09:06:37.169Z] LOG   | AI Backend: | "apple"
+[2025-10-24T09:06:37.169Z] LOG   | Model: | "Apple Intelligence (Neural Engine)"
+[2025-10-24T09:06:37.169Z] LOG   | Ready: | true
+[2025-10-24T09:06:37.169Z] INFO  | Using Apple Intelligence - Ready to chat!
+[2025-10-24T09:06:37.169Z] LOG   | Diagnostics complete ✓
+[2025-10-24T09:08:01.115Z] INFO  | Already initialized with backend: apple
+[2025-10-24T09:17:08.463Z] INFO  | Generating with tools: 0 available
+[2025-10-24T09:17:09.464Z] ERROR | Apple Intelligence Tool Error: | "Property 'structuredClone' doesn't exist"
+[2025-10-24T09:17:09.464Z] ERROR | Stack trace: | "ReferenceError: Property 'structuredClone' doesn't exist\n    at ?anon_0__loop4 (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:86158:31)\n    at next (native)\n    at ?anon_0_ (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:86166:17)\n    at next (native)\n    at asyncGeneratorStep (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45003:19)\n    at _next (/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:45017:29)\n    at tryCallOne (address at InternalBytecode.js:1:1180)\n    at anonymous (address at InternalBytecode.js:1:1874)"
