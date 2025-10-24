@@ -345,13 +345,12 @@ export class LlamaService {
 
 ${toolsJson}
 
-CRITICAL RULES:
-1. You do NOT know the current date or time - you MUST use get_current_datetime
-2. You do NOT have real-time web access - you MUST use search_web for any search queries
-3. When you need to use a tool, output:
-<function_call>
-{"name": "tool_name", "arguments": {"param": "value"}}
-</function_call>`;
+When you need to call a function, respond with this EXACT pythonic format:
+[function_name(param="value")]
+
+Examples:
+- Get current time: [get_current_datetime()]
+- Search web: [search_web(query="React Native")]`;
   }
 
   /**
@@ -373,28 +372,26 @@ CRITICAL RULES:
 
 ${toolList}
 
-CRITICAL RULES:
-1. You do NOT know the current date or time - MUST use get_current_datetime
-2. You do NOT have real-time web access - MUST use search_web for search queries
-3. When using a tool, output:
-<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>`;
+When you need to call a function, respond with this EXACT pythonic format:
+[function_name(param="value")]
+
+Examples:
+- Get current time: [get_current_datetime()]
+- Search web: [search_web(query="tutorials")]`;
   }
 
   /**
-   * Filter out function call tags from text
+   * Filter out function call from text (Pythonic format)
    */
   private static filterToolJson(text: string): string {
-    // Remove function call tags and their contents
-    let cleaned = text.replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
+    // Remove Pythonic function calls: [function_name(params)]
+    let cleaned = text.replace(/\[[\w_]+\([^\]]*\)\]/g, '').trim();
 
-    // Also remove old JSON format for backwards compatibility
+    // Remove old XML format for backwards compatibility
+    cleaned = cleaned.replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
+
+    // Remove old JSON format for backwards compatibility
     cleaned = cleaned.replace(/\{[\s\S]*?"(tool|name)"[\s\S]*?\}/g, '').trim();
-
-    // Remove standalone closing braces/tags
-    cleaned = cleaned.replace(/^\s*[<>}\]]\s*$/, '').trim();
-
-    // Remove any remaining function call fragments
-    cleaned = cleaned.replace(/<\/?function_call>/g, '').trim();
 
     // If the result is empty or just punctuation, return empty
     if (!cleaned || /^[\s\{\}\[\],.:;!?<>-]*$/.test(cleaned)) {
@@ -406,14 +403,37 @@ CRITICAL RULES:
 
   /**
    * Extract function call from response
-   * Supports both <function_call> tags and raw JSON
+   * Supports Pythonic format: [function_name(param="value")]
    */
   private static extractToolCall(text: string): string | null {
-    // Try to extract from <function_call> tags first (new format)
+    // Try to extract Pythonic format: [function_name(param1="val1", param2="val2")]
+    const pythonicPattern = /\[([\w_]+)\(([^\]]*)\)\]/;
+    const pythonicMatch = pythonicPattern.exec(text);
+
+    if (pythonicMatch) {
+      const functionName = pythonicMatch[1];
+      const argsString = pythonicMatch[2];
+
+      // Parse arguments: param="value" or param=value
+      const args: Record<string, any> = {};
+      if (argsString.trim()) {
+        // Match: param="value" or param='value'
+        const argPattern = /([\w_]+)\s*=\s*["']([^"']*)["']/g;
+        let argMatch;
+        while ((argMatch = argPattern.exec(argsString)) !== null) {
+          args[argMatch[1]] = argMatch[2];
+        }
+      }
+
+      // Convert to JSON format
+      return JSON.stringify({name: functionName, arguments: args});
+    }
+
+    // Fall back to old XML format for backwards compatibility
     const tagPattern = /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/;
     const tagMatch = tagPattern.exec(text);
     if (tagMatch) {
-      return tagMatch[1]; // Return just the JSON part
+      return tagMatch[1];
     }
 
     // Fall back to raw JSON (old format)
