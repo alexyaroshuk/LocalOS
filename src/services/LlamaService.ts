@@ -320,40 +320,40 @@ ${paramProps}
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant with function calling capabilities.
+    // Simplified tool descriptions
+    const toolList = this.availableTools
+      .map(tool => {
+        const params = tool.parameters
+          .map(p => `${p.name}: ${p.type}`)
+          .join(', ');
+        return `- ${tool.name}(${params}): ${tool.description}`;
+      })
+      .join('\n');
 
-# AVAILABLE FUNCTIONS
+    return `You are an AI assistant with tool calling abilities. You have access to these tools:
 
-${toolSchemas}
+${toolList}
 
-# WHEN TO USE FUNCTIONS
+CRITICAL INSTRUCTIONS:
+- When user asks about current time/date/day → MUST use get_current_datetime tool
+- When user says "search" or "find" → MUST use search_web tool
+- You do NOT know what the current time is - you MUST call the tool
 
-ALWAYS use functions for:
-- Current date/time queries → get_current_datetime()
-- Web searches → search_web(query="...")
-- Real-time information → search_web(query="...")
+OUTPUT FORMAT when calling a tool - output ONLY this, nothing else:
+<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>
 
-# RESPONSE FORMAT
+EXAMPLES:
 
-When calling a function, respond with EXACTLY this format (no extra text):
+Input: "what time is it now"
+Output: <function_call>{"name": "get_current_datetime", "arguments": {}}</function_call>
 
-<function_call>
-{"name": "function_name", "arguments": {"param": "value"}}
-</function_call>
+Input: "search for python tutorials"
+Output: <function_call>{"name": "search_web", "arguments": {"query": "python tutorials"}}</function_call>
 
-# EXAMPLES
+Input: "hello how are you"
+Output: Hello! I'm doing well, thank you for asking. How can I help you today?
 
-User: "What time is it now?"
-<function_call>
-{"name": "get_current_datetime", "arguments": {}}
-</function_call>
-
-User: "Search for React Native tutorials"
-<function_call>
-{"name": "search_web", "arguments": {"query": "React Native tutorials"}}
-</function_call>
-
-IMPORTANT: You do NOT know the current time/date. You MUST use the function.`;
+Remember: Use the tool when the user needs REAL-TIME data. Don't guess or make up current time/date.`;
   }
 
   /**
@@ -420,6 +420,12 @@ IMPORTANT: You do NOT know the current time/date. You MUST use the function.`;
     }
 
     Logger.info('✅ Tools are enabled. Available tools:', this.availableTools.map(t => t.name).join(', '));
+
+    // Log user's message for debugging
+    const userMessage = messages[messages.length - 1];
+    if (userMessage) {
+      Logger.info('👤 User prompt:', userMessage.content);
+    }
 
     try {
       // Add system prompt with tool definitions
