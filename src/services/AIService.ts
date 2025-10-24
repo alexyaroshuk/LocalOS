@@ -79,7 +79,7 @@ export class AIService {
    */
   static isReady(): boolean {
     if (this.currentBackend === 'apple') {
-      return AppleIntelligenceService.isInitialized();
+      return AppleIntelligenceService.isInitializedCheck();
     } else if (this.currentBackend === 'llama') {
       return LlamaService.isModelLoaded();
     }

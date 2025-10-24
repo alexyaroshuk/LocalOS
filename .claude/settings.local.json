@@ -15,7 +15,8 @@
       "Bash(npm view llama.rn versions --json)",
       "Read(//d/dev/projects/**)",
       "Bash(pod install)",
-      "Bash(adb devices)"
+      "Bash(adb devices)",
+      "Bash(npm install @react-native-ai/apple ai @ai-sdk/react)"
     ],
     "deny": [],
     "ask": []
