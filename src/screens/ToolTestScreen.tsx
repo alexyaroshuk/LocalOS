@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
 import {ToolService} from '../services/ToolService';
 import {AIService} from '../services/AIService';
+import {LlamaService} from '../services/LlamaService';
 import {Tool, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
@@ -22,6 +24,7 @@ export const ToolTestScreen: React.FC = () => {
   );
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
+  const [useLangchain, setUseLangchain] = useState(true);
 
   useEffect(() => {
     // Initialize tool service and get all tools
@@ -36,7 +39,20 @@ export const ToolTestScreen: React.FC = () => {
     const info = AIService.getBackendInfo();
     setBackendInfo(`${info.backend} - ${info.modelName}`);
     Logger.info('Tools supported?', AIService.areToolsSupported());
+
+    // Get initial Langchain mode state
+    setUseLangchain(LlamaService.isLangchainMode());
   }, []);
+
+  const handleToggleLangchain = (value: boolean) => {
+    setUseLangchain(value);
+    LlamaService.setLangchainMode(value);
+    Logger.info(`Switched to ${value ? 'Langchain' : 'Legacy'} prompting mode`);
+    Alert.alert(
+      'Prompting Mode Changed',
+      `Now using ${value ? 'Langchain-style JSON schema' : 'Legacy simplified'} prompts for tool calling.\n\nTest the tools to compare performance!`,
+    );
+  };
 
   const handleTestTool = async (tool: Tool) => {
     try {
@@ -200,6 +216,28 @@ export const ToolTestScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content}>
+        <View style={styles.toggleCard}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Prompt Format</Text>
+              <Text style={styles.toggleSubtitle}>
+                {useLangchain ? 'Langchain Mode (JSON Schema)' : 'Legacy Mode (Simplified)'}
+              </Text>
+            </View>
+            <Switch
+              value={useLangchain}
+              onValueChange={handleToggleLangchain}
+              trackColor={{false: '#D1D1D6', true: '#34C759'}}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.toggleDescription}>
+            {useLangchain
+              ? 'Using structured JSON schema format similar to Langchain\'s bind_tools'
+              : 'Using simpler tool list format with direct examples'}
+          </Text>
+        </View>
+
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>How Tool Testing Works</Text>
           <Text style={styles.infoText}>
@@ -257,11 +295,46 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  toggleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#34C759',
+  },
+  toggleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toggleInfo: {
+    flex: 1,
+  },
+  toggleTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+  },
+  toggleSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  toggleDescription: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
   infoBox: {
     backgroundColor: '#E3F2FD',
     borderRadius: 12,
     padding: 16,
     margin: 16,
+    marginTop: 8,
   },
   infoTitle: {
     fontSize: 16,

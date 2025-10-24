@@ -15,6 +15,7 @@ export class LlamaService {
   private static isInitialized: boolean = false;
   private static toolsEnabled: boolean = false;
   private static availableTools: Tool[] = [];
+  private static useLangchainPrompt: boolean = true; // Default to Langchain mode
 
   /**
    * Initialize and load a model
@@ -277,6 +278,21 @@ export class LlamaService {
   }
 
   /**
+   * Set the prompting mode for tool calling
+   */
+  static setLangchainMode(enabled: boolean): void {
+    this.useLangchainPrompt = enabled;
+    Logger.info(`Tool prompt mode: ${enabled ? 'Langchain' : 'Legacy'}`);
+  }
+
+  /**
+   * Get current prompting mode
+   */
+  static isLangchainMode(): boolean {
+    return this.useLangchainPrompt;
+  }
+
+  /**
    * Get system prompt with tool definitions
    * Format compatible with Llama 3.2 1B Function Calling model
    * Based on: nguyenthanhthuan/Llama-3.2-1B-Instruct-function-calling-v2
@@ -286,6 +302,17 @@ export class LlamaService {
       return '';
     }
 
+    // Use legacy or langchain mode based on toggle
+    return this.useLangchainPrompt
+      ? this.getLangchainToolPrompt()
+      : this.getLegacyToolPrompt();
+  }
+
+  /**
+   * Langchain-style tool prompt (new format)
+   * Uses JSON schema format similar to Langchain's bind_tools
+   */
+  private static getLangchainToolPrompt(): string {
     // Create JSON schema format (like Langchain's bind_tools)
     const toolSchemas = this.availableTools.map(tool => {
       const properties: Record<string, any> = {};
@@ -344,6 +371,47 @@ Assistant: <function_call>
 
 User: "hello"
 Assistant: Hello! How can I help you today?`;
+  }
+
+  /**
+   * Legacy Pydantic-style tool prompt (old format)
+   * Uses simpler tool list format without Pydantic schemas
+   */
+  private static getLegacyToolPrompt(): string {
+    // Simplified tool descriptions
+    const toolList = this.availableTools
+      .map(tool => {
+        const params = tool.parameters
+          .map(p => `${p.name}: ${p.type}`)
+          .join(', ');
+        return `- ${tool.name}(${params}): ${tool.description}`;
+      })
+      .join('\n');
+
+    return `You are an AI assistant with tool calling abilities. You have access to these tools:
+
+${toolList}
+
+CRITICAL INSTRUCTIONS:
+- When user asks about current time/date/day → MUST use get_current_datetime tool
+- When user says "search" or "find" → MUST use search_web tool
+- You do NOT know what the current time is - you MUST call the tool
+
+OUTPUT FORMAT when calling a tool - output ONLY this, nothing else:
+<function_call>{"name": "tool_name", "arguments": {"param": "value"}}</function_call>
+
+EXAMPLES:
+
+Input: "what time is it now"
+Output: <function_call>{"name": "get_current_datetime", "arguments": {}}</function_call>
+
+Input: "search for python tutorials"
+Output: <function_call>{"name": "search_web", "arguments": {"query": "python tutorials"}}</function_call>
+
+Input: "hello how are you"
+Output: Hello! I'm doing well, thank you for asking. How can I help you today?
+
+Remember: Use the tool when the user needs REAL-TIME data. Don't guess or make up current time/date.`;
   }
 
   /**
