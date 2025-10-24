@@ -6,7 +6,7 @@
 
 import {Platform} from 'react-native';
 import {Message} from '../types';
-import {createAppleProvider} from '@react-native-ai/apple';
+import {createAppleProvider, apple as appleBase} from '@react-native-ai/apple';
 import {generateText, streamText, tool} from 'ai';
 import {z} from 'zod';
 import {Logger} from '../utils/Logger';
@@ -22,9 +22,11 @@ interface AppleLLMConfig {
 // Define tools for Apple Intelligence
 const getCurrentDateTimeTool = tool({
   description: 'Get the current date and time. Use this when the user asks about the current date, time, day of the week, or any time-related queries.',
-  parameters: z.object({}),
+  parameters: z.object({
+    // Empty parameters - this tool takes no arguments
+  }),
   // @ts-ignore - AI SDK v5 tool() type inference issue, but this matches the documentation
-  execute: async () => {
+  execute: async (_args: Record<string, never>) => {
     const now = new Date();
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
@@ -111,20 +113,27 @@ const searchWebTool = tool({
   },
 });
 
-// Create Apple provider with tools registered
-const apple = createAppleProvider({
-  availableTools: {
-    get_current_datetime: getCurrentDateTimeTool,
-    search_web: searchWebTool,
-  },
-});
+// Create Apple provider with tools registered (lazy - only when tools are used)
+let appleWithTools: ReturnType<typeof createAppleProvider> | null = null;
+
+function getAppleProviderWithTools() {
+  if (!appleWithTools) {
+    appleWithTools = createAppleProvider({
+      availableTools: {
+        get_current_datetime: getCurrentDateTimeTool,
+        search_web: searchWebTool,
+      },
+    });
+    console.log('✅ Created Apple provider with tools: get_current_datetime, search_web');
+  }
+  return appleWithTools;
+}
 
 // Check if packages are available
-const isPackageAvailable = !!(apple && generateText && streamText);
+const isPackageAvailable = !!(appleBase && generateText && streamText);
 
 if (Platform.OS === 'ios') {
   console.log('✅ Loaded @react-native-ai/apple with AI SDK');
-  console.log('✅ Registered tools: get_current_datetime, search_web');
 }
 
 export class AppleIntelligenceService {
@@ -144,7 +153,7 @@ export class AppleIntelligenceService {
     console.log('  ✓ Platform is iOS');
     console.log('  ✓ iOS Version:', Platform.Version);
 
-    if (!isPackageAvailable || !apple) {
+    if (!isPackageAvailable || !appleBase) {
       console.log('  ✗ Apple Intelligence package NOT loaded');
       console.log('  → Package status: @react-native-ai/apple is not installed');
       console.log('  → To install: npm install @react-native-ai/apple ai @ai-sdk/react');
@@ -185,7 +194,7 @@ export class AppleIntelligenceService {
       return;
     }
 
-    if (!isPackageAvailable || !apple) {
+    if (!isPackageAvailable || !appleBase) {
       throw new Error('Apple Intelligence package not available');
     }
 
@@ -209,7 +218,7 @@ export class AppleIntelligenceService {
     config: AppleLLMConfig = {},
     onToken?: (token: string) => void,
   ): Promise<string> {
-    if (!isPackageAvailable || !apple || !generateText || !streamText) {
+    if (!isPackageAvailable || !appleBase || !generateText || !streamText) {
       const err = 'Apple Intelligence packages not available';
       Logger.error(err);
       throw new Error(err);
@@ -245,7 +254,7 @@ export class AppleIntelligenceService {
         Logger.info('Calling Apple Intelligence streamText...');
 
         const {textStream} = await streamText({
-          model: apple(),
+          model: appleBase(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
           topP: config.topP ?? 0.9,
@@ -271,7 +280,7 @@ export class AppleIntelligenceService {
         Logger.info('Calling Apple Intelligence generateText...');
 
         const result = await generateText({
-          model: apple(),
+          model: appleBase(),
           messages: aiMessages,
           temperature: config.temperature ?? 0.7,
           topP: config.topP ?? 0.9,
@@ -323,11 +332,14 @@ export class AppleIntelligenceService {
       toolName?: string,
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
-    if (!isPackageAvailable || !apple || !generateText) {
+    if (!isPackageAvailable || !appleBase || !generateText) {
       const err = 'Apple Intelligence packages not available';
       Logger.error(err);
       throw new Error(err);
     }
+
+    // Get the Apple provider with tools
+    const apple = getAppleProviderWithTools();
 
     try {
       // Convert messages to AI SDK format

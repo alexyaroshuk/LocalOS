@@ -22,7 +22,7 @@ export class AIService {
    * Returns the backend that was initialized
    */
   static async initialize(): Promise<AIBackend> {
-    if (this.initializationAttempted) {
+    if (this.initializationAttempted && this.currentBackend !== 'none') {
       Logger.info(`Already initialized with backend: ${this.currentBackend}`);
       return this.currentBackend;
     }
@@ -248,29 +248,42 @@ export class AIService {
    * Force switch to specific backend (advanced usage)
    */
   static async switchBackend(backend: 'apple' | 'llama'): Promise<boolean> {
-    console.log(`Attempting to switch to ${backend} backend...`);
+    Logger.info(`🔄 Switching to ${backend} backend...`);
+    console.log(`🔄 Attempting to switch to ${backend} backend...`);
 
     // Release current backend
     await this.release();
 
+    // Reset initialization flag so next call doesn't skip
+    this.initializationAttempted = false;
+
     if (backend === 'apple') {
       if (Platform.OS !== 'ios') {
+        Logger.error('Apple Intelligence only available on iOS');
         console.error('Apple Intelligence only available on iOS');
         return false;
       }
 
       const available = await AppleIntelligenceService.isAvailable();
       if (!available) {
+        Logger.error('Apple Intelligence not available on this device');
         console.error('Apple Intelligence not available on this device');
+        // Fall back to llama
+        this.currentBackend = 'llama';
+        this.initializationAttempted = true;
         return false;
       }
 
       await AppleIntelligenceService.initialize();
       this.currentBackend = 'apple';
+      this.initializationAttempted = true;
+      Logger.info('✅ Switched to Apple Intelligence');
       console.log('✅ Switched to Apple Intelligence');
       return true;
     } else {
       this.currentBackend = 'llama';
+      this.initializationAttempted = true;
+      Logger.info('✅ Switched to Llama.cpp');
       console.log('✅ Switched to Llama.cpp');
       return true;
     }
