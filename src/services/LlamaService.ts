@@ -406,9 +406,13 @@ Assistant: React is a JavaScript library for building user interfaces...
 
     if (!this.toolsEnabled) {
       // No tools enabled, use regular chat completion
+      console.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
+      console.log('Available tools:', this.availableTools.length);
       const response = await this.chatCompletion(messages, config, onToken);
       return {response, usedTool: false};
     }
+
+    console.log('✅ Tools are enabled. Available tools:', this.availableTools.map(t => t.name).join(', '));
 
     try {
       // Add system prompt with tool definitions
@@ -428,8 +432,10 @@ Assistant: React is a JavaScript library for building user interfaces...
         ...config,
         temperature: 0.1, // Lower temp for structured JSON output
         topP: 0.9,
+        maxTokens: 100, // Limit tokens for faster tool detection
       };
 
+      console.log('🔍 Starting tool detection phase (not streaming to UI)...');
       const firstResponse = await this.chatCompletion(
         messagesWithTools,
         toolDetectionConfig,
