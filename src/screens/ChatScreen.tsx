@@ -19,6 +19,7 @@ import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Message, ChatSession, ModelInfo} from '../types';
 import {AIService} from '../services/AIService';
+import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
 import {generateId} from '../utils/helpers';
 import {
@@ -52,6 +53,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'none'>('none');
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
+  const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -60,6 +62,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     initializeAI();
     loadSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update prompt mode display when it changes
+  useEffect(() => {
+    const checkPromptMode = () => {
+      const isLangchain = LlamaService.isLangchainMode();
+      setPromptMode(isLangchain ? 'langchain' : 'legacy');
+    };
+
+    // Check initially
+    checkPromptMode();
+
+    // Check periodically (in case it's changed from ToolTestScreen)
+    const interval = setInterval(checkPromptMode, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const initializeAI = async () => {
@@ -440,6 +458,18 @@ IMPORTANT CONTEXT:
               </View>
             )}
           </View>
+          {aiBackend === 'llama' && toolsEnabled && (
+            <View style={styles.promptModeContainer}>
+              <View style={[
+                styles.promptModeBadge,
+                promptMode === 'langchain' ? styles.promptModeLangchain : styles.promptModeLegacy
+              ]}>
+                <Text style={styles.promptModeText}>
+                  {promptMode === 'langchain' ? '🔗 Langchain' : '📝 Legacy'}
+                </Text>
+              </View>
+            </View>
+          )}
           {aiBackend === 'llama' && !AIService.isReady() && (
             <TouchableOpacity onPress={onModelSelect}>
               <Text style={styles.selectModelLink}>Load Model</Text>
@@ -595,6 +625,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#007AFF',
     marginTop: 2,
+  },
+  promptModeContainer: {
+    marginTop: 4,
+  },
+  promptModeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  promptModeLangchain: {
+    backgroundColor: '#34C759',
+  },
+  promptModeLegacy: {
+    backgroundColor: '#FF9500',
+  },
+  promptModeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   backendButton: {
     paddingHorizontal: 10,
