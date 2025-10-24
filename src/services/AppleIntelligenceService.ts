@@ -5,6 +5,7 @@
  */
 
 import {Platform} from 'react-native';
+import {Logger} from '../utils/Logger';
 import {Message} from '../types';
 import {createAppleProvider, apple as appleBase} from '@react-native-ai/apple';
 import {generateText, streamText, tool} from 'ai';
@@ -99,7 +100,7 @@ const searchWebTool = tool({
         source: 'DuckDuckGo',
       };
     } catch (error) {
-      console.error('Web search error:', error);
+      Logger.error('Web search error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Search failed',
@@ -120,7 +121,7 @@ function getAppleProviderWithTools() {
         search_web: searchWebTool,
       },
     });
-    console.log('✅ Created Apple provider with tools: get_current_datetime, search_web');
+    Logger.info('✅ Created Apple provider with tools: get_current_datetime, search_web');
   }
   return appleWithTools;
 }
@@ -129,7 +130,7 @@ function getAppleProviderWithTools() {
 const isPackageAvailable = !!(appleBase && generateText && streamText);
 
 if (Platform.OS === 'ios') {
-  console.log('✅ Loaded @react-native-ai/apple with AI SDK');
+  Logger.info('✅ Loaded @react-native-ai/apple with AI SDK');
 }
 
 export class AppleIntelligenceService {
@@ -139,44 +140,44 @@ export class AppleIntelligenceService {
    * Check if Apple Intelligence is available on this device
    */
   static async isAvailable(): Promise<boolean> {
-    console.log('  → Checking Apple Intelligence availability...');
+    Logger.info('  → Checking Apple Intelligence availability...');
 
     if (Platform.OS !== 'ios') {
-      console.log('  ✗ Platform is not iOS:', Platform.OS);
+      Logger.info('  ✗ Platform is not iOS:', Platform.OS);
       return false;
     }
 
-    console.log('  ✓ Platform is iOS');
-    console.log('  ✓ iOS Version:', Platform.Version);
+    Logger.info('  ✓ Platform is iOS');
+    Logger.info('  ✓ iOS Version:', Platform.Version);
 
     if (!isPackageAvailable || !appleBase) {
-      console.log('  ✗ Apple Intelligence package NOT loaded');
-      console.log('  → Package status: @react-native-ai/apple is not installed');
-      console.log('  → To install: npm install @react-native-ai/apple ai @ai-sdk/react');
-      console.log('  → Then run: cd ios && pod install && cd ..');
+      Logger.info('  ✗ Apple Intelligence package NOT loaded');
+      Logger.info('  → Package status: @react-native-ai/apple is not installed');
+      Logger.info('  → To install: npm install @react-native-ai/apple ai @ai-sdk/react');
+      Logger.info('  → Then run: cd ios && pod install && cd ..');
       return false;
     }
 
-    console.log('  ✓ Apple Intelligence package loaded successfully');
+    Logger.info('  ✓ Apple Intelligence package loaded successfully');
 
     try {
       // Check iOS version - Apple Intelligence requires iOS 18+
       const iosVersion = parseFloat(String(Platform.Version));
-      console.log('  → iOS version:', iosVersion);
+      Logger.info('  → iOS version:', iosVersion);
 
       if (iosVersion >= 18) {
-        console.log('  ✅ Apple Intelligence IS available on this device!');
-        console.log('  → Device meets all requirements (iOS 18+)');
+        Logger.info('  ✅ Apple Intelligence IS available on this device!');
+        Logger.info('  → Device meets all requirements (iOS 18+)');
         return true;
       } else {
-        console.log('  ✗ Apple Intelligence NOT available on this device');
-        console.log('  → iOS version < 18 (current: ' + iosVersion + ')');
-        console.log('  → Required: iOS 18.0 or higher');
+        Logger.info('  ✗ Apple Intelligence NOT available on this device');
+        Logger.info('  → iOS version < 18 (current: ' + iosVersion + ')');
+        Logger.info('  → Required: iOS 18.0 or higher');
         return false;
       }
     } catch (error) {
-      console.error('  ✗ Error checking Apple Intelligence availability');
-      console.error('  → Error:', error);
+      Logger.error('  ✗ Error checking Apple Intelligence availability');
+      Logger.error('  → Error:', error);
       return false;
     }
   }
@@ -186,7 +187,7 @@ export class AppleIntelligenceService {
    */
   static async initialize(_config: AppleLLMConfig = {}): Promise<void> {
     if (this.isInitialized) {
-      console.log('Apple Intelligence already initialized');
+      Logger.info('Apple Intelligence already initialized');
       return;
     }
 
@@ -195,13 +196,13 @@ export class AppleIntelligenceService {
     }
 
     try {
-      console.log('Initializing Apple Intelligence with AI SDK...');
+      Logger.info('Initializing Apple Intelligence with AI SDK...');
       // The AI SDK doesn't require explicit session initialization
       // Just mark as initialized
       this.isInitialized = true;
-      console.log('✅ Apple Intelligence initialized');
+      Logger.info('✅ Apple Intelligence initialized');
     } catch (error) {
-      console.error('Failed to initialize Apple Intelligence:', error);
+      Logger.error('Failed to initialize Apple Intelligence:', error);
       throw error;
     }
   }
@@ -233,12 +234,12 @@ export class AppleIntelligenceService {
         aiMessages[0].content += `\n\nCurrent date/time: ${currentDate.toLocaleString()}. You run offline with no internet. Knowledge cutoff: early 2025. If asked about current events, politely acknowledge this limitation.`;
       }
 
-      console.log(
+      Logger.info(
         `Generating response with Apple Intelligence (${messages.length} messages)`,
       );
       Logger.info(`Generating with Apple Intelligence (${messages.length} messages)`);
-      console.log('AI Messages:', JSON.stringify(aiMessages, null, 2));
-      console.log('Config:', {
+      Logger.info('AI Messages:', JSON.stringify(aiMessages, null, 2));
+      Logger.info('Config:', {
         temperature: config.temperature ?? 0.7,
         topP: config.topP ?? 0.9,
         hasOnToken: !!onToken,
@@ -246,7 +247,7 @@ export class AppleIntelligenceService {
 
       if (onToken) {
         // STREAMING mode - use the direct promise API
-        console.log('Using streamText for streaming...');
+        Logger.info('Using streamText for streaming...');
         Logger.info('Calling Apple Intelligence streamText...');
 
         const result = await streamText({
@@ -265,7 +266,7 @@ export class AppleIntelligenceService {
             onToken(chunk);
           }
         } catch (streamError) {
-          console.error('Streaming error, falling back to full text:', streamError);
+          Logger.error('Streaming error, falling back to full text:', streamError);
           // If streaming fails, get the full text
           fullResponse = await result.text;
           if (fullResponse) {
@@ -274,14 +275,14 @@ export class AppleIntelligenceService {
         }
 
         Logger.info(`Streaming complete: ${fullResponse.length} chars`);
-        console.log(
+        Logger.info(
           `✅ Apple Intelligence response complete (${fullResponse.length} chars)`,
         );
 
         return fullResponse;
       } else {
         // NON-STREAMING mode
-        console.log('Using generateText (no streaming callback)...');
+        Logger.info('Using generateText (no streaming callback)...');
         Logger.info('Calling Apple Intelligence generateText...');
 
         const result = await generateText({
@@ -292,7 +293,7 @@ export class AppleIntelligenceService {
         });
 
         Logger.info(`Got response: ${result.text.length} chars`);
-        console.log(
+        Logger.info(
           `✅ Apple Intelligence response complete (${result.text.length} chars)`,
         );
 
@@ -302,8 +303,8 @@ export class AppleIntelligenceService {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
 
-      console.error('Apple Intelligence generation error:', error);
-      console.error('Error details:', {
+      Logger.error('Apple Intelligence generation error:', error);
+      Logger.error('Error details:', {
         message: errorMsg,
         stack: errorStack,
         name: error instanceof Error ? error.name : undefined,
@@ -339,7 +340,7 @@ export class AppleIntelligenceService {
       toolName?: string,
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
-    console.warn('⚠️  Apple Intelligence does not support tool calling in current SDK version');
+    Logger.warn('⚠️  Apple Intelligence does not support tool calling in current SDK version');
     Logger.warn('Apple Intelligence tool calling is not supported - using regular chat');
 
     // Fall back to regular chat completion
@@ -382,9 +383,9 @@ export class AppleIntelligenceService {
   static async release(): Promise<void> {
     try {
       this.isInitialized = false;
-      console.log('✅ Apple Intelligence session released');
+      Logger.info('✅ Apple Intelligence session released');
     } catch (error) {
-      console.error('Error releasing Apple Intelligence session:', error);
+      Logger.error('Error releasing Apple Intelligence session:', error);
     }
   }
 }

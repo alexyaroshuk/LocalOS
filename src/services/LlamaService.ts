@@ -6,6 +6,7 @@ import {LlamaConfig, Message, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate} from '../utils/helpers';
 import {ToolService} from './ToolService';
+import {Logger} from '../utils/Logger';
 
 export class LlamaService {
   private static context: LlamaContext | null = null;
@@ -27,7 +28,7 @@ export class LlamaService {
       // Release existing context if any
       await this.releaseModel();
 
-      console.log('Loading model from:', modelPath);
+      Logger.info('Loading model from:', modelPath);
 
       const llamaConfig = {
         ...DEFAULT_LLAMA_CONFIG,
@@ -47,9 +48,9 @@ export class LlamaService {
       this.currentModelName = modelName;
       this.isInitialized = true;
 
-      console.log('Model loaded successfully:', modelName);
+      Logger.info('✅ Model loaded successfully:', modelName);
     } catch (error) {
-      console.error('Failed to load model:', error);
+      Logger.error('Failed to load model:', error);
       this.isInitialized = false;
       throw error;
     }
@@ -62,9 +63,9 @@ export class LlamaService {
     if (this.context) {
       try {
         await releaseContext(this.context.id);
-        console.log('Model context released');
+        Logger.info('Model context released');
       } catch (error) {
-        console.error('Failed to release context:', error);
+        Logger.error('Failed to release context:', error);
       }
       this.context = null;
       this.currentModelPath = null;
@@ -111,7 +112,7 @@ export class LlamaService {
         ...config,
       };
 
-      console.log('Starting completion with config:', llamaConfig);
+      Logger.debug('Starting completion with config:', llamaConfig);
 
       let fullResponse = '';
 
@@ -140,10 +141,10 @@ export class LlamaService {
         fullResponse = result.text;
       }
 
-      console.log('Completion finished');
+      Logger.debug('Completion finished');
       return fullResponse.trim();
     } catch (error) {
-      console.error('Completion error:', error);
+      Logger.error('Completion error:', error);
       throw error;
     }
   }
@@ -168,12 +169,12 @@ export class LlamaService {
       }));
 
       const prompt = getChatTemplate(this.currentModelName, chatMessages);
-      console.log('Generated prompt template for:', this.currentModelName);
+      Logger.debug('Generated prompt template for:', this.currentModelName);
 
       // Use the completion method with the formatted prompt
       return await this.completion(prompt, config, onToken);
     } catch (error) {
-      console.error('Chat completion error:', error);
+      Logger.error('Chat completion error:', error);
       throw error;
     }
   }
@@ -185,9 +186,9 @@ export class LlamaService {
     if (this.context) {
       try {
         await this.context.stopCompletion();
-        console.log('Generation stopped');
+        Logger.info('Generation stopped');
       } catch (error) {
-        console.error('Failed to stop generation:', error);
+        Logger.error('Failed to stop generation:', error);
       }
     }
   }
@@ -208,7 +209,7 @@ export class LlamaService {
         // Add more metadata if llama.rn exposes it
       };
     } catch (error) {
-      console.error('Failed to get model info:', error);
+      Logger.error('Failed to get model info:', error);
       return null;
     }
   }
@@ -225,7 +226,7 @@ export class LlamaService {
       const result = await this.context.tokenize(text);
       return result.tokens;
     } catch (error) {
-      console.error('Tokenization error:', error);
+      Logger.error('Tokenization error:', error);
       throw error;
     }
   }
@@ -238,7 +239,7 @@ export class LlamaService {
       const tokens = await this.tokenize(text);
       return tokens.length;
     } catch (error) {
-      console.error('Failed to count tokens:', error);
+      Logger.error('Failed to count tokens:', error);
       // Rough estimate: ~4 characters per token
       return Math.ceil(text.length / 4);
     }
@@ -256,7 +257,7 @@ export class LlamaService {
       ToolService.initialize();
       this.availableTools = ToolService.getAllTools();
     }
-    console.log(`Tools enabled: ${this.availableTools.length} tools available`);
+    Logger.info(`🔧 Tools enabled: ${this.availableTools.length} tools available`);
   }
 
   /**
@@ -265,7 +266,7 @@ export class LlamaService {
   static disableTools(): void {
     this.toolsEnabled = false;
     this.availableTools = [];
-    console.log('Tools disabled');
+    Logger.info('Tools disabled');
   }
 
   /**
@@ -277,105 +278,102 @@ export class LlamaService {
 
   /**
    * Get system prompt with tool definitions
-   * Optimized for local models like Llama 3.2 and Phi-3
+   * Format compatible with Llama 3.2 1B Function Calling model
+   * Based on: nguyenthanhthuan/Llama-3.2-1B-Instruct-function-calling-v2
    */
   private static getToolSystemPrompt(): string {
     if (!this.toolsEnabled || this.availableTools.length === 0) {
       return '';
     }
 
-    const toolDescriptions = this.availableTools
+    // Convert tools to Pydantic-like schema format expected by the model
+    const toolSchemas = this.availableTools
       .map(tool => {
-        const params = tool.parameters
-          .map(p => {
-            const required = p.required ? 'REQUIRED' : 'OPTIONAL';
-            return `    - ${p.name} (${p.type}, ${required}): ${p.description}`;
-          })
-          .join('\n');
+        const requiredParams = tool.parameters
+          .filter(p => p.required)
+          .map(p => `"${p.name}"`);
 
-        return `{
-  "name": "${tool.name}",
-  "description": "${tool.description}",
-  "parameters": {
-${params || '    (none)'}
-  }
-}`;
+        const paramProps = tool.parameters
+          .map(p => {
+            const typeMap: Record<string, string> = {
+              string: 'str',
+              number: 'int',
+              boolean: 'bool',
+              array: 'List[str]',
+              object: 'dict',
+            };
+
+            return `    "${p.name}": {
+      "type": "${typeMap[p.type] || 'str'}",
+      "description": "${p.description}"${p.required ? ', "required": true' : ''}
+    }`;
+          })
+          .join(',\n');
+
+        return `class ${tool.name}:
+    """${tool.description}"""
+
+    properties = {
+${paramProps}
+    }
+    required = [${requiredParams.join(', ')}]`;
       })
       .join('\n\n');
 
-    return `You are a helpful AI assistant with access to tools. You MUST use these tools when the user asks for information you cannot provide.
+    return `You are a helpful AI assistant with function calling capabilities.
 
-# AVAILABLE TOOLS
+# AVAILABLE FUNCTIONS
 
-${toolDescriptions}
+${toolSchemas}
 
-# CRITICAL RULES FOR TOOL USAGE
+# WHEN TO USE FUNCTIONS
 
-YOU MUST CALL A TOOL WHEN:
-1. User asks "What day is today?" → MUST call get_current_datetime
-2. User asks "What time is it?" → MUST call get_current_datetime
-3. User asks "What's the date?" → MUST call get_current_datetime
-4. User says "search" or "find" or "look up" → MUST call search_web
-5. User asks about current events or news → MUST call search_web
-6. User asks about trending topics → MUST call search_web
-7. User asks "Search the web for X" → MUST call search_web with query="X"
-8. User asks "Find information about X" → MUST call search_web with query="X"
-9. User asks about a specific person's current info → MUST call search_web
-10. User mentions needing up-to-date information → MUST call search_web
+ALWAYS use functions for:
+- Current date/time queries → get_current_datetime()
+- Web searches → search_web(query="...")
+- Real-time information → search_web(query="...")
 
-RESPOND NORMALLY (NO TOOL) WHEN:
-- User says greetings: "Hi", "Hello", "How are you?"
-- User asks general knowledge: "What is JavaScript?" (well-known concept)
-- User asks for explanations: "Explain React" (well-known concept)
-- User asks for advice or opinions
-- User asks about historical facts that don't need real-time data
+# RESPONSE FORMAT
 
-# HOW TO CALL A TOOL
+When calling a function, respond with EXACTLY this format (no extra text):
 
-When you need to call a tool, respond with ONLY this JSON format (NO other text):
+<function_call>
+{"name": "function_name", "arguments": {"param": "value"}}
+</function_call>
 
-{"tool": "tool_name", "arguments": {"param": "value"}}
+# EXAMPLES
 
-EXAMPLES:
+User: "What time is it now?"
+<function_call>
+{"name": "get_current_datetime", "arguments": {}}
+</function_call>
 
-User: "What day is today?"
-Assistant: {"tool": "get_current_datetime", "arguments": {}}
+User: "Search for React Native tutorials"
+<function_call>
+{"name": "search_web", "arguments": {"query": "React Native tutorials"}}
+</function_call>
 
-User: "Search for Elon Musk"
-Assistant: {"tool": "search_web", "arguments": {"query": "Elon Musk"}}
-
-User: "Who is the president?"
-Assistant: {"tool": "search_web", "arguments": {"query": "current president"}}
-
-User: "What is React?"
-Assistant: React is a JavaScript library for building user interfaces...
-
-# IMPORTANT NOTES
-
-- DO NOT say "I would call" or "I should call" - JUST OUTPUT THE JSON
-- DO NOT explain what you're doing - ONLY output the JSON
-- DO NOT add any text before or after the JSON
-- If unsure whether you know something, USE THE TOOL
-- Current date/time questions ALWAYS need the tool - you don't know what day it is
-- Person names you don't recognize ALWAYS need web search`;
+IMPORTANT: You do NOT know the current time/date. You MUST use the function.`;
   }
 
   /**
-   * Filter out JSON tool calls from text
+   * Filter out function call tags from text
    */
   private static filterToolJson(text: string): string {
-    // Remove JSON tool call patterns from the response
-    const toolJsonPattern = /\{[\s\S]*?"tool"[\s\S]*?\}/g;
-    let cleaned = text.replace(toolJsonPattern, '').trim();
+    // Remove function call tags and their contents
+    let cleaned = text.replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
 
-    // Remove standalone closing braces that might be left over
-    cleaned = cleaned.replace(/^\s*\}\s*$/, '').trim();
+    // Also remove old JSON format for backwards compatibility
+    cleaned = cleaned.replace(/\{[\s\S]*?"(tool|name)"[\s\S]*?\}/g, '').trim();
 
-    // Remove any remaining JSON-like fragments at the start/end
-    cleaned = cleaned.replace(/^\s*[\{\}]\s*/g, '').replace(/\s*[\{\}]\s*$/g, '').trim();
+    // Remove standalone closing braces/tags
+    cleaned = cleaned.replace(/^\s*[<>}\]]\s*$/, '').trim();
 
-    // If the result is empty or just punctuation, return a friendly message
-    if (!cleaned || /^[\s\{\}\[\],.:;!?-]*$/.test(cleaned)) {
+    // Remove any remaining function call fragments
+    cleaned = cleaned.replace(/<\/?function_call>/g, '').trim();
+
+    // If the result is empty or just punctuation, return empty
+    if (!cleaned || /^[\s\{\}\[\],.:;!?<>-]*$/.test(cleaned)) {
       return '';
     }
 
@@ -383,12 +381,21 @@ Assistant: React is a JavaScript library for building user interfaces...
   }
 
   /**
-   * Extract tool call from response
+   * Extract function call from response
+   * Supports both <function_call> tags and raw JSON
    */
   private static extractToolCall(text: string): string | null {
-    const toolJsonPattern = /\{[\s\S]*?"tool"[\s\S]*?\}/;
-    const match = toolJsonPattern.exec(text);
-    return match ? match[0] : null;
+    // Try to extract from <function_call> tags first (new format)
+    const tagPattern = /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/;
+    const tagMatch = tagPattern.exec(text);
+    if (tagMatch) {
+      return tagMatch[1]; // Return just the JSON part
+    }
+
+    // Fall back to raw JSON (old format)
+    const jsonPattern = /\{[\s\S]*?"(tool|name)"[\s\S]*?\}/;
+    const jsonMatch = jsonPattern.exec(text);
+    return jsonMatch ? jsonMatch[0] : null;
   }
 
   /**
@@ -406,13 +413,13 @@ Assistant: React is a JavaScript library for building user interfaces...
 
     if (!this.toolsEnabled) {
       // No tools enabled, use regular chat completion
-      console.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
-      console.log('Available tools:', this.availableTools.length);
+      Logger.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
+      Logger.debug('Available tools:', this.availableTools.length);
       const response = await this.chatCompletion(messages, config, onToken);
       return {response, usedTool: false};
     }
 
-    console.log('✅ Tools are enabled. Available tools:', this.availableTools.map(t => t.name).join(', '));
+    Logger.info('✅ Tools are enabled. Available tools:', this.availableTools.map(t => t.name).join(', '));
 
     try {
       // Add system prompt with tool definitions
@@ -435,60 +442,66 @@ Assistant: React is a JavaScript library for building user interfaces...
         maxTokens: 100, // Limit tokens for faster tool detection
       };
 
-      console.log('🔍 Starting tool detection phase (not streaming to UI)...');
+      Logger.info('🔍 Starting tool detection phase (not streaming to UI)...');
       const firstResponse = await this.chatCompletion(
         messagesWithTools,
         toolDetectionConfig,
       );
 
-      console.log('=== TOOL DETECTION DEBUG ===');
-      console.log('Temperature:', toolDetectionConfig.temperature, '(lower = more structured)');
-      console.log('Model raw output:', firstResponse);
-      console.log('Output length:', firstResponse.length);
+      Logger.debug('=== TOOL DETECTION DEBUG ===');
+      Logger.debug('Temperature:', toolDetectionConfig.temperature);
+      Logger.debug('Model raw output:', firstResponse);
+      Logger.debug('Output length:', firstResponse.length);
 
       // Try to parse tool call from response
       const toolCallMatch = this.extractToolCall(firstResponse);
 
       if (!toolCallMatch) {
-        console.log('❌ NO TOOL CALL DETECTED');
-        console.log('Possible reasons:');
-        console.log('1. Model responded normally (expected for non-tool questions)');
-        console.log('2. Model said "I would call" instead of outputting JSON');
-        console.log('3. Model is not trained for tool calling (use a fine-tuned model)');
-        console.log('See MODELS_FOR_TOOL_CALLING.md for recommended models');
+        Logger.info('❌ NO TOOL CALL DETECTED');
+        Logger.debug('Possible reasons:');
+        Logger.debug('1. Model responded normally (expected for non-tool questions)');
+        Logger.debug('2. Model said "I would call" instead of outputting JSON');
+        Logger.debug('3. Model is not trained for tool calling');
         // No tool call, filter any accidental JSON and return response
         const cleanResponse = this.filterToolJson(firstResponse);
         return {response: cleanResponse, usedTool: false};
       }
 
-      console.log('✅ TOOL CALL DETECTED:', toolCallMatch);
+      Logger.info('✅ TOOL CALL DETECTED:', toolCallMatch);
 
       try {
         const toolCall = JSON.parse(toolCallMatch);
 
-        if (!toolCall.tool || !ToolService.getTool(toolCall.tool)) {
+        // Support both "name" (new format) and "tool" (old format) fields
+        const toolName = toolCall.name || toolCall.tool;
+        const toolArgs = toolCall.arguments || {};
+
+        if (!toolName || !ToolService.getTool(toolName)) {
+          Logger.warn('⚠️  Invalid tool name or tool not found:', toolName);
           // Invalid tool call, filter JSON and return response
           const cleanResponse = this.filterToolJson(firstResponse);
           return {response: cleanResponse, usedTool: false};
         }
 
-        console.log('Tool call detected:', toolCall);
+        Logger.info('✅ Valid tool call detected:', {name: toolName, arguments: toolArgs});
 
         // Notify UI: tool is being called
         if (onToolUsage) {
-          onToolUsage('tool_call', toolCall.tool);
+          onToolUsage('tool_call', toolName);
         }
 
         // Execute the tool
         const toolResult = await ToolService.executeTool({
           id: `tool-${Date.now()}`,
-          name: toolCall.tool,
-          arguments: toolCall.arguments || {},
+          name: toolName,
+          arguments: toolArgs,
         });
+
+        Logger.info('🔧 Tool execution result:', toolResult);
 
         // Notify UI: tool result received
         if (onToolUsage) {
-          onToolUsage('tool_result', toolCall.tool);
+          onToolUsage('tool_result', toolName);
         }
 
         if (toolResult.error) {
@@ -517,7 +530,7 @@ Assistant: React is a JavaScript library for building user interfaces...
           return {
             response: cleanResponse,
             usedTool: true,
-            toolName: toolCall.tool,
+            toolName: toolName,
           };
         }
 
@@ -525,7 +538,7 @@ Assistant: React is a JavaScript library for building user interfaces...
         const toolResultMessage: Message = {
           id: 'tool-result',
           role: 'system',
-          content: `TOOL RESULTS:\n${JSON.stringify(toolResult.result, null, 2)}\n\n=== IMPORTANT INSTRUCTIONS ===\nNow answer the user's original question naturally using the information above. You MUST:\n1. Write a complete, helpful response in natural language\n2. DO NOT output any JSON, braces {}, or brackets []\n3. DO NOT just repeat the tool data - explain it naturally\n4. DO NOT output single characters like "}" or "{"\n5. Write at least 1-2 sentences explaining the answer\n\nRespond now in natural language:`,
+          content: `FUNCTION RESULT:\n${JSON.stringify(toolResult.result, null, 2)}\n\n=== IMPORTANT INSTRUCTIONS ===\nNow answer the user's original question naturally using the information above. You MUST:\n1. Write a complete, helpful response in natural language\n2. DO NOT output any <function_call> tags or JSON\n3. DO NOT just repeat the tool data - explain it naturally\n4. Write at least 1-2 sentences explaining the answer\n\nRespond now in natural language:`,
           timestamp: Date.now(),
         };
 
@@ -534,34 +547,38 @@ Assistant: React is a JavaScript library for building user interfaces...
           onToolUsage('generating');
         }
 
+        Logger.info('🎯 Generating final response with tool results...');
         const finalResponse = await this.chatCompletion(
           [...messagesWithTools, toolResultMessage],
           config,
-          onToken,
+          onToken, // THIS ENABLES STREAMING for the final response
         );
 
-        // Filter out any JSON artifacts from final response
+        Logger.debug('📝 Raw final response:', finalResponse);
+
+        // Filter out any function call artifacts from final response
         const cleanResponse = this.filterToolJson(finalResponse);
 
+        Logger.info('✨ Clean final response:', cleanResponse);
+
         // If the response is empty after filtering, the tool was likely used but no text was generated
-        // This can happen if the model only outputs the tool JSON
         if (!cleanResponse) {
-          console.log('⚠️  Model generated empty response after using tool. Tool result was processed but no text was generated.');
+          Logger.warn('⚠️  Model generated empty response after using tool.');
         }
 
         return {
           response: cleanResponse,
           usedTool: true,
-          toolName: toolCall.tool,
+          toolName: toolName,
         };
       } catch (parseError) {
         // Failed to parse tool call, filter JSON and return response
-        console.error('Failed to parse tool call:', parseError);
+        Logger.error('Failed to parse tool call:', parseError);
         const cleanResponse = this.filterToolJson(firstResponse);
         return {response: cleanResponse, usedTool: false};
       }
     } catch (error) {
-      console.error('Chat completion with tools error:', error);
+      Logger.error('Chat completion with tools error:', error);
       throw error;
     }
   }

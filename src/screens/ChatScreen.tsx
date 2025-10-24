@@ -26,6 +26,7 @@ import {
   MAX_CONTEXT_MESSAGES,
   ERROR_MESSAGES,
 } from '../utils/constants';
+import {Logger} from '../utils/Logger';
 
 interface ChatScreenProps {
   currentModel: ModelInfo | null;
@@ -63,15 +64,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const initializeAI = async () => {
     try {
-      console.log('🔍 Initializing AI backend...');
+      Logger.info('🔍 Initializing AI backend...');
       const backend = await AIService.initialize();
       const info = AIService.getBackendInfo();
 
       setAiBackend(backend);
       setBackendInfo(info.modelName);
 
-      console.log('✅ AI Backend:', backend);
-      console.log('✅ Model:', info.modelName);
+      Logger.info('✅ AI Backend:', backend);
+      Logger.info('✅ Model:', info.modelName);
 
       // Enable tools
       if (toolsEnabled) {
@@ -99,7 +100,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }
       }
     } catch (error) {
-      console.error('Failed to initialize AI:', error);
+      Logger.error('Failed to initialize AI:', error);
       setBackendInfo('Initialization failed');
     }
   };
@@ -136,7 +137,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       // Create new session if none exists
       createNewSession();
     } catch (error) {
-      console.error('Failed to load session:', error);
+      Logger.error('Failed to load session:', error);
       createNewSession();
     }
   };
@@ -264,6 +265,13 @@ IMPORTANT CONTEXT:
         fullResponse = result.response;
         usedTool = result.usedTool || false;
         toolName = result.toolName || '';
+
+        // Log tool usage for debugging
+        if (usedTool) {
+          Logger.info('✅ Tool was used:', toolName);
+        } else {
+          Logger.info('ℹ️  No tool was used (normal response)');
+        }
       } else {
         // Regular chat completion without tools
         const response = await AIService.chatCompletion(
@@ -292,13 +300,16 @@ IMPORTANT CONTEXT:
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
 
-      // Log tool usage
+      // Show tool usage indicator
       if (usedTool) {
-        console.log(`Tool used: ${toolName}`);
+        Logger.info(`🔧 Tool used: ${toolName}`);
+        Logger.info(`✨ Response generated using tool data`);
+      } else {
+        Logger.info(`💬 Regular response (no tools used)`);
       }
     } catch (error) {
-      console.error('Generation error:', error);
-      console.error('Error details:', {
+      Logger.error('Generation error:', error);
+      Logger.error('Error details:', {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined,
@@ -388,7 +399,7 @@ IMPORTANT CONTEXT:
               }
             } catch (error) {
               Alert.alert('Error', 'Failed to switch backend');
-              console.error('Backend switch error:', error);
+              Logger.error('Backend switch error:', error);
             }
           },
         },
