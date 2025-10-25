@@ -235,22 +235,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         -MAX_CONTEXT_MESSAGES,
       );
 
-      // Add system prompt if not present
-      if (contextMessages.length === 0 || contextMessages[0].role !== 'system') {
+      // Add system prompt if not present AND tools are not enabled
+      // When tools are enabled, LlamaService will add its own comprehensive system prompt
+      if (!toolsEnabled && (contextMessages.length === 0 || contextMessages[0].role !== 'system')) {
         const systemPrompt: Message = {
           id: generateId(),
           role: 'system',
-          content: `You are a helpful AI assistant running locally on this device. Be concise and accurate.
-
-CRITICAL RULES:
-- You have access to tools: get_current_datetime and search_web
-- When user asks about current time/date → USE get_current_datetime tool
-- When user asks about news/headlines/trending/search → USE search_web tool
-- DO NOT say "I don't have access" - YOU HAVE TOOLS
-- DO NOT refuse to answer about current events - USE THE SEARCH TOOL`,
+          content: `You are a helpful AI assistant running locally on this device. Be concise and accurate.`,
           timestamp: Date.now(),
         };
         contextMessages = [systemPrompt, ...contextMessages];
+        Logger.info('📝 Added basic system prompt (tools disabled)');
+      } else if (toolsEnabled) {
+        Logger.info('📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt');
       }
 
       // Generate response with tool support if enabled

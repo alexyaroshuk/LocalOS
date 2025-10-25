@@ -54,7 +54,7 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolFormat: 'transformers-native',
     needsToolExamples: false, // Native tool support, no examples needed
     toolDetectionTemp: 0.3, // Lower temp for more precise tool calling
-    toolDetectionMaxTokens: 200,
+    toolDetectionMaxTokens: 512, // Increased from 200 - need room for complete XML tool calls
     useLangchainPrompt: false, // Use native transformers format
     contextSize: 131072, // 128k context!
     description: 'Official Meta model with native tool calling via transformers chat templates. Better tool calling accuracy.',
