@@ -1,32 +1,122 @@
-[2025-10-25T07:38:25.664Z] INFO  | 🔍 Initializing AI backend...
-[2025-10-25T07:38:25.664Z] INFO  | Already initialized with backend: llama
-[2025-10-25T07:38:25.714Z] INFO  | ✅ AI Backend: | "llama"
-[2025-10-25T07:38:25.715Z] INFO  | ✅ Model: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T07:38:25.715Z] INFO  | 🔧 Tools enabled: 7 tools available
-[2025-10-25T07:38:40.854Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T07:38:40.855Z] INFO  | 👤 User prompt: | "My favorite color is blue"
-[2025-10-25T07:38:40.857Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T07:38:40.858Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T07:38:40.860Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.1,"topP":0.9,"topK":40,"maxTokens":100,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T07:38:47.508Z] DEBUG | Completion finished
-[2025-10-25T07:38:47.509Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T07:38:47.509Z] DEBUG | Temperature: | 0.1
-[2025-10-25T07:38:47.510Z] DEBUG | Model raw output: | "That's interesting! Blue is a great color. Is there anything else you'd like to know or any specific tasks you'd like to work on?"
-[2025-10-25T07:38:47.510Z] DEBUG | Output length: | 129
-[2025-10-25T07:38:47.511Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T07:38:47.512Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T07:38:47.512Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T07:38:56.774Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T07:38:56.775Z] INFO  | 👤 User prompt: | "What do you know about me?"
-[2025-10-25T07:38:56.776Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T07:38:56.777Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T07:38:56.779Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.1,"topP":0.9,"topK":40,"maxTokens":100,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T07:39:03.263Z] DEBUG | Completion finished
-[2025-10-25T07:39:03.264Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T07:39:03.264Z] DEBUG | Temperature: | 0.1
-[2025-10-25T07:39:03.265Z] DEBUG | Model raw output: | "I don't have any information about you yet. I can help you with tasks related to getting to know you and setting up initial tasks."
-[2025-10-25T07:39:03.265Z] DEBUG | Output length: | 130
-[2025-10-25T07:39:03.265Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T07:39:03.266Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T07:39:03.266Z] INFO  | 💬 Regular response (no tools used)
-
+[2025-10-25T11:08:33.799Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
+[2025-10-25T11:08:33.799Z] INFO  | 👤 User prompt: | "My favorite color is blue"
+[2025-10-25T11:08:33.799Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T11:08:33.799Z] DEBUG | Prompt length: | 2984
+[2025-10-25T11:08:33.799Z] DEBUG | Includes memory examples: | true
+[2025-10-25T11:08:33.799Z] DEBUG | Includes "What do you know":
+[2025-10-25T11:08:33.799Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
+[2025-10-25T11:08:33.799Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T11:08:33.799Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T11:08:33.799Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T11:08:33.799Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:08:36.956Z] DEBUG | Completion finished
+[2025-10-25T11:08:36.956Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T11:08:36.956Z] DEBUG | Temperature: | 0.3
+[2025-10-25T11:08:36.956Z] DEBUG | Model raw output: | "I've noted that down. I'll make sure to keep that in mind for our conversation. What else would you like to talk about?"
+[2025-10-25T11:08:36.956Z] DEBUG | Output length: | 119
+[2025-10-25T11:08:36.956Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T11:08:36.956Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T11:08:36.956Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T11:08:40.608Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
+[2025-10-25T11:08:40.608Z] INFO  | 👤 User prompt: | "What do you know about me?"
+[2025-10-25T11:08:40.609Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T11:08:40.609Z] DEBUG | Prompt length: | 2984
+[2025-10-25T11:08:40.609Z] DEBUG | Includes memory examples: | true
+[2025-10-25T11:08:40.609Z] DEBUG | Includes "What do you know":
+[2025-10-25T11:08:40.609Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
+[2025-10-25T11:08:40.609Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T11:08:40.609Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T11:08:40.609Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T11:08:40.609Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:08:42.824Z] DEBUG | Completion finished
+[2025-10-25T11:08:42.824Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T11:08:42.824Z] DEBUG | Temperature: | 0.3
+[2025-10-25T11:08:42.824Z] DEBUG | Model raw output: | "Let me check my memory. [archival_memory_search(query=\"user profile\", tags=[\"user\"], top_k=1)]"
+[2025-10-25T11:08:42.824Z] DEBUG | Output length: | 94
+[2025-10-25T11:08:42.824Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T11:08:42.824Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T11:08:42.824Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T11:09:59.148Z] ERROR | Failed to release context: | {}
+[2025-10-25T11:09:59.167Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
+[2025-10-25T11:09:59.310Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
+[2025-10-25T11:10:04.556Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
+[2025-10-25T11:10:04.696Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
+[2025-10-25T11:10:18.188Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
+[2025-10-25T11:10:18.329Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
+[2025-10-25T11:10:19.452Z] INFO  | 🔧 Tools enabled: 7 tools available
+[2025-10-25T11:10:19.452Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T11:10:19.452Z] INFO  | Tools supported? | true
+[2025-10-25T11:10:21.864Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
+[2025-10-25T11:10:22.004Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
+[2025-10-25T11:10:44.532Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
+[2025-10-25T11:10:46.250Z] INFO  | 📋 Model type detected: | "llama-3.2-1b-function-calling"
+[2025-10-25T11:10:46.250Z] INFO  | 🔧 Tool format: | "langchain-pydantic"
+[2025-10-25T11:10:46.251Z] INFO  | 📝 Needs examples: | true
+[2025-10-25T11:10:46.251Z] INFO  | ✅ Model loaded successfully: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:10:46.251Z] INFO  |    Using Llama 3.2 1B (Custom Function Calling) configuration
+[2025-10-25T11:10:46.260Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T11:10:46.260Z] INFO  | Already initialized with backend: apple
+[2025-10-25T11:10:46.261Z] INFO  | ✅ AI Backend: | "apple"
+[2025-10-25T11:10:46.261Z] INFO  | ✅ Model: | "Apple Intelligence (Neural Engine)"
+[2025-10-25T11:11:14.383Z] INFO  | 🔄 Switching to llama backend...
+[2025-10-25T11:11:14.383Z] INFO  | 🔄 Attempting to switch to llama backend...
+[2025-10-25T11:11:14.383Z] INFO  | ✅ Apple Intelligence session released
+[2025-10-25T11:11:14.383Z] INFO  | ✅ AI Service released
+[2025-10-25T11:11:14.383Z] INFO  | ✅ Switched to Llama.cpp
+[2025-10-25T11:11:14.383Z] INFO  | ✅ Switched to Llama.cpp
+[2025-10-25T11:11:24.178Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:11:24.178Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:11:24.752Z] DEBUG | Completion finished
+[2025-10-25T11:11:24.752Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T11:11:31.621Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:11:31.621Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:11:32.513Z] DEBUG | Completion finished
+[2025-10-25T11:11:32.513Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T11:11:34.297Z] INFO  | 🔧 Tools enabled: 7 tools available
+[2025-10-25T11:11:34.297Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T11:11:34.297Z] INFO  | Tools supported? | true
+[2025-10-25T11:11:35.350Z] INFO  | Tool prompt mode: Legacy
+[2025-10-25T11:11:35.350Z] INFO  | Switched to Legacy prompting mode
+[2025-10-25T11:11:37.099Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T11:11:37.099Z] INFO  | Already initialized with backend: llama
+[2025-10-25T11:11:37.113Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T11:11:37.113Z] INFO  | ✅ Model: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:11:37.113Z] INFO  | 🔧 Tools enabled: 7 tools available
+[2025-10-25T11:11:43.257Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
+[2025-10-25T11:11:43.257Z] INFO  | 👤 User prompt: | "My favorite color is blue"
+[2025-10-25T11:11:43.257Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T11:11:43.257Z] DEBUG | Prompt length: | 2984
+[2025-10-25T11:11:43.257Z] DEBUG | Includes memory examples: | true
+[2025-10-25T11:11:43.257Z] DEBUG | Includes "What do you know":
+[2025-10-25T11:11:43.257Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
+[2025-10-25T11:11:43.257Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.2-1b-function-calling","temperature":0.7,"maxTokens":150}
+[2025-10-25T11:11:43.257Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T11:11:43.257Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:11:43.258Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":150,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:11:44.748Z] DEBUG | Completion finished
+[2025-10-25T11:11:44.748Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T11:11:44.748Z] DEBUG | Temperature: | 0.7
+[2025-10-25T11:11:44.748Z] DEBUG | Model raw output: | "Blue is a great choice. Would you like to know more about the current weather in your area or learn about a specific blue-themed topic?"
+[2025-10-25T11:11:44.748Z] DEBUG | Output length: | 135
+[2025-10-25T11:11:44.748Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T11:11:44.748Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T11:11:44.748Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T11:11:47.653Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
+[2025-10-25T11:11:47.653Z] INFO  | 👤 User prompt: | "What do you know about me?"
+[2025-10-25T11:11:47.653Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T11:11:47.653Z] DEBUG | Prompt length: | 2984
+[2025-10-25T11:11:47.653Z] DEBUG | Includes memory examples: | true
+[2025-10-25T11:11:47.653Z] DEBUG | Includes "What do you know":
+[2025-10-25T11:11:47.653Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
+[2025-10-25T11:11:47.653Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.2-1b-function-calling","temperature":0.7,"maxTokens":150}
+[2025-10-25T11:11:47.653Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T11:11:47.653Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
+[2025-10-25T11:11:47.653Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":150,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T11:11:48.271Z] DEBUG | Completion finished
+[2025-10-25T11:11:48.271Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T11:11:48.271Z] DEBUG | Temperature: | 0.7
+[2025-10-25T11:11:48.271Z] DEBUG | Model raw output: | "I don't have access to your personal preferences or knowledge about you. I can only provide information based on our current conversation."
+[2025-10-25T11:11:48.271Z] DEBUG | Output length: | 138
+[2025-10-25T11:11:48.271Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T11:11:48.271Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T11:11:48.271Z] INFO  | 💬 Regular response (no tools used)

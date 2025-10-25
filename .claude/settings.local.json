@@ -25,7 +25,8 @@
       "Bash(npx tsc --noEmit --skipLibCheck src/services/MemoryService.ts src/services/ArchiveMemoryTools.ts src/services/MockDatabaseService.ts)",
       "Bash(npx tsc --noEmit --skipLibCheck src/services/LettaMemoryTools.ts src/components/DebugTestPrompts.tsx src/screens/MemoryViewerScreen.tsx)",
       "Bash(npx tsc --noEmit --skipLibCheck src/screens/ToolTestScreen.tsx src/services/LlamaService.ts src/types/modelConfig.ts)",
-      "Bash(npx tsc --noEmit src/types/modelConfig.ts)"
+      "Bash(npx tsc --noEmit src/types/modelConfig.ts)",
+      "Bash(cat node_modules/llama.rn/lib/typescript/src/index.d.ts)"
     ],
     "deny": [],
     "ask": []

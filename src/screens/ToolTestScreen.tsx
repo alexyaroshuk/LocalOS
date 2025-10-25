@@ -26,7 +26,6 @@ export const ToolTestScreen: React.FC = () => {
   );
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
-  const [useLangchain, setUseLangchain] = useState(true);
   const [modelMode, setModelMode] = useState<ModelType>('llama-3.2-1b-function-calling');
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
@@ -45,9 +44,6 @@ export const ToolTestScreen: React.FC = () => {
     const info = AIService.getBackendInfo();
     setBackendInfo(`${info.backend} - ${info.modelName}`);
     Logger.info('Tools supported?', AIService.areToolsSupported());
-
-    // Get initial Langchain mode state
-    setUseLangchain(LlamaService.isLangchainMode());
 
     // Check availability for all tools
     checkAllToolsAvailability(allTools);
@@ -75,16 +71,6 @@ export const ToolTestScreen: React.FC = () => {
     setToolAvailability(availabilityMap);
   };
 
-  const handleToggleLangchain = (value: boolean) => {
-    setUseLangchain(value);
-    LlamaService.setLangchainMode(value);
-    Logger.info(`Switched to ${value ? 'Langchain' : 'Legacy'} prompting mode`);
-    Alert.alert(
-      'Prompting Mode Changed',
-      `Now using ${value ? 'Langchain-style JSON schema' : 'Legacy simplified'} prompts for tool calling.\n\nTest the tools to compare performance!`,
-    );
-  };
-
   const handleToggleModelMode = (value: boolean) => {
     const newMode: ModelType = value ? 'llama-3.1-8b-instruct' : 'llama-3.2-1b-function-calling';
     setModelMode(newMode);
@@ -104,6 +90,38 @@ export const ToolTestScreen: React.FC = () => {
     );
   };
 
+  // Get sample test data for tool parameters
+  const getDefaultParamValue = (toolName: string, paramName: string): string => {
+    const sampleData: Record<string, Record<string, string>> = {
+      core_memory_append: {
+        label: 'user_profile',
+        content: 'Favorite color: blue, enjoys TypeScript programming',
+      },
+      core_memory_replace: {
+        label: 'user_profile',
+        old_content: 'New user',
+        new_content: 'Experienced developer who loves React Native',
+      },
+      archival_memory_insert: {
+        content: 'User prefers working in the morning, drinks coffee',
+        tags: 'habit, preference',
+      },
+      archival_memory_search: {
+        query: 'TypeScript programming preferences',
+        top_k: '5',
+      },
+      conversation_search: {
+        query: 'React Native discussion',
+        limit: '5',
+      },
+      search_web: {
+        query: 'Latest React Native news',
+      },
+    };
+
+    return sampleData[toolName]?.[paramName] || '';
+  };
+
   const handleDirectToolTest = async (toolName: string) => {
     try {
       Logger.info(`Direct tool execution test: ${toolName}`);
@@ -121,11 +139,16 @@ export const ToolTestScreen: React.FC = () => {
       // Build args from manual params or defaults
       for (const param of tool.parameters) {
         if (params[param.name]) {
+          // User has entered a value
           args[param.name] = params[param.name];
-        } else if (param.required) {
-          // Use default value for required params if not provided
-          if (toolName === 'search_web' && param.name === 'query') {
-            args[param.name] = 'React Native tutorials';
+        } else {
+          // Use sample data if available
+          const defaultValue = getDefaultParamValue(toolName, param.name);
+          if (defaultValue) {
+            args[param.name] = defaultValue;
+          } else if (param.required) {
+            // Fallback for required params
+            args[param.name] = `sample_${param.name}`;
           }
         }
       }
@@ -270,26 +293,34 @@ export const ToolTestScreen: React.FC = () => {
 
         {tool.parameters.length > 0 && (
           <View style={styles.parametersSection}>
-            <Text style={styles.parametersTitle}>Parameters (Manual Input):</Text>
-            {tool.parameters.map(param => (
-              <View key={param.name} style={styles.paramInputContainer}>
-                <Text style={styles.paramLabel}>
-                  {param.name}{param.required ? ' *' : ''}:
-                </Text>
-                <TextInput
-                  style={styles.paramInput}
-                  placeholder={`Enter ${param.name}`}
-                  value={toolParams.get(tool.name)?.[param.name] || ''}
-                  onChangeText={(text) => {
-                    const currentParams = toolParams.get(tool.name) || {};
-                    setToolParams(new Map(toolParams).set(tool.name, {
-                      ...currentParams,
-                      [param.name]: text,
-                    }));
-                  }}
-                />
-              </View>
-            ))}
+            <Text style={styles.parametersTitle}>Parameters (auto-filled with sample data):</Text>
+            {tool.parameters.map(param => {
+              const sampleValue = getDefaultParamValue(tool.name, param.name);
+              return (
+                <View key={param.name} style={styles.paramInputContainer}>
+                  <Text style={styles.paramLabel}>
+                    {param.name}{param.required ? ' *' : ''}:
+                  </Text>
+                  <TextInput
+                    style={styles.paramInput}
+                    placeholder={sampleValue || `Enter ${param.name}`}
+                    value={toolParams.get(tool.name)?.[param.name] || ''}
+                    onChangeText={(text) => {
+                      const currentParams = toolParams.get(tool.name) || {};
+                      setToolParams(new Map(toolParams).set(tool.name, {
+                        ...currentParams,
+                        [param.name]: text,
+                      }));
+                    }}
+                  />
+                  {sampleValue && !toolParams.get(tool.name)?.[param.name] && (
+                    <Text style={styles.sampleHint}>
+                      Sample: {sampleValue}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -343,28 +374,6 @@ export const ToolTestScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.toggleCard}>
-          <View style={styles.toggleHeader}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleTitle}>Prompt Format</Text>
-              <Text style={styles.toggleSubtitle}>
-                {useLangchain ? 'Langchain Mode (JSON Schema)' : 'Legacy Mode (Simplified)'}
-              </Text>
-            </View>
-            <Switch
-              value={useLangchain}
-              onValueChange={handleToggleLangchain}
-              trackColor={{false: '#D1D1D6', true: '#34C759'}}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          <Text style={styles.toggleDescription}>
-            {useLangchain
-              ? 'Using structured JSON schema format similar to Langchain\'s bind_tools'
-              : 'Using simpler tool list format with direct examples'}
-          </Text>
-        </View>
-
         <View style={styles.modelModeCard}>
           <View style={styles.toggleHeader}>
             <View style={styles.toggleInfo}>
@@ -647,6 +656,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: '#000',
+  },
+  sampleHint: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   buttonRow: {
     flexDirection: 'row',

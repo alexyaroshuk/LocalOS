@@ -1,7 +1,7 @@
 /**
  * Service for managing llama.cpp model inference
  */
-import {initLlama, LlamaContext, releaseContext} from 'llama.rn';
+import {initLlama, LlamaContext} from 'llama.rn';
 import {LlamaConfig, Message, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId} from '../utils/helpers';
@@ -76,7 +76,7 @@ export class LlamaService {
   static async releaseModel(): Promise<void> {
     if (this.context) {
       try {
-        await releaseContext(this.context.id);
+        await this.context.release();
         Logger.info('Model context released');
       } catch (error) {
         Logger.error('Failed to release context:', error);
@@ -420,33 +420,40 @@ Format: [tool_name(param="value")]`;
     if (needsExamples) {
       prompt += `
 
-CRITICAL EXAMPLES - Learn these patterns:
+MANDATORY RESPONSE FORMAT:
+- You MUST start your response with a tool call [tool_name(params)]
+- NEVER respond with plain text without calling a tool
+- ALWAYS use tools when the user's message matches any pattern below
+
+CRITICAL EXAMPLES - YOU MUST FOLLOW THESE EXACTLY:
 
 TIME/DATE:
-User: "What time is it?" → [get_current_datetime()]
-User: "What day is today?" → [get_current_datetime()]
+User: "What time is it?" → YOU MUST RESPOND: [get_current_datetime()]
+User: "What day is today?" → YOU MUST RESPOND: [get_current_datetime()]
 
 WEB SEARCH (Current events ONLY):
-User: "Latest headlines" → [search_web(query="headlines today")]
-User: "News about AI" → [search_web(query="AI news")]
-User: "What's trending" → [search_web(query="trending topics")]
+User: "Latest headlines" → YOU MUST RESPOND: [search_web(query="headlines today")]
+User: "News about AI" → YOU MUST RESPOND: [search_web(query="AI news")]
+User: "What's trending" → YOU MUST RESPOND: [search_web(query="trending topics")]
 
-MEMORY - WRITE (User shares info):
-User: "I prefer TypeScript" → [archival_memory_insert(content="User prefers TypeScript over JavaScript", tags=["preference", "programming"])]
-User: "My favorite color is blue" → [core_memory_append(label="user_profile", content="Favorite color: blue")]
-User: "I work best in mornings" → [archival_memory_insert(content="User works best in the morning hours", tags=["habit", "productivity"])]
-User: "Remember I'm working on LocalOS" → [core_memory_append(label="current_focus", content="Working on LocalOS project")]
+MEMORY - WRITE (User shares info about themselves):
+User: "I prefer TypeScript" → YOU MUST RESPOND: [archival_memory_insert(content="User prefers TypeScript over JavaScript", tags=["preference", "programming"])]
+User: "My favorite color is blue" → YOU MUST RESPOND: [core_memory_append(label="user_profile", content="Favorite color: blue")]
+User: "I work best in mornings" → YOU MUST RESPOND: [archival_memory_insert(content="User works best in the morning hours", tags=["habit", "productivity"])]
+User: "Remember I'm working on LocalOS" → YOU MUST RESPOND: [core_memory_append(label="current_focus", content="Working on LocalOS project")]
 
 MEMORY - READ (User asks about themselves):
-User: "What do you know about me?" → [archival_memory_search(query="user preferences habits", top_k=10)]
-User: "What are my preferences?" → [archival_memory_search(query="preferences", top_k=5)]
-User: "Do you remember what I said about TypeScript?" → [archival_memory_search(query="TypeScript", top_k=3)]
-User: "What did we discuss yesterday?" → [conversation_search(query="yesterday discussion", limit=5)]
+User: "What do you know about me?" → YOU MUST RESPOND: [archival_memory_search(query="user preferences habits", top_k=10)]
+User: "What are my preferences?" → YOU MUST RESPOND: [archival_memory_search(query="preferences", top_k=5)]
+User: "Do you remember what I said about TypeScript?" → YOU MUST RESPOND: [archival_memory_search(query="TypeScript", top_k=3)]
+User: "What did we discuss yesterday?" → YOU MUST RESPOND: [conversation_search(query="yesterday discussion", limit=5)]
 
-REMEMBER:
-- ALWAYS check archival_memory_search when user asks about themselves
-- ALWAYS save important info with archival_memory_insert or core_memory_append
-- DO NOT confuse web search with memory search!`;
+ABSOLUTE RULES - NEVER VIOLATE THESE:
+1. If user shares personal info → IMMEDIATELY call archival_memory_insert or core_memory_append
+2. If user asks "what do you know" → IMMEDIATELY call archival_memory_search
+3. DO NOT say "I don't have access" - YOU HAVE MEMORY TOOLS
+4. DO NOT respond with conversational text - CALL THE TOOL FIRST
+5. Tool calls MUST be on their own line, not mixed with text`;
     } else {
       // 8B model with native tool support - simpler, more concise instructions
       prompt += `
@@ -540,14 +547,40 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       const functionName = pythonicMatch[1];
       const argsString = pythonicMatch[2];
 
-      // Parse arguments: param="value" or param=value
+      // Parse arguments: param="value", param=123, param=["array", "values"]
       const args: Record<string, any> = {};
       if (argsString.trim()) {
-        // Match: param="value" or param='value'
-        const argPattern = /([\w_]+)\s*=\s*["']([^"']*)["']/g;
+        // More flexible pattern that handles strings, numbers, and arrays
+        // Matches: key="value", key='value', key=123, key=["a","b"], key=True, key=None
+        const argPattern = /([\w_]+)\s*=\s*(?:["']([^"']*)["']|\[([^\]]*)\]|(\w+)|(\d+))/g;
         let argMatch;
         while ((argMatch = argPattern.exec(argsString)) !== null) {
-          args[argMatch[1]] = argMatch[2];
+          const key = argMatch[1];
+
+          if (argMatch[2] !== undefined) {
+            // Quoted string: param="value"
+            args[key] = argMatch[2];
+          } else if (argMatch[3] !== undefined) {
+            // Array: param=["a", "b"]
+            // Parse the array content
+            const arrayContent = argMatch[3];
+            const arrayItems = arrayContent.split(',').map(item => {
+              const trimmed = item.trim();
+              // Remove quotes if present
+              return trimmed.replace(/^["']|["']$/g, '');
+            }).filter(item => item.length > 0);
+            args[key] = arrayItems;
+          } else if (argMatch[4] !== undefined) {
+            // Word: param=True, param=None, param=word
+            const word = argMatch[4];
+            if (word === 'True' || word === 'true') args[key] = true;
+            else if (word === 'False' || word === 'false') args[key] = false;
+            else if (word === 'None' || word === 'null') args[key] = null;
+            else args[key] = word;
+          } else if (argMatch[5] !== undefined) {
+            // Number: param=123
+            args[key] = parseInt(argMatch[5], 10);
+          }
         }
       }
 
