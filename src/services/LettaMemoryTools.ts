@@ -17,7 +17,7 @@ export class LettaMemoryTools {
     return {
       name: 'core_memory_append',
       description:
-        'Append to the contents of core memory. Use this to add new information without replacing existing content.',
+        'Append to core memory (always in-context). ONLY for things that INFLUENCE YOUR BEHAVIOR: conversation style (concise/verbose), communication preferences, current context. NOT for facts (job, favorite color) - use archival_memory_insert.',
       parameters: [
         {
           name: 'label',
@@ -87,7 +87,7 @@ export class LettaMemoryTools {
     return {
       name: 'core_memory_replace',
       description:
-        'Replace the contents of core memory. To delete memories, use an empty string for new_content.',
+        'Replace text in core memory (always in-context). ONLY for USER info. Use to update preferences/personality when they change.',
       parameters: [
         {
           name: 'label',
@@ -175,7 +175,7 @@ export class LettaMemoryTools {
     return {
       name: 'archival_memory_insert',
       description:
-        'Add to archival memory. Make sure to phrase the memory contents such that it can be easily queried later.',
+        'Add to archival memory (on-demand retrieval). Use for FACTS about the user: job, interests, preferences (favorite color, language preference), past events, conversations, tasks. Retrieved when needed.',
       parameters: [
         {
           name: 'content',
@@ -395,14 +395,112 @@ export class LettaMemoryTools {
   }
 
   /**
+   * Tool: core_memory_clear
+   * Clear/reset a core memory block
+   */
+  static getCoreMemoryClearTool(): Tool {
+    return {
+      name: 'core_memory_clear',
+      description:
+        'Clear/reset a specific core memory block. Use this to remove all content from a memory section.',
+      parameters: [
+        {
+          name: 'label',
+          type: 'string',
+          description: 'Section of the memory to be cleared',
+          required: true,
+          enum: [
+            'user_profile',
+            'conversation_style',
+            'current_focus',
+            'relationship_context',
+          ],
+        },
+      ],
+      execute: async (args: Record<string, any>) => {
+        try {
+          const {label} = args;
+
+          await MemoryService.updateCoreMemoryBlock(label as any, '');
+
+          return {
+            success: true,
+            message: `Cleared core memory '${label}'`,
+            label,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to clear core memory',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: archival_memory_delete
+   * Delete a specific memory from archival storage by ID
+   */
+  static getArchivalMemoryDeleteTool(): Tool {
+    return {
+      name: 'archival_memory_delete',
+      description:
+        'Delete a specific memory from archival storage. Use this to remove outdated or incorrect information.',
+      parameters: [
+        {
+          name: 'id',
+          type: 'number',
+          description: 'ID of the memory to delete',
+          required: true,
+        },
+      ],
+      execute: async (args: Record<string, any>) => {
+        try {
+          const {id} = args;
+
+          // Delete from mock database
+          const result = await MockDatabaseService.deleteArchiveMemory(id);
+
+          if (result) {
+            return {
+              success: true,
+              message: `Deleted archival memory with ID ${id}`,
+              id,
+            };
+          } else {
+            return {
+              success: false,
+              error: `Memory with ID ${id} not found`,
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to delete archival memory',
+          };
+        }
+      },
+    };
+  }
+
+  /**
    * Get all Letta-compatible memory tools
    */
   static getAllTools(): Tool[] {
     return [
       this.getCoreMemoryAppendTool(),
       this.getCoreMemoryReplaceTool(),
+      this.getCoreMemoryClearTool(),
       this.getArchivalMemoryInsertTool(),
       this.getArchivalMemorySearchTool(),
+      this.getArchivalMemoryDeleteTool(),
       this.getConversationSearchTool(),
     ];
   }

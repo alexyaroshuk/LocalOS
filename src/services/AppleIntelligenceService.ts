@@ -23,7 +23,8 @@ interface AppleLLMConfig {
 const getCurrentDateTimeTool = tool({
   description: 'Get the current date and time. Use this when the user asks about the current date, time, day of the week, or any time-related queries.',
   parameters: z.object({}),
-  execute: async () => {
+  // @ts-expect-error - AI SDK tool type inference issue with empty parameters
+  execute: async ({}: {}) => {
     const now = new Date();
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
@@ -53,6 +54,7 @@ const searchWebTool = tool({
   parameters: z.object({
     query: z.string().describe('The search query to look up'),
   }),
+  // @ts-expect-error - AI SDK tool type inference issue
   execute: async ({query}: {query: string}) => {
     try {
       const encodedQuery = encodeURIComponent(query);
@@ -126,7 +128,7 @@ function getAppleProviderWithTools() {
 }
 
 // Check if packages are available
-const isPackageAvailable = !!(appleBase && generateText && streamText);
+const isPackageAvailable = !!appleBase;
 
 if (Platform.OS === 'ios') {
   Logger.info('✅ Loaded @react-native-ai/apple with AI SDK');

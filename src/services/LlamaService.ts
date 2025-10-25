@@ -9,6 +9,7 @@ import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
+import {SYSTEM_PROMPTS, SystemPromptType, getDefaultPromptType} from './SystemPrompts';
 
 export class LlamaService {
   private static context: LlamaContext | null = null;
@@ -19,6 +20,7 @@ export class LlamaService {
   private static availableTools: Tool[] = [];
   private static useLangchainPrompt: boolean = true; // Default to Langchain mode
   private static modelConfig: ModelConfig | null = null; // Model-specific configuration
+  private static currentPromptType: SystemPromptType = 'letta'; // Current system prompt variant
 
   /**
    * Initialize and load a model
@@ -138,7 +140,6 @@ export class LlamaService {
           temperature: llamaConfig.temperature,
           top_p: llamaConfig.topP,
           top_k: llamaConfig.topK,
-          repeat_penalty: llamaConfig.repeatPenalty,
           stop: llamaConfig.stopSequences,
         },
         data => {
@@ -330,32 +331,73 @@ export class LlamaService {
   }
 
   /**
+   * Set system prompt type
+   */
+  static setPromptType(promptType: SystemPromptType): void {
+    this.currentPromptType = promptType;
+    Logger.info('📝 System prompt changed to:', promptType);
+  }
+
+  /**
+   * Get current system prompt type
+   */
+  static getPromptType(): SystemPromptType {
+    return this.currentPromptType;
+  }
+
+  /**
    * Get system prompt with tool definitions
-   * Format compatible with Llama 3.2 1B Function Calling model
-   * Based on: nguyenthanhthuan/Llama-3.2-1B-Instruct-function-calling-v2
+   * Uses configurable prompt variants for testing
    */
   private static getToolSystemPrompt(): string {
-    let prompt = '';
-
-    // Add core memory first (always included)
+    // Get core memory
+    let coreMemory = '';
     try {
-      const coreMemory = MemoryService.getFormattedCoreMemory();
-      prompt += coreMemory + '\n\n';
+      coreMemory = MemoryService.getFormattedCoreMemory();
     } catch (error) {
       Logger.warn('Core memory not available:', error);
     }
 
-    // Add tool definitions if enabled
+    // If no tools enabled, return just core memory
     if (!this.toolsEnabled || this.availableTools.length === 0) {
-      return prompt;
+      return coreMemory;
     }
 
-    // Use legacy or langchain mode based on toggle
-    prompt += this.useLangchainPrompt
-      ? this.getLangchainToolPrompt()
-      : this.getLegacyToolPrompt();
+    // Get model config to determine if examples are needed
+    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+    const needsExamples = modelConfig.needsToolExamples;
 
-    return prompt;
+    // Create tools JSON schema
+    const toolSchemas = this.availableTools.map(tool => {
+      const properties: Record<string, any> = {};
+      const required: string[] = [];
+
+      tool.parameters.forEach(p => {
+        properties[p.name] = {
+          type: p.type,
+          description: p.description,
+        };
+        if (p.required) {
+          required.push(p.name);
+        }
+      });
+
+      return {
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: 'object',
+          properties,
+          required: required.length > 0 ? required : undefined,
+        },
+      };
+    });
+
+    const toolsJson = JSON.stringify(toolSchemas, null, 2);
+
+    // Use selected prompt variant
+    const promptConfig = SYSTEM_PROMPTS[this.currentPromptType];
+    return promptConfig.getPrompt(coreMemory, toolsJson, needsExamples);
   }
 
   /**

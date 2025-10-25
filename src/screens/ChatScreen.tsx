@@ -99,11 +99,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
       // Show user what backend is being used
       if (backend === 'apple') {
-        Alert.alert(
+      /*   Alert.alert(
           '🚀 Apple Intelligence',
           'Using on-device Apple AI\n\n• 10x faster than Llama\n• Native tool calling\n• Zero downloads\n• Private & offline',
           [{text: 'Got it!'}],
-        );
+        ); */
       } else if (backend === 'llama') {
         // Only show if model is loaded
         if (!info.isReady) {

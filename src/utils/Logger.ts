@@ -42,7 +42,7 @@ class LoggerService {
    * Save logs to storage (debounced)
    */
   private saveLogsToStorage = (() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     return () => {
       clearTimeout(timeout);
       timeout = setTimeout(async () => {
@@ -161,7 +161,7 @@ class LoggerService {
    * Get logs filtered by level
    */
   getLogsByLevel(level: LogEntry['level']): LogEntry[] {
-    return this.logs.filter(log => log.log === level);
+    return this.logs.filter(log => log.level === level);
   }
 }
 

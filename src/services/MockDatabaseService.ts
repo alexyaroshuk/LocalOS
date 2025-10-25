@@ -74,29 +74,31 @@ export class MockDatabaseService {
     console.log('[MockDB] Initializing database...');
 
     // Initialize core memory blocks (these will be loaded by MemoryService)
+    // NOTE: Core memory should INFLUENCE BEHAVIOR, not store facts
+    // Facts about the user (job, interests, etc) go in archival memory
     this.coreMemory = [
       {
         id: this.nextId++,
         block_name: 'user_profile',
-        content: 'User is a software developer working on LocalOS. Interested in AI and privacy-focused apps.',
+        content: 'Experienced developer. Treat as technical peer.',
         last_updated: Date.now(),
       },
       {
         id: this.nextId++,
         block_name: 'conversation_style',
-        content: 'Prefers concise, technical responses. Appreciates code examples and practical guidance.',
+        content: 'Prefers concise, technical responses. Use code examples. Skip pleasantries.',
         last_updated: Date.now(),
       },
       {
         id: this.nextId++,
         block_name: 'current_focus',
-        content: 'Currently implementing memory system with task management. Working on Phase A.',
+        content: 'Building LocalOS memory system. Context: mobile app, React Native, local-first AI.',
         last_updated: Date.now(),
       },
       {
         id: this.nextId++,
         block_name: 'relationship_context',
-        content: 'Working solo on LocalOS project. Active in React Native community.',
+        content: 'Solo developer. No need to explain basic concepts. Direct communication preferred.',
         last_updated: Date.now(),
       },
     ];
@@ -105,22 +107,39 @@ export class MockDatabaseService {
     const now = Date.now();
     const dayInMs = 24 * 60 * 60 * 1000;
 
+    // Archive memory stores FACTS about the user (retrieved on-demand)
     this.archiveMemories = [
+      {
+        id: this.nextId++,
+        content: 'User is a software developer specializing in React Native and TypeScript',
+        category: 'fact',
+        importance: 8,
+        created_at: now - 10 * dayInMs,
+        metadata: JSON.stringify({tags: ['occupation', 'skills', 'programming']}),
+      },
       {
         id: this.nextId++,
         content: 'User prefers TypeScript over JavaScript for all projects',
         category: 'preference',
         importance: 8,
         created_at: now - 10 * dayInMs,
-        metadata: JSON.stringify({tags: ['development', 'languages'], confidence: 0.9}),
+        metadata: JSON.stringify({tags: ['development', 'languages']}),
       },
       {
         id: this.nextId++,
-        content: 'User mentioned they work best in the mornings',
+        content: 'User works best in the mornings',
         category: 'preference',
         importance: 6,
         created_at: now - 5 * dayInMs,
-        metadata: JSON.stringify({tags: ['productivity', 'schedule']}),
+        metadata: JSON.stringify({tags: ['productivity', 'schedule', 'habits']}),
+      },
+      {
+        id: this.nextId++,
+        content: 'User is interested in AI, privacy-focused apps, and local-first software',
+        category: 'fact',
+        importance: 7,
+        created_at: now - 12 * dayInMs,
+        metadata: JSON.stringify({tags: ['interests', 'technology']}),
       },
       {
         id: this.nextId++,
@@ -128,15 +147,15 @@ export class MockDatabaseService {
         category: 'event',
         importance: 7,
         created_at: now - 14 * dayInMs,
-        metadata: JSON.stringify({tags: ['project', 'milestone']}),
+        metadata: JSON.stringify({tags: ['project', 'milestone', 'LocalOS']}),
       },
       {
         id: this.nextId++,
-        content: 'User discussed implementing Letta-style memory architecture',
+        content: 'User discussed implementing Letta-style memory architecture on 2025-01-14',
         category: 'conversation',
         importance: 9,
         created_at: now - 1 * dayInMs,
-        metadata: JSON.stringify({tags: ['memory', 'architecture', 'planning']}),
+        metadata: JSON.stringify({tags: ['memory', 'architecture', 'planning', 'Letta']}),
       },
     ];
 
@@ -298,7 +317,7 @@ export class MockDatabaseService {
 
   static async searchArchive(query: string, limit: number = 5): Promise<ArchiveMemory[]> {
     // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     // Simple keyword search
     const lowerQuery = query.toLowerCase();
@@ -455,6 +474,51 @@ export class MockDatabaseService {
     fact.last_confirmed = Date.now();
     console.log(`[MockDB] Updated user fact confidence: ${fact.fact.substring(0, 50)}...`);
     return fact;
+  }
+
+  /**
+   * Delete an archive memory by ID
+   */
+  static async deleteArchiveMemory(id: number): Promise<boolean> {
+    const index = this.archiveMemories.findIndex(m => m.id === id);
+    if (index === -1) {
+      console.log(`[MockDB] Archive memory ${id} not found`);
+      return false;
+    }
+
+    this.archiveMemories.splice(index, 1);
+    console.log(`[MockDB] Deleted archive memory ${id}`);
+    return true;
+  }
+
+  /**
+   * Delete a task by ID
+   */
+  static async deleteTask(id: number): Promise<boolean> {
+    const index = this.tasks.findIndex(t => t.id === id);
+    if (index === -1) {
+      console.log(`[MockDB] Task ${id} not found`);
+      return false;
+    }
+
+    this.tasks.splice(index, 1);
+    console.log(`[MockDB] Deleted task ${id}`);
+    return true;
+  }
+
+  /**
+   * Delete a user fact by ID
+   */
+  static async deleteUserFact(id: number): Promise<boolean> {
+    const index = this.userFacts.findIndex(f => f.id === id);
+    if (index === -1) {
+      console.log(`[MockDB] User fact ${id} not found`);
+      return false;
+    }
+
+    this.userFacts.splice(index, 1);
+    console.log(`[MockDB] Deleted user fact ${id}`);
+    return true;
   }
 
   // ============== UTILITY ==============

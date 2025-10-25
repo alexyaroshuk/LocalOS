@@ -50,11 +50,11 @@ class MemoryService {
         await this.saveCoreMemory();
         console.log('[MemoryService] Initialized with default core memory');
       }
-      return this.coreMemory;
+      return this.coreMemory as CoreMemoryBlocks;
     } catch (error) {
       console.error('[MemoryService] Failed to load core memory:', error);
       this.coreMemory = DEFAULT_CORE_MEMORY;
-      return this.coreMemory;
+      return this.coreMemory as CoreMemoryBlocks;
     }
   }
 

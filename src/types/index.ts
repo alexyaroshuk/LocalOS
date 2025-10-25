@@ -91,6 +91,8 @@ export interface ToolResult {
   name: string;
   result: any;
   error?: string;
+  success?: boolean;
+  data?: any;
 }
 
 // Extended message type to support tool calls
