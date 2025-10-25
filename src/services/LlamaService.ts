@@ -7,6 +7,7 @@ import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId} from '../utils/helpers';
 import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
+import MemoryService from './MemoryService';
 
 export class LlamaService {
   private static context: LlamaContext | null = null;
@@ -298,14 +299,27 @@ export class LlamaService {
    * Based on: nguyenthanhthuan/Llama-3.2-1B-Instruct-function-calling-v2
    */
   private static getToolSystemPrompt(): string {
+    let prompt = '';
+
+    // Add core memory first (always included)
+    try {
+      const coreMemory = MemoryService.getFormattedCoreMemory();
+      prompt += coreMemory + '\n\n';
+    } catch (error) {
+      Logger.warn('Core memory not available:', error);
+    }
+
+    // Add tool definitions if enabled
     if (!this.toolsEnabled || this.availableTools.length === 0) {
-      return '';
+      return prompt;
     }
 
     // Use legacy or langchain mode based on toggle
-    return this.useLangchainPrompt
+    prompt += this.useLangchainPrompt
       ? this.getLangchainToolPrompt()
       : this.getLegacyToolPrompt();
+
+    return prompt;
   }
 
   /**
@@ -345,29 +359,50 @@ export class LlamaService {
 
 ${toolsJson}
 
-ABSOLUTE MANDATORY RULES:
-If user says ANY of these words, you MUST call search_web immediately:
-"search", "find", "news", "latest", "headlines", "trending", "about", "what's happening", "current events"
+CRITICAL TOOL USAGE RULES:
 
-DO NOT say "I don't have access" - YOU HAVE THE SEARCH TOOL
-DO NOT answer from memory - USE THE TOOL
-DO NOT refuse - CALL THE TOOL NOW
+1. MEMORY TOOLS - Use these to remember and recall information:
+   - When user shares personal info: USE core_memory_append or archival_memory_insert
+   - When user asks "what do you know": USE archival_memory_search
+   - When user asks about past conversations: USE conversation_search
+   - ALWAYS search memory BEFORE saying "I don't know"
+
+2. WEB SEARCH - Use ONLY for current events/news:
+   - Keywords: "news", "latest", "headlines", "trending", "current events"
+   - DO NOT use for questions about the USER
+
+3. TIME/DATE - Use for time-related queries:
+   - Keywords: "what time", "what day", "date", "when is"
 
 Format: [tool_name(param="value")]
 
-EXAMPLES - Learn these patterns:
+CRITICAL EXAMPLES - Learn these patterns:
+
+TIME/DATE:
 User: "What time is it?" → [get_current_datetime()]
+User: "What day is today?" → [get_current_datetime()]
+
+WEB SEARCH (Current events ONLY):
 User: "Latest headlines" → [search_web(query="headlines today")]
-User: "News about Trump" → [search_web(query="Trump news")]
-User: "Latest news about canada" → [search_web(query="canada news")]
-User: "What's trending on Twitter" → [search_web(query="Twitter trending")]
-User: "Search for React Native" → [search_web(query="React Native")]
-User: "Find React tutorials" → [search_web(query="React tutorials")]
-User: "What's on the news" → [search_web(query="latest news")]
-User: "Latest news about biden" → [search_web(query="biden news")]
-User: "What's happening with AI" → [search_web(query="AI news")]
-User: "Search for Trump Canada" → [search_web(query="Trump Canada")]
-User: "What's trending" → [search_web(query="trending topics")]`;
+User: "News about AI" → [search_web(query="AI news")]
+User: "What's trending" → [search_web(query="trending topics")]
+
+MEMORY - WRITE (User shares info):
+User: "I prefer TypeScript" → [archival_memory_insert(content="User prefers TypeScript over JavaScript", tags=["preference", "programming"])]
+User: "My favorite color is blue" → [core_memory_append(label="user_profile", content="Favorite color: blue")]
+User: "I work best in mornings" → [archival_memory_insert(content="User works best in the morning hours", tags=["habit", "productivity"])]
+User: "Remember I'm working on LocalOS" → [core_memory_append(label="current_focus", content="Working on LocalOS project")]
+
+MEMORY - READ (User asks about themselves):
+User: "What do you know about me?" → [archival_memory_search(query="user preferences habits", top_k=10)]
+User: "What are my preferences?" → [archival_memory_search(query="preferences", top_k=5)]
+User: "Do you remember what I said about TypeScript?" → [archival_memory_search(query="TypeScript", top_k=3)]
+User: "What did we discuss yesterday?" → [conversation_search(query="yesterday discussion", limit=5)]
+
+REMEMBER:
+- ALWAYS check archival_memory_search when user asks about themselves
+- ALWAYS save important info with archival_memory_insert or core_memory_append
+- DO NOT confuse web search with memory search!`;
   }
 
   /**
@@ -560,10 +595,21 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
     try {
       // Add system prompt with tool definitions
+      const systemPrompt = this.getToolSystemPrompt();
+
+      // DEBUG: Log system prompt to verify it includes memory examples
+      Logger.debug('=== SYSTEM PROMPT DEBUG ===');
+      Logger.debug('Prompt length:', systemPrompt.length);
+      Logger.debug('Includes memory examples:', systemPrompt.includes('archival_memory_search'));
+      Logger.debug('Includes "What do you know":', systemPrompt.includes('What do you know about me'));
+      if (systemPrompt.length > 0) {
+        Logger.debug('First 500 chars:', systemPrompt.substring(0, 500));
+      }
+
       const systemMessage: Message = {
         id: 'system-tools',
         role: 'system',
-        content: this.getToolSystemPrompt(),
+        content: systemPrompt,
         timestamp: Date.now(),
       };
 
@@ -574,9 +620,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       // Don't stream to UI during tool detection phase
       const toolDetectionConfig = {
         ...config,
-        temperature: 0.1, // Lower temp for structured JSON output
+        temperature: 0.7, // Increased from 0.1 - too low may cause repetitive/stuck behavior
         topP: 0.9,
-        maxTokens: 100, // Limit tokens for faster tool detection
+        maxTokens: 150, // Increased from 100 - tool calls may need more tokens
       };
 
       Logger.info('🔍 Starting tool detection phase (not streaming to UI)...');
