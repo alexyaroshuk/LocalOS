@@ -6,6 +6,23 @@ export interface Message {
   timestamp: number;
 }
 
+// Action message type - actions are treated as messages in the chat
+export interface ActionMessage {
+  id: string;
+  role: 'action';
+  actionType: 'thinking' | 'tool_call' | 'tool_result' | 'generating';
+  content: string; // Description like "Thought for 2s" or "Used search_web"
+  timestamp: number;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+  toolName?: string;
+  toolArgs?: Record<string, any>;
+  toolResult?: any;
+  error?: string;
+  isComplete: boolean;
+}
+
 // Model information
 export interface ModelInfo {
   id: string;
@@ -35,11 +52,14 @@ export interface LlamaConfig {
   toolDetectionMaxTokens?: number;
 }
 
+// Union type for all chat items
+export type ChatItem = Message | ActionMessage;
+
 // Chat session
 export interface ChatSession {
   id: string;
   title: string;
-  messages: Message[];
+  messages: ChatItem[];
   modelId: string;
   createdAt: number;
   updatedAt: number;
