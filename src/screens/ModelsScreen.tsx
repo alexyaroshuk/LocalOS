@@ -16,6 +16,7 @@ import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
 import {RECOMMENDED_MODELS} from '../utils/constants';
 import {formatBytes} from '../utils/helpers';
+import {Logger} from '../utils/Logger';
 
 interface ModelsScreenProps {
   currentModel: ModelInfo | null;
@@ -33,6 +34,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   >(new Map());
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
   const [availableSpace, setAvailableSpace] = useState<number>(0);
+  const [showDownloadableModels, setShowDownloadableModels] = useState<boolean>(false);
 
   useEffect(() => {
     initializeModels();
@@ -213,6 +215,15 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     try {
       setLoadingModel(model.id);
 
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info('🔄 LOADING MODEL');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info(`Model Name: ${model.name}`);
+      Logger.info(`Model ID: ${model.id}`);
+      Logger.info(`Model Path: ${model.localPath}`);
+      Logger.info(`Model Size: ${formatBytes(model.size)}`);
+      Logger.info(`Quantization: ${model.quantization}`);
+
       await LlamaService.loadModel(model.localPath, model.name);
 
       await StorageService.saveCurrentModel(model);
@@ -224,10 +235,30 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       onModelLoaded(model);
 
+      Logger.info('✅ Model loaded successfully');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
       Alert.alert('Success', `${model.name} loaded successfully!`);
     } catch (error) {
-      console.error('Failed to load model:', error);
-      Alert.alert('Error', 'Failed to load model. Please try again.');
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error('❌ FAILED TO LOAD MODEL');
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error(`Model Name: ${model.name}`);
+      Logger.error(`Model ID: ${model.id}`);
+      Logger.error(`Model Path: ${model.localPath}`);
+      Logger.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+      Logger.error('Error Message:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        Logger.error('Stack Trace:', error.stack);
+      }
+      Logger.error('Full Error Object:', error);
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert(
+        'Failed to Load Model',
+        `Error: ${errorMessage}\n\nPlease check the logs for more details.`,
+      );
     } finally {
       setLoadingModel(null);
     }
@@ -327,6 +358,18 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   console.log('Actual file size:', actualSize);
                 } catch (err) {
                   console.warn('Could not get file size, using picker size:', err);
+                }
+
+                // Check if model with this path already exists
+                const existingModel = models.find(m => m.localPath === destPath);
+                if (existingModel) {
+                  Logger.info('Model already exists in list, not adding duplicate');
+                  Alert.alert(
+                    'Model Already Exists',
+                    `This model is already in your list: ${existingModel.name}`,
+                  );
+                  setLoadingModel(null);
+                  return;
                 }
 
                 // Create model info
@@ -466,8 +509,39 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
           </>
         )}
 
-        <Text style={styles.sectionTitle}>All Models</Text>
-        {models.map(renderModelCard)}
+        <Text style={styles.sectionTitle}>Downloaded Models</Text>
+        {models.filter(m => m.downloaded).length > 0 ? (
+          models.filter(m => m.downloaded).map(renderModelCard)
+        ) : (
+          <Text style={styles.emptyStateText}>
+            No models downloaded yet. Import a model or download one below.
+          </Text>
+        )}
+
+        <View style={styles.sectionDivider} />
+
+        <TouchableOpacity
+          style={styles.expandableHeader}
+          onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
+          <Text style={styles.sectionTitle}>Downloadable Models</Text>
+          <Text style={styles.expandIcon}>
+            {showDownloadableModels ? '▼' : '▶'}
+          </Text>
+        </TouchableOpacity>
+        {showDownloadableModels && (
+          <>
+            <Text style={styles.sectionSubtitle}>
+              Models available for download from Hugging Face
+            </Text>
+            {models.filter(m => !m.downloaded).length > 0 ? (
+              models.filter(m => !m.downloaded).map(renderModelCard)
+            ) : (
+              <Text style={styles.emptyStateText}>
+                All recommended models are already downloaded!
+              </Text>
+            )}
+          </>
+        )}
 
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>About Model Sizes</Text>
@@ -641,5 +715,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1565C0',
     lineHeight: 20,
+  },
+  expandableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  expandIcon: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    marginBottom: 12,
+    paddingVertical: 16,
   },
 });

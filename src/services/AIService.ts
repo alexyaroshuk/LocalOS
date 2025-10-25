@@ -34,41 +34,10 @@ export class AIService {
     Logger.info('Platform Version:', Platform.Version);
     LogSection.header('Detection Process');
 
-    // Try Apple Intelligence first (iOS 18+ only)
-    if (Platform.OS === 'ios') {
-      Logger.info('✓ Running on iOS - checking Apple Intelligence...');
-
-      try {
-        const appleAvailable = await AppleIntelligenceService.isAvailable();
-        Logger.info('Apple Intelligence available?', appleAvailable);
-
-        if (appleAvailable) {
-          Logger.info('✓ Initializing Apple Intelligence...');
-          await AppleIntelligenceService.initialize();
-          this.currentBackend = 'apple';
-          LogSection.end();
-          Logger.log('✅ SUCCESS: Using Apple Intelligence (Neural Engine)');
-          LogSection.end();
-          return 'apple';
-        } else {
-          Logger.warn('✗ Apple Intelligence not available on this device');
-          Logger.info('  Possible reasons:');
-          Logger.info('  1. iOS version < 18 (current: ' + Platform.Version + ')');
-          Logger.info('  2. Package not installed: @react-native-ai/apple');
-          Logger.info('  3. Device not supported');
-        }
-      } catch (error) {
-        Logger.error('✗ Apple Intelligence initialization failed');
-        Logger.error('Error details:', error);
-      }
-    } else {
-      Logger.info('✗ Not iOS - Apple Intelligence not available');
-    }
-
-    // Fallback to Llama.cpp (works everywhere)
-    LogSection.header('Fallback');
-    Logger.warn('⚠️  FALLBACK: Using Llama.cpp');
+    // Use Llama.cpp as default
+    Logger.info('✅ Using Llama.cpp as default backend');
     Logger.info('Load a GGUF model from Models screen to start chatting');
+    Logger.info('You can switch to Apple Intelligence from the Chat screen if available');
     LogSection.end();
     this.currentBackend = 'llama';
     return 'llama';

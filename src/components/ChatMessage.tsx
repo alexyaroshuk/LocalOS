@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, Clipboard} from 'react-native';
 import {Message} from '../types';
 import {formatTimestamp} from '../utils/helpers';
 
@@ -11,11 +11,36 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({message}) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
+  const handleLongPress = () => {
+    Alert.alert(
+      'Message Options',
+      'What would you like to do?',
+      [
+        {
+          text: 'Copy',
+          onPress: () => {
+            Clipboard.setString(message.content);
+            Alert.alert('Copied', 'Message copied to clipboard');
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+    );
+  };
+
   if (isSystem) {
     return (
-      <View style={styles.systemContainer}>
-        <Text style={styles.systemText}>{message.content}</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.systemContainer}
+        onLongPress={handleLongPress}
+        delayLongPress={500}>
+        <Text style={styles.systemText} selectable={true}>
+          {message.content}
+        </Text>
+      </TouchableOpacity>
     );
   }
 
@@ -25,22 +50,26 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({message}) => {
         styles.messageContainer,
         isUser ? styles.userContainer : styles.assistantContainer,
       ]}>
-      <View
+      <TouchableOpacity
         style={[
           styles.messageBubble,
           isUser ? styles.userBubble : styles.assistantBubble,
-        ]}>
+        ]}
+        onLongPress={handleLongPress}
+        delayLongPress={500}
+        activeOpacity={0.7}>
         <Text
           style={[
             styles.messageText,
             isUser ? styles.userText : styles.assistantText,
-          ]}>
+          ]}
+          selectable={true}>
           {message.content}
         </Text>
-        <Text style={styles.timestamp}>
+        <Text style={styles.timestamp} selectable={false}>
           {formatTimestamp(message.timestamp)}
         </Text>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };

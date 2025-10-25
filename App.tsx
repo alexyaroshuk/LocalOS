@@ -60,6 +60,23 @@ function AppContent() {
       // Initialize mock database (for testing)
       await MockDatabaseService.initialize();
 
+      // Load the last used model (if any)
+      const {StorageService} = require('./src/services/StorageService');
+      const {LlamaService} = require('./src/services/LlamaService');
+      const lastModel = await StorageService.loadCurrentModel();
+
+      if (lastModel && lastModel.downloaded && lastModel.localPath) {
+        console.log('Loading last used model:', lastModel.name);
+        try {
+          await LlamaService.loadModel(lastModel.localPath, lastModel.name);
+          setCurrentModel(lastModel);
+          console.log('Last used model loaded successfully');
+        } catch (error) {
+          console.error('Failed to load last used model:', error);
+          // Don't block app initialization if model load fails
+        }
+      }
+
       console.log('App initialized successfully');
       setIsInitialized(true);
     } catch (error) {

@@ -50,7 +50,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     stage: 'thinking' | 'using_tool' | 'processing' | null;
     toolName?: string;
   }>({stage: null});
-  const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'none'>('none');
+  const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'none'>('llama');
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
   const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
