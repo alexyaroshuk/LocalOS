@@ -30,6 +30,9 @@ export interface LlamaConfig {
   seed?: number;
   repeatPenalty: number;
   nGpuLayers?: number; // for GPU acceleration
+  // Optional overrides for tool detection phase
+  toolDetectionTemp?: number;
+  toolDetectionMaxTokens?: number;
 }
 
 // Chat session

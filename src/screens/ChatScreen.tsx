@@ -54,6 +54,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
   const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
+  const [contextStats, setContextStats] = useState<{
+    totalTokens: number;
+    remainingTokens: number;
+    usagePercent: number;
+  } | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -131,6 +136,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       }, 100);
     }
   }, [messages, streamingText]);
+
+  // Update context stats when messages change
+  useEffect(() => {
+    if (aiBackend === 'llama' && toolsEnabled && messages.length > 0) {
+      try {
+        const stats = LlamaService.getContextStats(messages);
+        setContextStats({
+          totalTokens: stats.totalTokens,
+          remainingTokens: stats.remainingTokens,
+          usagePercent: stats.usagePercent,
+        });
+      } catch (error) {
+        Logger.debug('Failed to get context stats:', error);
+      }
+    } else {
+      setContextStats(null);
+    }
+  }, [messages, aiBackend, toolsEnabled]);
 
   // Save session whenever messages change
   useEffect(() => {
@@ -475,6 +498,34 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </View>
             </View>
           )}
+          {contextStats && (
+            <View style={styles.contextMeterContainer}>
+              <View style={styles.contextMeterBar}>
+                <View
+                  style={[
+                    styles.contextMeterFill,
+                    {
+                      width: `${Math.min(contextStats.usagePercent, 100)}%`,
+                      backgroundColor:
+                        contextStats.usagePercent < 50
+                          ? '#34C759'
+                          : contextStats.usagePercent < 80
+                          ? '#FF9500'
+                          : '#FF3B30',
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.contextMeterText}>
+                {contextStats.totalTokens.toLocaleString()}
+                {' / '}
+                {(contextStats.totalTokens + contextStats.remainingTokens).toLocaleString()}
+                {' tokens ('}
+                {contextStats.usagePercent.toFixed(0)}
+                {'%)'}
+              </Text>
+            </View>
+          )}
           {aiBackend === 'llama' && !AIService.isReady() && (
             <TouchableOpacity onPress={onModelSelect}>
               <Text style={styles.selectModelLink}>Load Model</Text>
@@ -650,6 +701,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  contextMeterContainer: {
+    marginTop: 6,
+  },
+  contextMeterBar: {
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 3,
+  },
+  contextMeterFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  contextMeterText: {
+    fontSize: 9,
+    color: '#666',
+    fontWeight: '500',
   },
   backendButton: {
     paddingHorizontal: 10,

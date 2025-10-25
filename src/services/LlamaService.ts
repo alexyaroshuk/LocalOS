@@ -346,6 +346,54 @@ export class LlamaService {
   }
 
   /**
+   * Get full system prompt text (for debugging/viewing)
+   */
+  static getFullSystemPrompt(): string {
+    return this.getToolSystemPrompt();
+  }
+
+  /**
+   * Estimate token count (rough approximation: 1 token ≈ 4 chars)
+   */
+  static estimateTokenCount(text: string): number {
+    return Math.ceil(text.length / 4);
+  }
+
+  /**
+   * Get context usage stats
+   */
+  static getContextStats(messages: Message[]): {
+    contextSize: number;
+    systemPromptTokens: number;
+    messagesTokens: number;
+    totalTokens: number;
+    remainingTokens: number;
+    usagePercent: number;
+  } {
+    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+    const contextSize = modelConfig.contextSize;
+
+    const systemPrompt = this.getToolSystemPrompt();
+    const systemPromptTokens = this.estimateTokenCount(systemPrompt);
+
+    const messagesText = messages.map(m => m.content).join('');
+    const messagesTokens = this.estimateTokenCount(messagesText);
+
+    const totalTokens = systemPromptTokens + messagesTokens;
+    const remainingTokens = contextSize - totalTokens;
+    const usagePercent = (totalTokens / contextSize) * 100;
+
+    return {
+      contextSize,
+      systemPromptTokens,
+      messagesTokens,
+      totalTokens,
+      remainingTokens,
+      usagePercent,
+    };
+  }
+
+  /**
    * Get system prompt with tool definitions
    * Uses configurable prompt variants for testing
    */
@@ -393,7 +441,8 @@ export class LlamaService {
       };
     });
 
-    const toolsJson = JSON.stringify(toolSchemas, null, 2);
+    // Compact JSON - no pretty printing to save ~50% tokens
+    const toolsJson = JSON.stringify(toolSchemas);
 
     // Use selected prompt variant
     const promptConfig = SYSTEM_PROMPTS[this.currentPromptType];
@@ -431,7 +480,8 @@ export class LlamaService {
       };
     });
 
-    const toolsJson = JSON.stringify(toolSchemas, null, 2);
+    // Compact JSON - no pretty printing to save tokens
+    const toolsJson = JSON.stringify(toolSchemas);
 
     // Get model config to determine if examples are needed
     const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
@@ -794,17 +844,23 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       // Use model-specific temperature and maxTokens
       // Don't stream to UI during tool detection phase
       const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+
+      // Allow config to override model defaults for testing
       const toolDetectionConfig = {
         ...config,
-        temperature: modelConfig.toolDetectionTemp, // Model-specific temperature
-        topP: 0.9,
-        maxTokens: modelConfig.toolDetectionMaxTokens, // Model-specific token limit
+        temperature: config.toolDetectionTemp ?? modelConfig.toolDetectionTemp, // Use override if provided
+        topP: config.topP ?? 0.9,
+        maxTokens: config.toolDetectionMaxTokens ?? modelConfig.toolDetectionMaxTokens, // Use override if provided
       };
 
       Logger.debug('🎯 Tool detection config:', {
         modelType: modelConfig.type,
         temperature: toolDetectionConfig.temperature,
         maxTokens: toolDetectionConfig.maxTokens,
+        overridesUsed: {
+          temp: config.toolDetectionTemp !== undefined,
+          maxTokens: config.toolDetectionMaxTokens !== undefined,
+        },
       });
 
       Logger.info('🔍 Starting tool detection phase (not streaming to UI)...');
@@ -959,10 +1015,11 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         }
 
         // Tool executed successfully, provide results to LLM for final answer
+        // Use compact JSON to save tokens
         const toolResultMessage: Message = {
           id: 'tool-result',
           role: 'system',
-          content: `FUNCTION RESULT:\n${JSON.stringify(toolResult.result, null, 2)}\n\n=== IMPORTANT INSTRUCTIONS ===\nNow answer the user's original question naturally using the information above. You MUST:\n1. Write a complete, helpful response in natural language\n2. DO NOT output any <function_call> tags or JSON\n3. DO NOT just repeat the tool data - explain it naturally\n4. Write at least 1-2 sentences explaining the answer\n\nRespond now in natural language:`,
+          content: `RESULT: ${JSON.stringify(toolResult.result)}\n\nRespond naturally using this data. NO tool syntax.`,
           timestamp: Date.now(),
         };
 
