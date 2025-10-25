@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -16,10 +16,11 @@ import {
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
+import {ActionCard} from '../components/ActionCard';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Toast} from '../components/Toast';
-import {Message, ChatSession, ModelInfo} from '../types';
+import {Message, ChatSession, ModelInfo, AgentAction, MessageWithActions} from '../types';
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
@@ -40,7 +41,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   currentModel,
   onModelSelect,
 }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageWithActions[]>([]);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
@@ -64,6 +65,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
   const [editingMessage, setEditingMessage] = useState<{id: string; content: string} | null>(null);
+  const [currentActions, setCurrentActions] = useState<AgentAction[]>([]);
+  const [currentActionStartTime, setCurrentActionStartTime] = useState<number | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -275,6 +278,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     setIsGenerating(true);
     setStreamingText('');
     setToolUsageState({stage: null});
+    setCurrentActions([]);
+    setCurrentActionStartTime(null);
 
     try {
       // Get recent messages for context (limit to avoid exceeding context window)
@@ -303,8 +308,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       let toolName = '';
 
       if (toolsEnabled && AIService.areToolsSupported()) {
-        // Show "Thinking..." state
+        // Show "Thinking..." state and start tracking
         setToolUsageState({stage: 'thinking'});
+        const thinkingStartTime = Date.now();
+        setCurrentActionStartTime(thinkingStartTime);
 
         // Use tool-enabled chat completion
         const result = await AIService.chatCompletionWithTools(
@@ -317,14 +324,60 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             setStreamingText(fullResponse);
           },
           // Tool usage callback
-          (stage, tool) => {
+          (stage, tool, toolArgs, toolResult) => {
+            const now = Date.now();
+
             if (stage === 'tool_call') {
+              // Finish thinking action
+              if (currentActionStartTime) {
+                const thinkingAction: AgentAction = {
+                  id: generateId(),
+                  type: 'thinking',
+                  startTime: currentActionStartTime,
+                  endTime: now,
+                  duration: now - currentActionStartTime,
+                };
+                setCurrentActions(prev => [...prev, thinkingAction]);
+              }
+
+              // Start tool call action
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText(''); // Clear streaming text during tool use
+              setCurrentActionStartTime(now);
             } else if (stage === 'tool_result') {
+              // Finish tool call action
+              if (currentActionStartTime && tool) {
+                const toolAction: AgentAction = {
+                  id: generateId(),
+                  type: 'tool_call',
+                  startTime: currentActionStartTime,
+                  endTime: now,
+                  duration: now - currentActionStartTime,
+                  toolName: tool,
+                  toolArgs: toolArgs,
+                  toolResult: toolResult,
+                };
+                setCurrentActions(prev => [...prev, toolAction]);
+              }
+
               setToolUsageState({stage: 'processing'});
+              setCurrentActionStartTime(now);
             } else if (stage === 'generating') {
+              // Finish processing action
+              if (currentActionStartTime) {
+                const processingAction: AgentAction = {
+                  id: generateId(),
+                  type: 'tool_result',
+                  startTime: currentActionStartTime,
+                  endTime: now,
+                  duration: now - currentActionStartTime,
+                  toolName: tool,
+                };
+                setCurrentActions(prev => [...prev, processingAction]);
+              }
+
               setToolUsageState({stage: null});
+              setCurrentActionStartTime(now); // Start generating action
             }
           },
         );
@@ -356,16 +409,32 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       // Clear tool usage state
       setToolUsageState({stage: null});
 
-      // Create assistant message
-      const assistantMessage: Message = {
+      // Add final generating action if we were tracking time
+      const finalActions = [...currentActions];
+      if (currentActionStartTime) {
+        const generatingAction: AgentAction = {
+          id: generateId(),
+          type: 'generating',
+          startTime: currentActionStartTime,
+          endTime: Date.now(),
+          duration: Date.now() - currentActionStartTime,
+        };
+        finalActions.push(generatingAction);
+      }
+
+      // Create assistant message with actions
+      const assistantMessage: MessageWithActions = {
         id: generateId(),
         role: 'assistant',
         content: fullResponse,
         timestamp: Date.now(),
+        actions: finalActions.length > 0 ? finalActions : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
+      setCurrentActions([]);
+      setCurrentActionStartTime(null);
 
       // Show tool usage indicator
       if (usedTool) {
@@ -477,12 +546,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     );
   };
 
-  const renderMessage = ({item}: {item: Message}) => (
-    <ChatMessage
-      message={item}
-      onCopy={handleCopy}
-      onEdit={handleEdit}
-    />
+  const renderMessage = useCallback(
+    ({item}: {item: MessageWithActions}) => (
+      <>
+        <ChatMessage
+          message={item}
+          onCopy={handleCopy}
+          onEdit={handleEdit}
+        />
+        {item.actions && item.actions.length > 0 && (
+          <View style={styles.actionsContainer}>
+            {item.actions.map(action => (
+              <ActionCard key={action.id} action={action} />
+            ))}
+          </View>
+        )}
+      </>
+    ),
+    [handleCopy, handleEdit],
   );
 
   const renderStreamingMessage = () => {
@@ -894,5 +975,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#856404',
     fontWeight: '600',
+  },
+  actionsContainer: {
+    marginTop: -8,
+    marginBottom: 8,
   },
 });

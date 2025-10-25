@@ -748,7 +748,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     messages: Message[],
     config: Partial<LlamaConfig> = {},
     onToken?: (token: string) => void,
-    onToolUsage?: (stage: 'tool_call' | 'tool_result' | 'generating', toolName?: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any
+    ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
     if (!this.context || !this.currentModelName) {
       throw new Error('Model not loaded');
@@ -793,17 +798,18 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         Logger.info(`📝 Extracted query: "${query}"`);
 
         // Call search_web directly
-        onToolUsage?.('tool_call', 'search_web');
+        const toolArgs = {query};
+        onToolUsage?.('tool_call', 'search_web', toolArgs);
 
         const toolResult = await ToolService.executeTool({
           id: generateId(),
           name: 'search_web',
-          arguments: {query},
+          arguments: toolArgs,
         });
 
         Logger.info('🔧 Tool execution result:', toolResult);
 
-        onToolUsage?.('tool_result', 'search_web');
+        onToolUsage?.('tool_result', 'search_web', toolArgs, toolResult);
 
         // Format results for user
         let responseText = '';
@@ -918,16 +924,17 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             Logger.info(`📝 Override query: "${query}"`);
 
             // Force call search_web
-            onToolUsage?.('tool_call', 'search_web');
+            const overrideArgs = {query};
+            onToolUsage?.('tool_call', 'search_web', overrideArgs);
 
             const toolResult = await ToolService.executeTool({
               id: generateId(),
               name: 'search_web',
-              arguments: {query},
+              arguments: overrideArgs,
             });
 
             Logger.info('🔧 Override tool result:', toolResult);
-            onToolUsage?.('tool_result', 'search_web');
+            onToolUsage?.('tool_result', 'search_web', overrideArgs, toolResult);
 
             // Format results
             let responseText = '';
@@ -973,7 +980,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
         // Notify UI: tool is being called
         if (onToolUsage) {
-          onToolUsage('tool_call', toolName);
+          onToolUsage('tool_call', toolName, toolArgs);
         }
 
         // Execute the tool
@@ -987,7 +994,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
         // Notify UI: tool result received
         if (onToolUsage) {
-          onToolUsage('tool_result', toolName);
+          onToolUsage('tool_result', toolName, toolArgs, toolResult);
         }
 
         if (toolResult.error) {

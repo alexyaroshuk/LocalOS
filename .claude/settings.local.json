@@ -27,7 +27,8 @@
       "Bash(npx tsc --noEmit --skipLibCheck src/screens/ToolTestScreen.tsx src/services/LlamaService.ts src/types/modelConfig.ts)",
       "Bash(npx tsc --noEmit src/types/modelConfig.ts)",
       "Bash(cat node_modules/llama.rn/lib/typescript/src/index.d.ts)",
-      "Bash(npx tsc --noEmit --skipLibCheck)"
+      "Bash(npx tsc --noEmit --skipLibCheck)",
+      "Bash(npx tsc --noEmit --skipLibCheck src/types/index.ts src/components/ActionCard.tsx src/screens/ChatScreen.tsx src/services/AIService.ts src/services/LlamaService.ts)"
     ],
     "deny": [],
     "ask": []
