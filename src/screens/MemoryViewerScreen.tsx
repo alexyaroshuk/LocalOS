@@ -88,6 +88,107 @@ export const MemoryViewerScreen: React.FC = () => {
     }
   };
 
+  const handleDeleteArchiveMemory = async (id: number) => {
+    Alert.alert(
+      'Delete Memory',
+      'Are you sure you want to delete this memory?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await MockDatabaseService.deleteArchiveMemory(id);
+              await loadData();
+              Alert.alert('Success', 'Memory deleted');
+            } catch (error) {
+              console.error('Failed to delete memory:', error);
+              Alert.alert('Error', 'Failed to delete memory');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteTask = async (id: number) => {
+    Alert.alert(
+      'Delete Task',
+      'Are you sure you want to delete this task?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await MockDatabaseService.deleteTask(id);
+              await loadData();
+              Alert.alert('Success', 'Task deleted');
+            } catch (error) {
+              console.error('Failed to delete task:', error);
+              Alert.alert('Error', 'Failed to delete task');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteUserFact = async (id: number) => {
+    Alert.alert(
+      'Delete Fact',
+      'Are you sure you want to delete this fact?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await MockDatabaseService.deleteUserFact(id);
+              await loadData();
+              Alert.alert('Success', 'Fact deleted');
+            } catch (error) {
+              console.error('Failed to delete fact:', error);
+              Alert.alert('Error', 'Failed to delete fact');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleEditCoreMemory = (blockName: string, currentContent: string) => {
+    Alert.prompt(
+      'Edit Core Memory',
+      `Edit ${blockName.replace(/_/g, ' ')}:`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Save',
+          onPress: async (newContent?: string) => {
+            if (!newContent || newContent.trim() === '') {
+              Alert.alert('Error', 'Content cannot be empty');
+              return;
+            }
+            try {
+              MemoryService.updateCoreMemory(blockName, newContent.trim());
+              await loadData();
+              Alert.alert('Success', 'Core memory updated');
+            } catch (error) {
+              console.error('Failed to update core memory:', error);
+              Alert.alert('Error', 'Failed to update core memory');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      currentContent,
+    );
+  };
+
   const renderCoreMemory = () => (
     <ScrollView
       style={styles.content}
@@ -111,6 +212,13 @@ export const MemoryViewerScreen: React.FC = () => {
                 </View>
               </View>
               <Text style={styles.memoryContent}>{value as string}</Text>
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => handleEditCoreMemory(key, value as string)}>
+                  <Text style={styles.editButtonText}>✏️ Edit</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </>
@@ -164,6 +272,13 @@ export const MemoryViewerScreen: React.FC = () => {
               <Text style={styles.memoryDate}>
                 {new Date(memory.created_at).toLocaleDateString()}
               </Text>
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteArchiveMemory(memory.id)}>
+                  <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -224,16 +339,23 @@ export const MemoryViewerScreen: React.FC = () => {
         <Text style={styles.taskDescription}>{task.description}</Text>
       )}
       <View style={styles.taskFooter}>
-        {task.due_date && (
-          <Text style={styles.taskDueDate}>
-            Due: {new Date(task.due_date).toLocaleDateString()}
-          </Text>
-        )}
-        {task.completed_at && (
-          <Text style={styles.taskCompletedDate}>
-            ✓ {new Date(task.completed_at).toLocaleDateString()}
-          </Text>
-        )}
+        <View style={styles.taskDates}>
+          {task.due_date && (
+            <Text style={styles.taskDueDate}>
+              Due: {new Date(task.due_date).toLocaleDateString()}
+            </Text>
+          )}
+          {task.completed_at && (
+            <Text style={styles.taskCompletedDate}>
+              ✓ {new Date(task.completed_at).toLocaleDateString()}
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeleteTask(task.id)}>
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -271,6 +393,13 @@ export const MemoryViewerScreen: React.FC = () => {
             <Text style={styles.factDate}>
               Last confirmed: {new Date(fact.last_confirmed).toLocaleDateString()}
             </Text>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteUserFact(fact.id)}>
+                <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))
       )}
@@ -527,6 +656,10 @@ const styles = StyleSheet.create({
   taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  taskDates: {
+    flex: 1,
   },
   taskDueDate: {
     fontSize: 12,
@@ -605,5 +738,35 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 24,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
