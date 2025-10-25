@@ -323,7 +323,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                 let actualSize = file.size || 0;
                 try {
                   const stat = await RNFS.stat(destPath);
-                  actualSize = parseInt(stat.size, 10);
+                  actualSize = Number(stat.size);
                   console.log('Actual file size:', actualSize);
                 } catch (err) {
                   console.warn('Could not get file size, using picker size:', err);

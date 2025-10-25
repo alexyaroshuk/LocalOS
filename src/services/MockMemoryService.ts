@@ -348,7 +348,7 @@ async function migrate(db, currentVersion) {
     limit: number = 5,
   ): Promise<SearchResult[]> {
     // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
 
     // Simple mock: filter by keyword match and assign random similarity scores
     const lowerQuery = query.toLowerCase();
@@ -373,7 +373,7 @@ async function migrate(db, currentVersion) {
    * Search by keyword
    */
   static async searchKeyword(query: string): Promise<Memory[]> {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise<void>(resolve => setTimeout(resolve, 200));
 
     const lowerQuery = query.toLowerCase();
     return this.memories.filter(
@@ -390,7 +390,7 @@ async function migrate(db, currentVersion) {
     content: string,
     metadata?: MemoryMetadata,
   ): Promise<Memory> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     const now = Date.now();
     const memory: Memory = {
@@ -415,7 +415,7 @@ async function migrate(db, currentVersion) {
    * Update existing memory
    */
   static async updateMemory(id: string, content: string): Promise<Memory> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     const index = this.memories.findIndex(m => m.id === id);
     if (index === -1) {
@@ -436,7 +436,7 @@ async function migrate(db, currentVersion) {
    * Delete memory
    */
   static async deleteMemory(id: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     const index = this.memories.findIndex(m => m.id === id);
     if (index === -1) {
@@ -451,7 +451,7 @@ async function migrate(db, currentVersion) {
    * Get memory by ID
    */
   static async getMemory(id: string): Promise<Memory | null> {
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
     return this.memories.find(m => m.id === id) || null;
   }
 
@@ -459,7 +459,7 @@ async function migrate(db, currentVersion) {
    * Get recent memories
    */
   static async getRecentMemories(limit: number = 10): Promise<Memory[]> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     return [...this.memories]
       .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -470,7 +470,7 @@ async function migrate(db, currentVersion) {
    * Get all memories
    */
   static async getAllMemories(): Promise<Memory[]> {
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
     return [...this.memories];
   }
 
@@ -478,7 +478,7 @@ async function migrate(db, currentVersion) {
    * Get memories by tag
    */
   static async getMemoriesByTag(tag: string): Promise<Memory[]> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
 
     return this.memories.filter(m =>
       m.tags.some(t => t.toLowerCase() === tag.toLowerCase()),
@@ -489,7 +489,7 @@ async function migrate(db, currentVersion) {
    * Get all unique tags
    */
   static async getAllTags(): Promise<string[]> {
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
 
     const tagSet = new Set<string>();
     this.memories.forEach(m => {
@@ -503,7 +503,7 @@ async function migrate(db, currentVersion) {
    * Get vault statistics
    */
   static async getVaultStats(): Promise<VaultStats> {
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
 
     const tags = await this.getAllTags();
 

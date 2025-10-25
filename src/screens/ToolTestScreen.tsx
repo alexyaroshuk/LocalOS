@@ -18,6 +18,7 @@ import {Tool, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
 import {ModelType, MODEL_CONFIGS} from '../types/modelConfig';
+import {SystemPromptType, SYSTEM_PROMPTS} from '../services/SystemPrompts';
 
 export const ToolTestScreen: React.FC = () => {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -27,6 +28,7 @@ export const ToolTestScreen: React.FC = () => {
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
   const [modelMode, setModelMode] = useState<ModelType>('llama-3.2-1b-function-calling');
+  const [promptType, setPromptType] = useState<SystemPromptType>('letta');
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
 
@@ -87,6 +89,19 @@ export const ToolTestScreen: React.FC = () => {
       `Max Tokens: ${config.toolDetectionMaxTokens}\n` +
       `Context Size: ${config.contextSize.toLocaleString()}\n\n` +
       `${config.description}`,
+    );
+  };
+
+  const handlePromptTypeChange = (newType: SystemPromptType) => {
+    setPromptType(newType);
+    LlamaService.setPromptType(newType);
+
+    const config = SYSTEM_PROMPTS[newType];
+    Logger.info(`Switched to ${config.name} system prompt`);
+
+    Alert.alert(
+      'System Prompt Changed',
+      `${config.name}\n\n${config.description}\n\nTest the tools to see if this prompt works better!`,
     );
   };
 
@@ -225,6 +240,8 @@ export const ToolTestScreen: React.FC = () => {
       );
 
       const toolResult: ToolResult = {
+        id: generateId(),
+        name: tool.name,
         success: result.usedTool || false,
         data: result.response,
         result: result, // Store full result for display
@@ -249,6 +266,9 @@ export const ToolTestScreen: React.FC = () => {
       Alert.alert('Test Error', `Failed to test ${tool.name}: ${errorMsg}`);
 
       setTestResults(prev => new Map(prev).set(tool.name, {
+        id: generateId(),
+        name: tool.name,
+        result: null,
         success: false,
         error: errorMsg,
       }));
@@ -411,6 +431,35 @@ export const ToolTestScreen: React.FC = () => {
           </View>
         </View>
 
+        <View style={styles.promptSelectorCard}>
+          <Text style={styles.promptSelectorTitle}>System Prompt Variant</Text>
+          <Text style={styles.promptSelectorSubtitle}>
+            {SYSTEM_PROMPTS[promptType].name}
+          </Text>
+          <Text style={styles.promptSelectorDesc}>
+            {SYSTEM_PROMPTS[promptType].description}
+          </Text>
+          <View style={styles.promptButtonRow}>
+            {(Object.keys(SYSTEM_PROMPTS) as SystemPromptType[]).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.promptButton,
+                  promptType === type && styles.promptButtonActive,
+                ]}
+                onPress={() => handlePromptTypeChange(type)}>
+                <Text
+                  style={[
+                    styles.promptButtonText,
+                    promptType === type && styles.promptButtonTextActive,
+                  ]}>
+                  {SYSTEM_PROMPTS[type].name.split(' ')[0]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>How Tool Testing Works</Text>
           <Text style={styles.infoText}>
@@ -533,6 +582,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  promptSelectorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+    borderWidth: 2,
+    borderColor: '#9C27B0',
+  },
+  promptSelectorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 8,
+  },
+  promptSelectorSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9C27B0',
+    marginBottom: 4,
+  },
+  promptSelectorDesc: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  promptButtonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  promptButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#D1D1D6',
+  },
+  promptButtonActive: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#9C27B0',
+  },
+  promptButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  promptButtonTextActive: {
+    color: '#FFFFFF',
   },
   infoBox: {
     backgroundColor: '#E3F2FD',

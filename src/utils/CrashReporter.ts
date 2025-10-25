@@ -85,11 +85,19 @@ export class CrashReporter {
 }
 
 // Setup global promise rejection handler
-const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  CrashReporter.logUnhandledRejection(event.reason, event.promise);
+// Note: In React Native, use ErrorUtils instead of browser's PromiseRejectionEvent
+const handleUnhandledRejection = (reason: any, promise: Promise<any>) => {
+  CrashReporter.logUnhandledRejection(reason, promise);
 };
 
 // Add listener for unhandled promise rejections
-if (typeof window !== 'undefined') {
-  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+// In React Native, use ErrorUtils for global error handling
+declare const global: any;
+
+if (typeof global !== 'undefined' && global.ErrorUtils) {
+  const ErrorUtils = global.ErrorUtils;
+  ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
+    const context = isFatal ? 'FATAL' : 'NON_FATAL';
+    CrashReporter.logError(error, context);
+  });
 }

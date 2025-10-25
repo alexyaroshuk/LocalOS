@@ -54,7 +54,7 @@ export class ModelStorageService {
     try {
       const path = this.getModelPath(filename);
       const stat = await RNFS.stat(path);
-      return parseInt(stat.size, 10);
+      return Number(stat.size);
     } catch (error) {
       console.error('Failed to get model size:', error);
       return 0;
