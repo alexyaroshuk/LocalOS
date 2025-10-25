@@ -33,19 +33,24 @@ export const ActionCard: React.FC<ActionCardProps> = memo(({action}) => {
   };
 
   const getActionTitle = (): string => {
-    const duration = action.duration ? ` (${formatDuration(action.duration)})` : '';
+    const isInProgress = !action.endTime;
+    const duration = action.duration ? ` for ${formatDuration(action.duration)}` : '';
 
     switch (action.type) {
       case 'thinking':
-        return `Thought${duration}`;
+        return isInProgress ? 'Thinking...' : `Thought${duration}`;
       case 'tool_call':
-        return `Used ${action.toolName || 'tool'}${duration}`;
+        return isInProgress
+          ? `Using ${action.toolName || 'tool'}...`
+          : `Used ${action.toolName || 'tool'}${duration}`;
       case 'tool_result':
-        return `Got result from ${action.toolName || 'tool'}${duration}`;
+        return isInProgress
+          ? `Processing result from ${action.toolName || 'tool'}...`
+          : `Got result from ${action.toolName || 'tool'}${duration}`;
       case 'generating':
-        return `Generated response${duration}`;
+        return isInProgress ? 'Generating...' : `Generated response${duration}`;
       default:
-        return `Action${duration}`;
+        return isInProgress ? 'Processing...' : `Action${duration}`;
     }
   };
 
@@ -121,12 +126,15 @@ export const ActionCard: React.FC<ActionCardProps> = memo(({action}) => {
     );
   };
 
+  const isInProgress = !action.endTime;
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={[
           styles.header,
           {borderLeftColor: getActionColor()},
+          isInProgress && styles.inProgressHeader,
         ]}
         onPress={() => hasDetails() && setIsExpanded(!isExpanded)}
         activeOpacity={hasDetails() ? 0.7 : 1}>
@@ -156,6 +164,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderLeftWidth: 3,
+  },
+  inProgressHeader: {
+    backgroundColor: '#F0F8FF',
+    opacity: 0.9,
   },
   headerContent: {
     flexDirection: 'row',

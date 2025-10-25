@@ -70,8 +70,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </TouchableOpacity>
             ) : (
               <Text
-                style={[styles.messageText, styles.assistantText]}
-                selectable={true}>
+                style={[styles.messageText, styles.assistantText]}>
                 {message.content}
               </Text>
             )}

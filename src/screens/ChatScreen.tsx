@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import {ActionCard} from '../components/ActionCard';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Toast} from '../components/Toast';
-import {Message, ChatSession, ModelInfo, AgentAction, MessageWithActions} from '../types';
+import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage} from '../types';
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
@@ -41,7 +41,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   currentModel,
   onModelSelect,
 }) => {
-  const [messages, setMessages] = useState<MessageWithActions[]>([]);
+  const [messages, setMessages] = useState<ChatItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
@@ -65,8 +65,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
   const [editingMessage, setEditingMessage] = useState<{id: string; content: string} | null>(null);
-  const [currentActions, setCurrentActions] = useState<AgentAction[]>([]);
-  const [currentActionStartTime, setCurrentActionStartTime] = useState<number | null>(null);
+
+  // Track current action being worked on
+  const currentActionIdRef = useRef<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -278,14 +279,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     setIsGenerating(true);
     setStreamingText('');
     setToolUsageState({stage: null});
-    setCurrentActions([]);
-    setCurrentActionStartTime(null);
+    currentActionIdRef.current = null;
 
     try {
       // Get recent messages for context (limit to avoid exceeding context window)
-      let contextMessages = [...messages, userMessage].slice(
-        -MAX_CONTEXT_MESSAGES,
-      );
+      // Filter out action messages - only send user/assistant/system messages to AI
+      let contextMessages = [...messages, userMessage]
+        .filter(msg => msg.role !== 'action')
+        .slice(-MAX_CONTEXT_MESSAGES) as Message[];
 
       // Add system prompt if not present AND tools are not enabled
       // When tools are enabled, LlamaService will add its own comprehensive system prompt
@@ -308,10 +309,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       let toolName = '';
 
       if (toolsEnabled && AIService.areToolsSupported()) {
-        // Show "Thinking..." state and start tracking
+        // Show "Thinking..." state and create action message
         setToolUsageState({stage: 'thinking'});
         const thinkingStartTime = Date.now();
-        setCurrentActionStartTime(thinkingStartTime);
+
+        // Create thinking action message
+        const thinkingActionId = generateId();
+        currentActionIdRef.current = thinkingActionId;
+        const thinkingAction: ActionMessage = {
+          id: thinkingActionId,
+          role: 'action',
+          actionType: 'thinking',
+          content: 'Thinking...',
+          timestamp: Date.now(),
+          startTime: thinkingStartTime,
+          isComplete: false,
+        };
+        setMessages(prev => [...prev, thinkingAction]);
 
         // Use tool-enabled chat completion
         const result = await AIService.chatCompletionWithTools(
@@ -328,56 +342,82 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             const now = Date.now();
 
             if (stage === 'tool_call') {
-              // Finish thinking action
-              if (currentActionStartTime) {
-                const thinkingAction: AgentAction = {
-                  id: generateId(),
-                  type: 'thinking',
-                  startTime: currentActionStartTime,
-                  endTime: now,
-                  duration: now - currentActionStartTime,
-                };
-                setCurrentActions(prev => [...prev, thinkingAction]);
+              // Complete thinking action
+              if (currentActionIdRef.current) {
+                setMessages(prev =>
+                  prev.map(msg => {
+                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                      const actionMsg = msg as ActionMessage;
+                      const duration = now - actionMsg.startTime;
+                      return {
+                        ...actionMsg,
+                        content: `Thought for ${(duration / 1000).toFixed(1)}s`,
+                        endTime: now,
+                        duration,
+                        isComplete: true,
+                      };
+                    }
+                    return msg;
+                  }),
+                );
               }
 
-              // Start tool call action
+              // Create new tool call action
+              const toolCallId = generateId();
+              currentActionIdRef.current = toolCallId;
+              const toolCallAction: ActionMessage = {
+                id: toolCallId,
+                role: 'action',
+                actionType: 'tool_call',
+                content: `Using ${tool}...`,
+                timestamp: Date.now(),
+                startTime: now,
+                toolName: tool,
+                toolArgs: toolArgs,
+                isComplete: false,
+              };
+              setMessages(prev => [...prev, toolCallAction]);
               setToolUsageState({stage: 'using_tool', toolName: tool});
-              setStreamingText(''); // Clear streaming text during tool use
-              setCurrentActionStartTime(now);
+              setStreamingText('');
             } else if (stage === 'tool_result') {
-              // Finish tool call action
-              if (currentActionStartTime && tool) {
-                const toolAction: AgentAction = {
-                  id: generateId(),
-                  type: 'tool_call',
-                  startTime: currentActionStartTime,
-                  endTime: now,
-                  duration: now - currentActionStartTime,
-                  toolName: tool,
-                  toolArgs: toolArgs,
-                  toolResult: toolResult,
-                };
-                setCurrentActions(prev => [...prev, toolAction]);
+              // Complete tool call action
+              if (currentActionIdRef.current) {
+                setMessages(prev =>
+                  prev.map(msg => {
+                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                      const actionMsg = msg as ActionMessage;
+                      const duration = now - actionMsg.startTime;
+                      return {
+                        ...actionMsg,
+                        content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
+                        endTime: now,
+                        duration,
+                        toolResult: toolResult,
+                        isComplete: true,
+                      };
+                    }
+                    return msg;
+                  }),
+                );
               }
 
               setToolUsageState({stage: 'processing'});
-              setCurrentActionStartTime(now);
+              currentActionIdRef.current = null;
             } else if (stage === 'generating') {
-              // Finish processing action
-              if (currentActionStartTime) {
-                const processingAction: AgentAction = {
-                  id: generateId(),
-                  type: 'tool_result',
-                  startTime: currentActionStartTime,
-                  endTime: now,
-                  duration: now - currentActionStartTime,
-                  toolName: tool,
-                };
-                setCurrentActions(prev => [...prev, processingAction]);
-              }
-
+              // Create generating action
+              const generatingId = generateId();
+              currentActionIdRef.current = generatingId;
+              const generatingAction: ActionMessage = {
+                id: generatingId,
+                role: 'action',
+                actionType: 'generating',
+                content: 'Generating response...',
+                timestamp: Date.now(),
+                startTime: now,
+                isComplete: false,
+              };
+              setMessages(prev => [...prev, generatingAction]);
               setToolUsageState({stage: null});
-              setCurrentActionStartTime(now); // Start generating action
             }
           },
         );
@@ -409,32 +449,38 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       // Clear tool usage state
       setToolUsageState({stage: null});
 
-      // Add final generating action if we were tracking time
-      const finalActions = [...currentActions];
-      if (currentActionStartTime) {
-        const generatingAction: AgentAction = {
-          id: generateId(),
-          type: 'generating',
-          startTime: currentActionStartTime,
-          endTime: Date.now(),
-          duration: Date.now() - currentActionStartTime,
-        };
-        finalActions.push(generatingAction);
+      // Complete the last generating action if it exists
+      const now = Date.now();
+      if (currentActionIdRef.current) {
+        setMessages(prev =>
+          prev.map(msg => {
+            if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+              const actionMsg = msg as ActionMessage;
+              const duration = now - actionMsg.startTime;
+              return {
+                ...actionMsg,
+                content: `Generated response in ${(duration / 1000).toFixed(1)}s`,
+                endTime: now,
+                duration,
+                isComplete: true,
+              };
+            }
+            return msg;
+          }),
+        );
       }
 
-      // Create assistant message with actions
-      const assistantMessage: MessageWithActions = {
+      // Create assistant message
+      const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: fullResponse,
         timestamp: Date.now(),
-        actions: finalActions.length > 0 ? finalActions : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
-      setCurrentActions([]);
-      setCurrentActionStartTime(null);
+      currentActionIdRef.current = null;
 
       // Show tool usage indicator
       if (usedTool) {
@@ -546,23 +592,33 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     );
   };
 
-  const renderMessage = useCallback(
-    ({item}: {item: MessageWithActions}) => (
-      <>
-        <ChatMessage
-          message={item}
-          onCopy={handleCopy}
-          onEdit={handleEdit}
-        />
-        {item.actions && item.actions.length > 0 && (
-          <View style={styles.actionsContainer}>
-            {item.actions.map(action => (
-              <ActionCard key={action.id} action={action} />
-            ))}
-          </View>
-        )}
-      </>
-    ),
+  const renderItem = useCallback(
+    ({item}: {item: ChatItem}) => {
+      if (item.role === 'action') {
+        const actionMsg = item as ActionMessage;
+        // Convert ActionMessage to AgentAction format for ActionCard
+        const action = {
+          id: actionMsg.id,
+          type: actionMsg.actionType,
+          startTime: actionMsg.startTime,
+          endTime: actionMsg.endTime,
+          duration: actionMsg.duration,
+          toolName: actionMsg.toolName,
+          toolArgs: actionMsg.toolArgs,
+          toolResult: actionMsg.toolResult,
+          error: actionMsg.error,
+        };
+        return <ActionCard action={action} />;
+      } else {
+        return (
+          <ChatMessage
+            message={item as Message}
+            onCopy={handleCopy}
+            onEdit={handleEdit}
+          />
+        );
+      }
+    },
     [handleCopy, handleEdit],
   );
 
@@ -665,39 +721,32 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
       </View>
 
-      {/* Messages - Wrap in Pressable to handle taps on empty space */}
-      <Pressable style={styles.messageList} onPress={() => {}}>
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.messagesList}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {currentModel
-                  ? 'Start a conversation!'
-                  : 'Please load a model to start chatting'}
-              </Text>
-            </View>
-          }
-          ListFooterComponent={
-            <>
-              {toolUsageState.stage && (
-                <ToolUsageIndicator
-                  stage={toolUsageState.stage}
-                  toolName={toolUsageState.toolName}
-                />
-              )}
-              {renderStreamingMessage()}
-              {isGenerating && !streamingText && !toolUsageState.stage && (
-                <TypingIndicator />
-              )}
-            </>
-          }
-        />
-      </Pressable>
+      {/* Messages */}
+      <FlatList
+        ref={flatListRef}
+        style={styles.messageList}
+        data={messages}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.messagesList}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {currentModel
+                ? 'Start a conversation!'
+                : 'Please load a model to start chatting'}
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          <>
+            {renderStreamingMessage()}
+            {isGenerating && !streamingText && (
+              <TypingIndicator />
+            )}
+          </>
+        }
+      />
 
       {/* Debug Test Prompts */}
       <DebugTestPrompts
@@ -975,9 +1024,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#856404',
     fontWeight: '600',
-  },
-  actionsContainer: {
-    marginTop: -8,
-    marginBottom: 8,
   },
 });
