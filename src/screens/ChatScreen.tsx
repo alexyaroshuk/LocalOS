@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Pressable,
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
 import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
+import {Toast} from '../components/Toast';
 import {Message, ChatSession, ModelInfo} from '../types';
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
@@ -59,8 +61,30 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     remainingTokens: number;
     usagePercent: number;
   } | null>(null);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [showToast, setShowToast] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<{id: string; content: string} | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
+
+  const showToastMessage = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
+  const handleCopy = () => {
+    showToastMessage('Copied to clipboard');
+  };
+
+  const handleEdit = (messageId: string, content: string) => {
+    setEditingMessage({id: messageId, content});
+    setInputText(content);
+  };
+
+  const cancelEdit = () => {
+    setEditingMessage(null);
+    setInputText('');
+  };
 
   // Initialize AI backend and load session on mount
   useEffect(() => {
@@ -454,7 +478,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const renderMessage = ({item}: {item: Message}) => (
-    <ChatMessage message={item} />
+    <ChatMessage
+      message={item}
+      onCopy={handleCopy}
+      onEdit={handleEdit}
+    />
   );
 
   const renderStreamingMessage = () => {
@@ -556,44 +584,60 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
       </View>
 
-      {/* Messages */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={item => item.id}
-        style={styles.messageList}
-        contentContainerStyle={styles.messagesList}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {currentModel
-                ? 'Start a conversation!'
-                : 'Please load a model to start chatting'}
-            </Text>
-          </View>
-        }
-        ListFooterComponent={
-          <>
-            {toolUsageState.stage && (
-              <ToolUsageIndicator
-                stage={toolUsageState.stage}
-                toolName={toolUsageState.toolName}
-              />
-            )}
-            {renderStreamingMessage()}
-            {isGenerating && !streamingText && !toolUsageState.stage && (
-              <TypingIndicator />
-            )}
-          </>
-        }
-      />
+      {/* Messages - Wrap in Pressable to handle taps on empty space */}
+      <Pressable style={styles.messageList} onPress={() => {}}>
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.messagesList}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {currentModel
+                  ? 'Start a conversation!'
+                  : 'Please load a model to start chatting'}
+              </Text>
+            </View>
+          }
+          ListFooterComponent={
+            <>
+              {toolUsageState.stage && (
+                <ToolUsageIndicator
+                  stage={toolUsageState.stage}
+                  toolName={toolUsageState.toolName}
+                />
+              )}
+              {renderStreamingMessage()}
+              {isGenerating && !streamingText && !toolUsageState.stage && (
+                <TypingIndicator />
+              )}
+            </>
+          }
+        />
+      </Pressable>
 
       {/* Debug Test Prompts */}
       <DebugTestPrompts
         onPromptSelect={prompt => setInputText(prompt)}
         disabled={isGenerating}
       />
+
+      {/* Edit Mode Banner */}
+      {editingMessage && (
+        <View style={styles.editBanner}>
+          <View style={styles.editBannerContent}>
+            <Text style={styles.editBannerTitle}>Editing message</Text>
+            <Text style={styles.editBannerText} numberOfLines={1}>
+              {editingMessage.content}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={cancelEdit} style={styles.editCancelButton}>
+            <Text style={styles.editCancelText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Input */}
       <View style={styles.inputContainer}>
@@ -621,6 +665,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Toast Notification */}
+      <Toast
+        message={toastMessage}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+      />
 
       {/* Log Viewer Modal */}
       <Modal
@@ -810,6 +861,38 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  editBanner: {
+    backgroundColor: '#FFF3CD',
+    borderTopWidth: 1,
+    borderTopColor: '#FFE69C',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editBannerContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  editBannerTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 2,
+  },
+  editBannerText: {
+    fontSize: 14,
+    color: '#856404',
+  },
+  editCancelButton: {
+    padding: 4,
+  },
+  editCancelText: {
+    fontSize: 20,
+    color: '#856404',
     fontWeight: '600',
   },
 });
