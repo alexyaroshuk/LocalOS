@@ -1,28 +1,11 @@
-Starting compilation in watch mode...
+src/screens/MemoryViewerScreen.tsx:177:29 - error TS2551: Property 'updateCoreMemory' does not exist on type 'MemoryService'. Did you mean 'updateCoreMemoryBlock'?
 
-src/services/AppleIntelligenceService.ts:27:3 - error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Type '({}: {}) => Promise<{ datetime: string; formatted: string; timestamp: number; timezone: string; day: string; date: string; time: string; }>' is not 
-assignable to type 'undefined'.
+177               MemoryService.updateCoreMemory(blockName, newContent.trim());
+                                ~~~~~~~~~~~~~~~~
 
-27   execute: async ({}: {}) => {
-     ~~~~~~~
+  src/services/MemoryService.ts:93:9
+    93   async updateCoreMemoryBlock(
+               ~~~~~~~~~~~~~~~~~~~~~
+    'updateCoreMemoryBlock' is declared here.
 
-  node_modules/@ai-sdk/provider-utils/dist/index.d.ts:743:18
-    743 declare function tool(tool: Tool<never, never>): Tool<never, never>;
-                         ~~~~
-    The last overload is declared here.
-
-src/services/AppleIntelligenceService.ts:58:3 - error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Type '({ query }: { query: string; }) => Promise<{ success: boolean; message: string; query: string; results?: undefined; source?: undefined; error?: undefined; } | { success: boolean; query: string; results: string[]; source: string; message?: undefined; error?: undefined; } | { ...; }>' is not assignable to type 'undefined'.
-
-58   execute: async ({query}: {query: string}) => {
-     ~~~~~~~
-
-  node_modules/@ai-sdk/provider-utils/dist/index.d.ts:743:18
-    743 declare function tool(tool: Tool<never, never>): Tool<never, never>;
-                         ~~~~
-    The last overload is declared here.
-
-[8:24:50 PM] Found 2 errors. Watching for file changes.
+[8:40:46 PM] Found 1 error. Watching for file changes.
