@@ -582,7 +582,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
    */
   private static extractToolCall(text: string): string | null {
     // Try to extract Pythonic format: [function_name(param1="val1", param2="val2")]
-    const pythonicPattern = /\[([\w_]+)\(([^\]]*)\)\]/;
+    const pythonicPattern = /[([w_]+)((.*?))]/s;
     const pythonicMatch = pythonicPattern.exec(text);
 
     if (pythonicMatch) {
