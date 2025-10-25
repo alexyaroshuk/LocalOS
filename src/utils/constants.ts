@@ -74,4 +74,4 @@ export const ERROR_MESSAGES = {
 
 // UI Constants
 export const MAX_MESSAGE_LENGTH = 4000;
-export const MAX_CONTEXT_MESSAGES = 20; // Keep last 20 messages in context
+export const MAX_CONTEXT_MESSAGES = 20; // Keep last 20 messages - iPhone 17 can handle it

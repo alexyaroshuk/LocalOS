@@ -32,11 +32,22 @@ export const ToolTestScreen: React.FC = () => {
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
 
-  // Inference settings state
+  // Inference settings state (for final response)
   const [temperature, setTemperature] = useState<number>(0.7);
   const [maxTokens, setMaxTokens] = useState<number>(512);
   const [topP, setTopP] = useState<number>(0.9);
   const [topK, setTopK] = useState<number>(40);
+
+  // Model config overrides (for tool detection phase)
+  const [toolDetectionTemp, setToolDetectionTemp] = useState<number>(
+    MODEL_CONFIGS[modelMode].toolDetectionTemp
+  );
+  const [toolDetectionMaxTokens, setToolDetectionMaxTokens] = useState<number>(
+    MODEL_CONFIGS[modelMode].toolDetectionMaxTokens
+  );
+
+  // Prompt viewer state
+  const [showPromptViewer, setShowPromptViewer] = useState<boolean>(false);
 
   useEffect(() => {
     // Initialize tool service and get all tools
@@ -91,6 +102,10 @@ export const ToolTestScreen: React.FC = () => {
 
     const config = MODEL_CONFIGS[newMode];
     Logger.info(`Switched to ${config.displayName}`);
+
+    // Update tool detection settings to match new model defaults
+    setToolDetectionTemp(config.toolDetectionTemp);
+    setToolDetectionMaxTokens(config.toolDetectionMaxTokens);
 
     Alert.alert(
       'Model Mode Changed',
@@ -247,10 +262,23 @@ export const ToolTestScreen: React.FC = () => {
           testPrompt = 'What is the current date and time?';
           break;
         case 'search_web':
-          testPrompt = 'Search the web for React Native tutorials';
+          testPrompt = 'Search for latest React Native news';
+          break;
+        // Memory tools - specific prompts
+        case 'archival_memory_insert':
+          testPrompt = 'My favorite color is blue. Remember this.';
+          break;
+        case 'archival_memory_search':
+          testPrompt = 'What do you know about me?';
+          break;
+        case 'core_memory_append':
+          testPrompt = 'I prefer concise responses. Update how you talk to me.';
+          break;
+        case 'core_memory_replace':
+          testPrompt = 'Actually, I prefer detailed responses instead of concise ones.';
           break;
         default:
-          testPrompt = `Use the ${tool.name} tool to help me`;
+          testPrompt = `Test the ${tool.name} tool`;
       }
 
       Logger.info('═══════════════════════════════════════════════════════════');
@@ -275,10 +303,14 @@ export const ToolTestScreen: React.FC = () => {
         messages,
         [tool],
         {
+          // Final response generation settings
           temperature,
           maxTokens,
           topP,
           topK,
+          // Tool detection phase overrides
+          toolDetectionTemp,
+          toolDetectionMaxTokens,
         },
         undefined,
         (stage, toolName) => {
@@ -513,6 +545,39 @@ export const ToolTestScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Prompt Viewer Toggle */}
+          <TouchableOpacity
+            style={styles.promptViewerToggle}
+            onPress={() => setShowPromptViewer(!showPromptViewer)}>
+            <Text style={styles.promptViewerToggleText}>
+              {showPromptViewer ? '▼' : '▶'} View Full Prompt Text
+            </Text>
+          </TouchableOpacity>
+
+          {/* Collapsible Prompt Viewer */}
+          {showPromptViewer && (() => {
+            const fullPrompt = LlamaService.getFullSystemPrompt();
+            const charCount = fullPrompt.length;
+            const tokenEstimate = LlamaService.estimateTokenCount(fullPrompt);
+            return (
+              <View style={styles.promptViewerContainer}>
+                <View style={styles.promptStats}>
+                  <Text style={styles.promptStatText}>
+                    Characters: <Text style={styles.promptStatValue}>{charCount.toLocaleString()}</Text>
+                  </Text>
+                  <Text style={styles.promptStatText}>
+                    Est. Tokens: <Text style={styles.promptStatValue}>{tokenEstimate.toLocaleString()}</Text>
+                  </Text>
+                </View>
+                <ScrollView style={styles.promptTextScroll} nestedScrollEnabled>
+                  <Text style={styles.promptText} selectable>
+                    {fullPrompt}
+                  </Text>
+                </ScrollView>
+              </View>
+            );
+          })()}
         </View>
 
         <View style={styles.inferenceSettingsCard}>
@@ -598,6 +663,57 @@ export const ToolTestScreen: React.FC = () => {
 
           <Text style={styles.inferenceHint}>
             💡 Lower temperature (0.1-0.3) may help with tool calling accuracy. Higher values increase creativity but reduce reliability.
+          </Text>
+        </View>
+
+        <View style={styles.modelConfigCard}>
+          <Text style={styles.modelConfigTitle}>Model Config (Tool Detection Phase)</Text>
+          <Text style={styles.modelConfigSubtitle}>
+            Advanced: Configure how the model detects tool calls
+          </Text>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Detection Temp: {toolDetectionTemp.toFixed(2)}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={toolDetectionTemp.toString()}
+                onChangeText={(text) => {
+                  const val = parseFloat(text);
+                  if (!isNaN(val) && val >= 0 && val <= 2) setToolDetectionTemp(val);
+                }}
+                keyboardType="numeric"
+                placeholder="0.3"
+              />
+              <Text style={styles.settingRange}>0.0 - 2.0</Text>
+            </View>
+            <Text style={styles.paramHelp}>
+              Controls randomness during tool detection. Lower = more precise/deterministic tool calls. Recommended: 0.1-0.3 for 8B, 0.5-0.7 for 1B.
+            </Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Detection MaxTokens: {toolDetectionMaxTokens}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={toolDetectionMaxTokens.toString()}
+                onChangeText={(text) => {
+                  const val = parseInt(text);
+                  if (!isNaN(val) && val > 0) setToolDetectionMaxTokens(val);
+                }}
+                keyboardType="numeric"
+                placeholder="512"
+              />
+              <Text style={styles.settingRange}>50 - 1024</Text>
+            </View>
+            <Text style={styles.paramHelp}>
+              Maximum tokens for tool call output. Too low = truncated tool calls (tool fails). Too high = wasted tokens. Recommended: 512 for complex tools, 200 for simple ones.
+            </Text>
+          </View>
+
+          <Text style={styles.modelConfigHint}>
+            ⚙️ These settings control the FIRST pass where the model decides whether to call a tool. The inference settings above control the SECOND pass (final response generation).
           </Text>
         </View>
 
@@ -776,6 +892,54 @@ const styles = StyleSheet.create({
   promptButtonTextActive: {
     color: '#FFFFFF',
   },
+  promptViewerToggle: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D1D6',
+  },
+  promptViewerToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9C27B0',
+  },
+  promptViewerContainer: {
+    marginTop: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  promptStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  promptStatText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  promptStatValue: {
+    fontWeight: '700',
+    color: '#9C27B0',
+  },
+  promptTextScroll: {
+    maxHeight: 300,
+  },
+  promptText: {
+    fontSize: 11,
+    color: '#333',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    lineHeight: 16,
+  },
   inferenceSettingsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -848,6 +1012,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     minWidth: 80,
+  },
+  paramHelp: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 6,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  modelConfigCard: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#FFD54F',
+  },
+  modelConfigTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F57C00',
+  },
+  modelConfigSubtitle: {
+    fontSize: 13,
+    color: '#E65100',
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  modelConfigHint: {
+    fontSize: 12,
+    color: '#E65100',
+    marginTop: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   infoBox: {
     backgroundColor: '#E3F2FD',
