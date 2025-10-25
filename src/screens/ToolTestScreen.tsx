@@ -32,6 +32,12 @@ export const ToolTestScreen: React.FC = () => {
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
 
+  // Inference settings state
+  const [temperature, setTemperature] = useState<number>(0.7);
+  const [maxTokens, setMaxTokens] = useState<number>(512);
+  const [topP, setTopP] = useState<number>(0.9);
+  const [topK, setTopK] = useState<number>(40);
+
   useEffect(() => {
     // Initialize tool service and get all tools
     ToolService.initialize();
@@ -107,6 +113,31 @@ export const ToolTestScreen: React.FC = () => {
     Alert.alert(
       'System Prompt Changed',
       `${config.name}\n\n${config.description}\n\nTest the tools to see if this prompt works better!`,
+    );
+  };
+
+  const handleClearContext = () => {
+    Alert.alert(
+      'Clear Context',
+      'This will clear the conversation history and free up context. Continue?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear messages by releasing and reloading the model
+              await LlamaService.releaseModel();
+              Logger.info('✅ Context cleared successfully');
+              Alert.alert('Success', 'Context has been cleared. The model will reload on next use.');
+            } catch (error) {
+              Logger.error('Failed to clear context:', error);
+              Alert.alert('Error', 'Failed to clear context');
+            }
+          },
+        },
+      ],
     );
   };
 
@@ -233,11 +264,16 @@ export const ToolTestScreen: React.FC = () => {
         },
       ];
 
-      // Call AI with tools enabled
+      // Call AI with tools enabled using current inference settings
       const result = await AIService.chatCompletionWithTools(
         messages,
         [tool],
-        {},
+        {
+          temperature,
+          maxTokens,
+          topP,
+          topK,
+        },
         undefined,
         (stage, toolName) => {
           Logger.info(`Tool stage: ${stage}, tool: ${toolName}`);
@@ -465,6 +501,92 @@ export const ToolTestScreen: React.FC = () => {
           </View>
         </View>
 
+        <View style={styles.inferenceSettingsCard}>
+          <View style={styles.inferenceHeader}>
+            <Text style={styles.inferenceTitle}>Inference Settings</Text>
+            <TouchableOpacity
+              style={styles.clearContextButton}
+              onPress={handleClearContext}>
+              <Text style={styles.clearContextButtonText}>🗑️ Clear Context</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.inferenceSubtitle}>
+            Adjust generation parameters (affects tool calling behavior)
+          </Text>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Temperature: {temperature.toFixed(2)}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={temperature.toString()}
+                onChangeText={(text) => {
+                  const val = parseFloat(text);
+                  if (!isNaN(val) && val >= 0 && val <= 2) setTemperature(val);
+                }}
+                keyboardType="numeric"
+                placeholder="0.7"
+              />
+              <Text style={styles.settingRange}>0.0 - 2.0</Text>
+            </View>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Max Tokens: {maxTokens}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={maxTokens.toString()}
+                onChangeText={(text) => {
+                  const val = parseInt(text);
+                  if (!isNaN(val) && val > 0) setMaxTokens(val);
+                }}
+                keyboardType="numeric"
+                placeholder="512"
+              />
+              <Text style={styles.settingRange}>1 - 4096</Text>
+            </View>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Top P: {topP.toFixed(2)}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={topP.toString()}
+                onChangeText={(text) => {
+                  const val = parseFloat(text);
+                  if (!isNaN(val) && val >= 0 && val <= 1) setTopP(val);
+                }}
+                keyboardType="numeric"
+                placeholder="0.9"
+              />
+              <Text style={styles.settingRange}>0.0 - 1.0</Text>
+            </View>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Top K: {topK}</Text>
+            <View style={styles.settingInputRow}>
+              <TextInput
+                style={styles.settingInput}
+                value={topK.toString()}
+                onChangeText={(text) => {
+                  const val = parseInt(text);
+                  if (!isNaN(val) && val > 0) setTopK(val);
+                }}
+                keyboardType="numeric"
+                placeholder="40"
+              />
+              <Text style={styles.settingRange}>1 - 100</Text>
+            </View>
+          </View>
+
+          <Text style={styles.inferenceHint}>
+            💡 Lower temperature (0.1-0.3) may help with tool calling accuracy. Higher values increase creativity but reduce reliability.
+          </Text>
+        </View>
+
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>How Tool Testing Works</Text>
           <Text style={styles.infoText}>
@@ -639,6 +761,79 @@ const styles = StyleSheet.create({
   },
   promptButtonTextActive: {
     color: '#FFFFFF',
+  },
+  inferenceSettingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  inferenceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  inferenceTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  inferenceSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+  },
+  inferenceHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
+  clearContextButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  clearContextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  settingRow: {
+    marginBottom: 16,
+  },
+  settingLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 8,
+  },
+  settingInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingInput: {
+    flex: 1,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+  },
+  settingRange: {
+    fontSize: 12,
+    color: '#666',
+    minWidth: 80,
   },
   infoBox: {
     backgroundColor: '#E3F2FD',
