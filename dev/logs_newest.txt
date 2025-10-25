@@ -1,122 +1,242 @@
-[2025-10-25T11:08:33.799Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T11:08:33.799Z] INFO  | 👤 User prompt: | "My favorite color is blue"
-[2025-10-25T11:08:33.799Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-25T11:08:33.799Z] DEBUG | Prompt length: | 2984
-[2025-10-25T11:08:33.799Z] DEBUG | Includes memory examples: | true
-[2025-10-25T11:08:33.799Z] DEBUG | Includes "What do you know":
-[2025-10-25T11:08:33.799Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
-[2025-10-25T11:08:33.799Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
-[2025-10-25T11:08:33.799Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T11:08:33.799Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-25T11:08:33.799Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:08:36.956Z] DEBUG | Completion finished
-[2025-10-25T11:08:36.956Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T11:08:36.956Z] DEBUG | Temperature: | 0.3
-[2025-10-25T11:08:36.956Z] DEBUG | Model raw output: | "I've noted that down. I'll make sure to keep that in mind for our conversation. What else would you like to talk about?"
-[2025-10-25T11:08:36.956Z] DEBUG | Output length: | 119
-[2025-10-25T11:08:36.956Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T11:08:36.956Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T11:08:36.956Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T11:08:40.608Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T11:08:40.608Z] INFO  | 👤 User prompt: | "What do you know about me?"
-[2025-10-25T11:08:40.609Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-25T11:08:40.609Z] DEBUG | Prompt length: | 2984
-[2025-10-25T11:08:40.609Z] DEBUG | Includes memory examples: | true
-[2025-10-25T11:08:40.609Z] DEBUG | Includes "What do you know":
-[2025-10-25T11:08:40.609Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
-[2025-10-25T11:08:40.609Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
-[2025-10-25T11:08:40.609Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T11:08:40.609Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-25T11:08:40.609Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:08:42.824Z] DEBUG | Completion finished
-[2025-10-25T11:08:42.824Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T11:08:42.824Z] DEBUG | Temperature: | 0.3
-[2025-10-25T11:08:42.824Z] DEBUG | Model raw output: | "Let me check my memory. [archival_memory_search(query=\"user profile\", tags=[\"user\"], top_k=1)]"
-[2025-10-25T11:08:42.824Z] DEBUG | Output length: | 94
-[2025-10-25T11:08:42.824Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T11:08:42.824Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T11:08:42.824Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T11:09:59.148Z] ERROR | Failed to release context: | {}
-[2025-10-25T11:09:59.167Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
-[2025-10-25T11:09:59.310Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
-[2025-10-25T11:10:04.556Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
-[2025-10-25T11:10:04.696Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
-[2025-10-25T11:10:18.188Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
-[2025-10-25T11:10:18.329Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
-[2025-10-25T11:10:19.452Z] INFO  | 🔧 Tools enabled: 7 tools available
-[2025-10-25T11:10:19.452Z] INFO  | 🔧 Tools enabled for testing
-[2025-10-25T11:10:19.452Z] INFO  | Tools supported? | true
-[2025-10-25T11:10:21.864Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
-[2025-10-25T11:10:22.004Z] ERROR | Failed to load model: | {"code":"llama_cpp_error","nativeStackIOS":["0   LocalOSApp                          0x0000000104c801b4 RCTJSErrorFromCodeMessageAndNSError + 76","1   LocalOSApp                          0x0000000104d64804 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeERKNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSJ_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSS_m_block_invoke.103 + 260","2   LocalOSApp                          0x0000000104eb7fd0 -[RNLlama initContext:withContextParams:withResolver:withRejecter:] + 636","3   CoreFoundation                      0x00000001990e7864 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288868","4   CoreFoundation                      0x00000001990e76ec 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 288492","5   CoreFoundation                      0x00000001991f7df0 973E47E5-88F0-3367-B9D4-46D5CB999B75 + 1404400","6   LocalOSApp                          0x0000000104d60c14 ___ZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArray_block_invoke + 96","7   LocalOSApp                          0x0000000104d65358 _ZNSt3__110__function6__funcIZN8facebook5react15ObjCTurboModule23performMethodInvocationERNS2_3jsi7RuntimeEbPKcP12NSInvocationP14NSMutableArrayE3$_1NS_9allocatorISE_EEFvvEEclEv + 104","8   libdispatch.dylib                   0x00000001d0a61adc D34AC6A9-10DC-3535-9944-E3EFC5994788 + 6876","9   libdispatch.dylib                   0x00000001d0a7b7ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 112620","10  libdispatch.dylib                   0x00000001d0a6a468 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 42088","11  libdispatch.dylib                   0x00000001d0a6af44 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 44868","12  libdispatch.dylib                   0x00000001d0a753ec D34AC6A9-10DC-3535-9944-E3EFC5994788 + 87020","13  libdispatch.dylib                   0x00000001d0a74ce4 D34AC6A9-10DC-3535-9944-E3EFC5994788 + 85220","14  libsystem_pthread.dylib             0x00000001f3edb3b8 _pthread_wqthread + 292","15  libsystem_pthread.dylib             0x00000001f3eda8c0 start_wqthread + 8"],"domain":"RCTErrorDomain","userInfo":null}
-[2025-10-25T11:10:44.532Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/3A360B3A-33B5-4CCD-8082-ED9997096059/Documents/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf"
-[2025-10-25T11:10:46.250Z] INFO  | 📋 Model type detected: | "llama-3.2-1b-function-calling"
-[2025-10-25T11:10:46.250Z] INFO  | 🔧 Tool format: | "langchain-pydantic"
-[2025-10-25T11:10:46.251Z] INFO  | 📝 Needs examples: | true
-[2025-10-25T11:10:46.251Z] INFO  | ✅ Model loaded successfully: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:10:46.251Z] INFO  |    Using Llama 3.2 1B (Custom Function Calling) configuration
-[2025-10-25T11:10:46.260Z] INFO  | 🔍 Initializing AI backend...
-[2025-10-25T11:10:46.260Z] INFO  | Already initialized with backend: apple
-[2025-10-25T11:10:46.261Z] INFO  | ✅ AI Backend: | "apple"
-[2025-10-25T11:10:46.261Z] INFO  | ✅ Model: | "Apple Intelligence (Neural Engine)"
-[2025-10-25T11:11:14.383Z] INFO  | 🔄 Switching to llama backend...
-[2025-10-25T11:11:14.383Z] INFO  | 🔄 Attempting to switch to llama backend...
-[2025-10-25T11:11:14.383Z] INFO  | ✅ Apple Intelligence session released
-[2025-10-25T11:11:14.383Z] INFO  | ✅ AI Service released
-[2025-10-25T11:11:14.383Z] INFO  | ✅ Switched to Llama.cpp
-[2025-10-25T11:11:14.383Z] INFO  | ✅ Switched to Llama.cpp
-[2025-10-25T11:11:24.178Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:11:24.178Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:11:24.752Z] DEBUG | Completion finished
-[2025-10-25T11:11:24.752Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T11:11:31.621Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:11:31.621Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:11:32.513Z] DEBUG | Completion finished
-[2025-10-25T11:11:32.513Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T11:11:34.297Z] INFO  | 🔧 Tools enabled: 7 tools available
-[2025-10-25T11:11:34.297Z] INFO  | 🔧 Tools enabled for testing
-[2025-10-25T11:11:34.297Z] INFO  | Tools supported? | true
-[2025-10-25T11:11:35.350Z] INFO  | Tool prompt mode: Legacy
-[2025-10-25T11:11:35.350Z] INFO  | Switched to Legacy prompting mode
-[2025-10-25T11:11:37.099Z] INFO  | 🔍 Initializing AI backend...
-[2025-10-25T11:11:37.099Z] INFO  | Already initialized with backend: llama
-[2025-10-25T11:11:37.113Z] INFO  | ✅ AI Backend: | "llama"
-[2025-10-25T11:11:37.113Z] INFO  | ✅ Model: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:11:37.113Z] INFO  | 🔧 Tools enabled: 7 tools available
-[2025-10-25T11:11:43.257Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T11:11:43.257Z] INFO  | 👤 User prompt: | "My favorite color is blue"
-[2025-10-25T11:11:43.257Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-25T11:11:43.257Z] DEBUG | Prompt length: | 2984
-[2025-10-25T11:11:43.257Z] DEBUG | Includes memory examples: | true
-[2025-10-25T11:11:43.257Z] DEBUG | Includes "What do you know":
-[2025-10-25T11:11:43.257Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
-[2025-10-25T11:11:43.257Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.2-1b-function-calling","temperature":0.7,"maxTokens":150}
-[2025-10-25T11:11:43.257Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T11:11:43.257Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:11:43.258Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":150,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:11:44.748Z] DEBUG | Completion finished
-[2025-10-25T11:11:44.748Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T11:11:44.748Z] DEBUG | Temperature: | 0.7
-[2025-10-25T11:11:44.748Z] DEBUG | Model raw output: | "Blue is a great choice. Would you like to know more about the current weather in your area or learn about a specific blue-themed topic?"
-[2025-10-25T11:11:44.748Z] DEBUG | Output length: | 135
-[2025-10-25T11:11:44.748Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T11:11:44.748Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T11:11:44.748Z] INFO  | 💬 Regular response (no tools used)
-[2025-10-25T11:11:47.653Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, archival_memory_insert, archival_memory_search, conversation_search"
-[2025-10-25T11:11:47.653Z] INFO  | 👤 User prompt: | "What do you know about me?"
-[2025-10-25T11:11:47.653Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-25T11:11:47.653Z] DEBUG | Prompt length: | 2984
-[2025-10-25T11:11:47.653Z] DEBUG | Includes memory examples: | true
-[2025-10-25T11:11:47.653Z] DEBUG | Includes "What do you know":
-[2025-10-25T11:11:47.653Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nYou are an AI assistant with tool calling abilities. You have access to these tools:\n\n- get_current_datetime(): Get the curr"
-[2025-10-25T11:11:47.653Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.2-1b-function-calling","temperature":0.7,"maxTokens":150}
-[2025-10-25T11:11:47.653Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-25T11:11:47.653Z] DEBUG | Generated prompt template for: | "Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0"
-[2025-10-25T11:11:47.653Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":150,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-25T11:11:48.271Z] DEBUG | Completion finished
-[2025-10-25T11:11:48.271Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-25T11:11:48.271Z] DEBUG | Temperature: | 0.7
-[2025-10-25T11:11:48.271Z] DEBUG | Model raw output: | "I don't have access to your personal preferences or knowledge about you. I can only provide information based on our current conversation."
-[2025-10-25T11:11:48.271Z] DEBUG | Output length: | 138
-[2025-10-25T11:11:48.271Z] INFO  | ❌ NO TOOL CALL DETECTED
-[2025-10-25T11:11:48.271Z] INFO  | ℹ️  No tool was used (normal response)
-[2025-10-25T11:11:48.271Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:12:59.664Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:12:59.664Z] INFO  | 👤 User prompt: | "Hi"
+[2025-10-25T14:12:59.664Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:12:59.665Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:12:59.665Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:12:59.665Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:12:59.665Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:12:59.665Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:12:59.665Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:12:59.665Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:12:59.665Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:12:59.665Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:13:01.201Z] DEBUG | Completion finished
+[2025-10-25T14:13:01.201Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:13:01.201Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:13:01.201Z] DEBUG | Model raw output: | "Nice to meet you. I'm LocalOS Assistant. How can I assist you today?"
+[2025-10-25T14:13:01.201Z] DEBUG | Output length: | 68
+[2025-10-25T14:13:01.201Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:13:01.201Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:13:01.201Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:13:06.995Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:13:06.995Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:13:06.995Z] INFO  | Tools supported? | true
+[2025-10-25T14:13:06.995Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:13:08.914Z] INFO  | Model context released
+[2025-10-25T14:13:08.914Z] INFO  | ✅ Context cleared successfully
+[2025-10-25T14:13:10.487Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:13:10.487Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:13:10.503Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:13:10.503Z] INFO  | ✅ Model: | "No model loaded"
+[2025-10-25T14:13:10.503Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:13:14.932Z] INFO  | Loading model from: | "/var/mobile/Containers/Data/Application/72C429A3-DC43-41D6-8450-0448E471E428/Documents/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+[2025-10-25T14:13:15.509Z] INFO  | 📋 Model type detected: | "llama-3.1-8b-instruct"
+[2025-10-25T14:13:15.509Z] INFO  | 🔧 Tool format: | "transformers-native"
+[2025-10-25T14:13:15.509Z] INFO  | 📝 Needs examples:
+[2025-10-25T14:13:15.509Z] INFO  | ✅ Model loaded successfully: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:13:15.509Z] INFO  |    Using Llama 3.1 8B (Official Tool Support) configuration
+[2025-10-25T14:13:15.526Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:13:15.526Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:13:15.532Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:13:15.532Z] INFO  | ✅ Model: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:13:15.532Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:13:19.430Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:13:19.430Z] INFO  | 👤 User prompt: | "Hi"
+[2025-10-25T14:13:19.430Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:13:19.430Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:13:19.430Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:13:19.430Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:13:19.430Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:13:19.430Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:13:19.430Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:13:19.430Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:13:19.430Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:13:19.430Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:13:53.326Z] DEBUG | Completion finished
+[2025-10-25T14:13:53.326Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:13:53.326Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:13:53.327Z] DEBUG | Model raw output: | "Nice to meet you. I'm here to help with any questions or tasks you may have. What would you like to talk about or what can I assist you with today?"
+[2025-10-25T14:13:53.327Z] DEBUG | Output length: | 147
+[2025-10-25T14:13:53.327Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:13:53.327Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:13:53.327Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:13:57.103Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:13:57.103Z] INFO  | 👤 User prompt: | "My favorite color is blue"
+[2025-10-25T14:13:57.103Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:13:57.103Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:13:57.103Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:13:57.103Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:13:57.104Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:13:57.104Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:13:57.104Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:13:57.104Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:13:57.104Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:13:57.104Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:14:08.437Z] DEBUG | Completion finished
+[2025-10-25T14:14:08.437Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:14:08.437Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:14:08.437Z] DEBUG | Model raw output: | "I've taken note of that. I'll remember that your favorite color is blue. I don't have a visual display, but I can recall that information if you'd like to discuss it further or if it comes up in our conversation."
+[2025-10-25T14:14:08.437Z] DEBUG | Output length: | 212
+[2025-10-25T14:14:08.437Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:14:08.437Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:14:08.437Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:14:19.624Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:14:19.624Z] INFO  | 👤 User prompt: | "What do you know about me?"
+[2025-10-25T14:14:19.624Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:14:19.624Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:14:19.624Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:14:19.624Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:14:19.624Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:14:19.624Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:14:19.624Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:14:19.624Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:14:19.624Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:14:19.624Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:14:28.267Z] DEBUG | Completion finished
+[2025-10-25T14:14:28.267Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:14:28.267Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:14:28.267Z] DEBUG | Model raw output: | "I don't have any information about you in my memory yet. I'm a new LocalOS Assistant, and this is our first conversation. I can start by asking: What would you like to talk about or what would you like to know about yourself?"
+[2025-10-25T14:14:28.267Z] DEBUG | Output length: | 225
+[2025-10-25T14:14:28.267Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:14:28.267Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:14:28.267Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:14:33.743Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:14:33.743Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:14:33.744Z] INFO  | Tools supported? | true
+[2025-10-25T14:14:33.744Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:14:38.463Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:14:38.463Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:14:38.463Z] INFO  | Tools supported? | true
+[2025-10-25T14:14:38.463Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:14:57.455Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:14:57.455Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:14:57.455Z] INFO  | Tools supported? | true
+[2025-10-25T14:14:57.455Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:14:58.319Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:14:58.319Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:14:58.332Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:14:58.332Z] INFO  | ✅ Model: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:14:58.332Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:15:23.326Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:15:23.326Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:15:23.340Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:15:23.340Z] INFO  | ✅ Model: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:15:23.340Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:15:28.743Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:15:28.743Z] INFO  | 👤 User prompt: | "Remember that I work best in the mornings"
+[2025-10-25T14:15:28.743Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:15:28.744Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:15:28.744Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:15:28.744Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:15:28.744Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:15:28.744Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:15:28.744Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:15:28.744Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:15:28.744Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:15:28.744Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:15:41.230Z] DEBUG | Completion finished
+[2025-10-25T14:15:41.230Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:15:41.230Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:15:41.230Z] DEBUG | Model raw output: | "I'll remember that you work best in the mornings. I'll update my archival memory with this information so I can recall it later.\n\n<archival_memory_insert content=\"You work best in the mornings\" tags=[\"work habits\", \"productivity\"] />"
+[2025-10-25T14:15:41.230Z] DEBUG | Output length: | 233
+[2025-10-25T14:15:41.230Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:15:41.230Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:15:41.230Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:16:02.725Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:16:02.725Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:16:02.725Z] INFO  | Tools supported? | true
+[2025-10-25T14:16:02.725Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:16:03.848Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:16:03.848Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:16:03.863Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:16:03.863Z] INFO  | ✅ Model: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:16:03.863Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:16:19.368Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:16:19.368Z] INFO  | 👤 User prompt: | "What do you know about me?"
+[2025-10-25T14:16:19.368Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:16:19.369Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:16:19.369Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:16:19.369Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:16:19.369Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:16:19.369Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:16:19.369Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:16:19.369Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:16:19.369Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:16:19.369Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:16:29.987Z] DEBUG | Completion finished
+[2025-10-25T14:16:29.987Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:16:29.987Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:16:29.987Z] DEBUG | Model raw output: | "I've searched my archival memory about you. Currently, I know that you work best in the mornings. That's the only piece of information I have so far. Would you like to add more details about yourself?"
+[2025-10-25T14:16:29.987Z] DEBUG | Output length: | 200
+[2025-10-25T14:16:29.987Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:16:29.987Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:16:29.987Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:16:40.494Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:16:40.494Z] INFO  | 👤 User prompt: | "What do you know about me?"
+[2025-10-25T14:16:40.494Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:16:40.494Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:16:40.494Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:16:40.494Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:16:40.494Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:16:40.494Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:16:40.494Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:16:40.494Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:16:40.494Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:16:40.494Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:16:47.893Z] DEBUG | Completion finished
+[2025-10-25T14:16:47.893Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:16:47.893Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:16:47.893Z] DEBUG | Model raw output: | "I don't have any information about you in my current memory. I'm a new AI assistant, and this is the start of our conversation. However, I can store information about you as we interact. Would you like to share something about yourself?"
+[2025-10-25T14:16:47.893Z] DEBUG | Output length: | 236
+[2025-10-25T14:16:47.893Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:16:47.893Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-25T14:16:47.893Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-25T14:16:50.228Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-25T14:16:50.228Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-25T14:16:50.228Z] INFO  | Tools supported? | true
+[2025-10-25T14:16:50.228Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-25T14:16:59.882Z] INFO  | Testing tool with AI backend: core_memory_append
+[2025-10-25T14:16:59.882Z] INFO  | Test prompt: "Use the core_memory_append tool to help me"
+[2025-10-25T14:16:59.882Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:16:59.882Z] INFO  | 👤 User prompt: | "Use the core_memory_append tool to help me"
+[2025-10-25T14:16:59.882Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:16:59.882Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:16:59.882Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:16:59.882Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:16:59.882Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:16:59.882Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:16:59.882Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:16:59.882Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:16:59.883Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:16:59.883Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:17:02.866Z] DEBUG | Completion finished
+[2025-10-25T14:17:02.866Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:17:02.866Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:17:02.866Z] DEBUG | Model raw output: | "You want to use the `core_memory_append` tool. What section of the memory would you like to append to, and what content would you like to add?"
+[2025-10-25T14:17:02.866Z] DEBUG | Output length: | 142
+[2025-10-25T14:17:02.866Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:17:06.602Z] INFO  | Testing tool with AI backend: archival_memory_insert
+[2025-10-25T14:17:06.602Z] INFO  | Test prompt: "Use the archival_memory_insert tool to help me"
+[2025-10-25T14:17:06.602Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-25T14:17:06.602Z] INFO  | 👤 User prompt: | "Use the archival_memory_insert tool to help me"
+[2025-10-25T14:17:06.602Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-25T14:17:06.603Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-25T14:17:06.603Z] DEBUG | Prompt length: | 6932
+[2025-10-25T14:17:06.603Z] DEBUG | Includes memory examples: | true
+[2025-10-25T14:17:06.603Z] DEBUG | Includes "What do you know":
+[2025-10-25T14:17:06.603Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nnew user\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>\nYour memory consists of two types:\n- Core Mem"
+[2025-10-25T14:17:06.603Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":200}
+[2025-10-25T14:17:06.603Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-25T14:17:06.603Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:17:06.603Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":200,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-25T14:17:39.735Z] DEBUG | Completion finished
+[2025-10-25T14:17:39.735Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-25T14:17:39.735Z] DEBUG | Temperature: | 0.3
+[2025-10-25T14:17:39.735Z] DEBUG | Model raw output: | "**archival_memory_insert**\n\nYou've decided to use the archival_memory_insert tool to add information about yourself to your long-term memory. This tool is used for facts about the user, such as job, interests, preferences, past events, conversations, and tasks.\n\n**Parameters:**\n\n* `content`: The information you want to add to your archival memory.\n* `tags`: Optional list of tags to associate with this memory for better organization and filtering.\n\n**Example usage:**\n\nTo add your job as a software developer, you can use the following command:\n\n`archival_memory_insert(content=\"I am a software developer.\", tags=[\"job\", \"profession\"])`\n\nPlease provide the content you'd like to add to your archival memory."
+[2025-10-25T14:17:39.735Z] DEBUG | Output length: | 710
+[2025-10-25T14:17:39.735Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-25T14:17:41.577Z] INFO  | 🔍 Initializing AI backend...
+[2025-10-25T14:17:41.577Z] INFO  | Already initialized with backend: llama
+[2025-10-25T14:17:41.590Z] INFO  | ✅ AI Backend: | "llama"
+[2025-10-25T14:17:41.590Z] INFO  | ✅ Model: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-25T14:17:41.590Z] INFO  | 🔧 Tools enabled: 9 tools available
