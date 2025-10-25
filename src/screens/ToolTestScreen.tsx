@@ -98,23 +98,21 @@ export const ToolTestScreen: React.FC = () => {
   const handleToggleModelMode = (value: boolean) => {
     const newMode: ModelType = value ? 'llama-3.1-8b-instruct' : 'llama-3.2-1b-function-calling';
     setModelMode(newMode);
-    LlamaService.setModelMode(newMode);
 
     const config = MODEL_CONFIGS[newMode];
-    Logger.info(`Switched to ${config.displayName}`);
+    Logger.info(`Loading config preset: ${config.displayName}`);
 
-    // Update tool detection settings to match new model defaults
+    // Update tool detection settings to match new preset
     setToolDetectionTemp(config.toolDetectionTemp);
     setToolDetectionMaxTokens(config.toolDetectionMaxTokens);
 
     Alert.alert(
-      'Model Mode Changed',
-      `${config.displayName}\n\n` +
+      'Config Preset Loaded',
+      `Using ${config.displayName} settings as testing preset:\n\n` +
       `Tool Format: ${config.toolFormat}\n` +
       `Temperature: ${config.toolDetectionTemp}\n` +
-      `Max Tokens: ${config.toolDetectionMaxTokens}\n` +
-      `Context Size: ${config.contextSize.toLocaleString()}\n\n` +
-      `${config.description}`,
+      `Max Tokens: ${config.toolDetectionMaxTokens}\n\n` +
+      `⚠️ Note: This doesn't change your loaded model, only the test settings. Your actual model is still loaded.`,
     );
   };
 
@@ -484,9 +482,9 @@ export const ToolTestScreen: React.FC = () => {
         <View style={styles.modelModeCard}>
           <View style={styles.toggleHeader}>
             <View style={styles.toggleInfo}>
-              <Text style={styles.toggleTitle}>Model Configuration</Text>
+              <Text style={styles.toggleTitle}>Testing Config Preset</Text>
               <Text style={styles.modelModeSubtitle}>
-                {MODEL_CONFIGS[modelMode].displayName}
+                {MODEL_CONFIGS[modelMode].displayName} Settings
               </Text>
             </View>
             <Switch
@@ -497,20 +495,17 @@ export const ToolTestScreen: React.FC = () => {
             />
           </View>
           <Text style={styles.toggleDescription}>
-            {MODEL_CONFIGS[modelMode].description}
+            Load default settings for testing. {MODEL_CONFIGS[modelMode].description}
           </Text>
           <View style={styles.modelConfigDetails}>
             <Text style={styles.configDetailText}>
               Tool Format: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolFormat}</Text>
             </Text>
             <Text style={styles.configDetailText}>
-              Temperature: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionTemp}</Text>
+              Detection Temp: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionTemp}</Text>
             </Text>
             <Text style={styles.configDetailText}>
-              Max Tokens: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionMaxTokens}</Text>
-            </Text>
-            <Text style={styles.configDetailText}>
-              Context Size: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].contextSize.toLocaleString()}</Text>
+              Detection MaxTokens: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionMaxTokens}</Text>
             </Text>
             <Text style={styles.configDetailText}>
               Needs Examples: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].needsToolExamples ? 'Yes' : 'No'}</Text>
