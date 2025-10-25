@@ -670,6 +670,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     const userMessage = messages[messages.length - 1];
     if (userMessage) {
       Logger.info('👤 User prompt:', userMessage.content);
+      Logger.info('📝 System prompt type:', this.currentPromptType);
     }
 
     // LAYER 2: TRIGGER WORD DETECTION - Bypass model if trigger words detected
