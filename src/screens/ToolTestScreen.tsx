@@ -127,12 +127,14 @@ export const ToolTestScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              Logger.info('🗑️ CONTEXT CLEARED - User cleared model context from Tool Test screen');
+              Logger.info('Action: Releasing model to free memory and reset conversation history');
               // Clear messages by releasing and reloading the model
               await LlamaService.releaseModel();
-              Logger.info('✅ Context cleared successfully');
+              Logger.info('✅ Context cleared successfully - Model will reload on next use');
               Alert.alert('Success', 'Context has been cleared. The model will reload on next use.');
             } catch (error) {
-              Logger.error('Failed to clear context:', error);
+              Logger.error('❌ Failed to clear context:', error);
               Alert.alert('Error', 'Failed to clear context');
             }
           },
@@ -251,8 +253,12 @@ export const ToolTestScreen: React.FC = () => {
           testPrompt = `Use the ${tool.name} tool to help me`;
       }
 
-      Logger.info(`Testing tool with AI backend: ${tool.name}`);
+      Logger.info('═══════════════════════════════════════════════════════════');
+      Logger.info('🧪 TOOL TEST STARTED (from Tool Test Screen)');
+      Logger.info('═══════════════════════════════════════════════════════════');
+      Logger.info(`Tool being tested: ${tool.name}`);
       Logger.info(`Test prompt: "${testPrompt}"`);
+      Logger.info(`Inference settings - Temp: ${temperature}, MaxTokens: ${maxTokens}, TopP: ${topP}, TopK: ${topK}`);
 
       // Create messages with very explicit system prompt for tool testing
       const messages: Message[] = [
@@ -291,18 +297,26 @@ export const ToolTestScreen: React.FC = () => {
       setTestResults(prev => new Map(prev).set(tool.name, toolResult));
 
       if (result.usedTool) {
+        Logger.info('✅ TOOL TEST SUCCESS - Tool was called!');
+        Logger.info(`Tool called: ${result.toolName}`);
+        Logger.info('═══════════════════════════════════════════════════════════');
         Alert.alert(
           'Tool Called! ✅',
           `The AI successfully called ${result.toolName}.\n\nFull response:\n${result.response}`
         );
       } else {
+        Logger.warn('❌ TOOL TEST FAILED - Tool was NOT called');
+        Logger.warn(`Expected tool: ${tool.name}`);
+        Logger.warn(`Response: ${result.response.substring(0, 200)}`);
+        Logger.info('═══════════════════════════════════════════════════════════');
         Alert.alert(
           'Tool NOT Called ❌',
           `The AI did not call the ${tool.name} tool.\n\nResponse: ${result.response}`
         );
       }
     } catch (error) {
-      Logger.error(`Test error for ${tool.name}:`, error);
+      Logger.error('❌ TOOL TEST ERROR:', error);
+      Logger.info('═══════════════════════════════════════════════════════════');
       const errorMsg = error instanceof Error ? error.message : String(error);
       Alert.alert('Test Error', `Failed to test ${tool.name}: ${errorMsg}`);
 

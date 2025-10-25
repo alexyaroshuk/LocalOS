@@ -581,7 +581,48 @@ User: "What's trending" → [search_web(query="trending topics")]`;
    * Supports Pythonic format: [function_name(param="value")]
    */
   private static extractToolCall(text: string): string | null {
-    // Try to extract Pythonic format: [function_name(param1="val1", param2="val2")]
+    Logger.debug('🔍 extractToolCall input:', text.substring(0, 300));
+
+    // FIRST: Try XML self-closing tag format (8B model native format)
+    // Example: <archival_memory_insert content="text" tags=["tag1", "tag2"] />
+    const xmlPattern = /<([\w_]+)\s+([^/>]+)\s*\/>/;
+    const xmlMatch = xmlPattern.exec(text);
+
+    if (xmlMatch) {
+      const functionName = xmlMatch[1];
+      const attrsString = xmlMatch[2];
+      Logger.debug('✅ Found XML format tool:', functionName);
+      Logger.debug('Attributes string:', attrsString);
+
+      // Parse XML attributes
+      const args: Record<string, any> = {};
+      // Match: attr="value" or attr=["array", "items"]
+      const attrPattern = /([\w_]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|\[([^\]]*)\])/g;
+      let attrMatch;
+      while ((attrMatch = attrPattern.exec(attrsString)) !== null) {
+        const key = attrMatch[1];
+        if (attrMatch[2] !== undefined) {
+          // Double-quoted string
+          args[key] = attrMatch[2];
+        } else if (attrMatch[3] !== undefined) {
+          // Single-quoted string
+          args[key] = attrMatch[3];
+        } else if (attrMatch[4] !== undefined) {
+          // Array: ["item1", "item2"]
+          const arrayContent = attrMatch[4];
+          const arrayItems = arrayContent.split(',').map(item => {
+            const trimmed = item.trim();
+            return trimmed.replace(/^["']|["']$/g, '');
+          }).filter(item => item.length > 0);
+          args[key] = arrayItems;
+        }
+      }
+
+      Logger.debug('Parsed XML args:', args);
+      return JSON.stringify({name: functionName, arguments: args});
+    }
+
+    // SECOND: Try Pythonic bracket format: [function_name(param1="val1", param2="val2")]
     // Use lazy matching (.*?) to handle nested brackets in array parameters like tags=["a","b"]
     const pythonicPattern = /\[([\w_]+)\((.*?)\)\]/s;
     const pythonicMatch = pythonicPattern.exec(text);

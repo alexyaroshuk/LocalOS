@@ -217,6 +217,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       timestamp: Date.now(),
     };
 
+    Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    Logger.info('💬 CHAT MESSAGE (from Chat Screen)');
+    Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    Logger.info(`User: ${inputText.trim()}`);
+    Logger.info(`Tools enabled: ${toolsEnabled}`);
+
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsGenerating(true);
@@ -356,8 +362,11 @@ CRITICAL RULES:
         text: 'Clear',
         style: 'destructive',
         onPress: () => {
+          Logger.info('🗑️ CHAT CLEARED - User cleared all messages in chat');
+          Logger.info(`Previous message count: ${messages.length}`);
           setMessages([]);
           createNewSession();
+          Logger.info('✅ New chat session created');
         },
       },
     ]);
