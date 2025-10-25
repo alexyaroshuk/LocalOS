@@ -477,6 +477,31 @@ export class MockDatabaseService {
   }
 
   /**
+   * Update a user fact
+   */
+  static async updateUserFact(id: number, updates: Partial<UserFact>): Promise<UserFact | null> {
+    const fact = this.userFacts.find(f => f.id === id);
+    if (!fact) return null;
+
+    Object.assign(fact, updates);
+    fact.last_confirmed = Date.now();
+    console.log(`[MockDB] Updated user fact: ${fact.fact.substring(0, 50)}...`);
+    return fact;
+  }
+
+  /**
+   * Update an archive memory
+   */
+  static async updateArchiveMemory(id: number, updates: Partial<ArchiveMemory>): Promise<ArchiveMemory | null> {
+    const memory = this.archiveMemories.find(m => m.id === id);
+    if (!memory) return null;
+
+    Object.assign(memory, updates);
+    console.log(`[MockDB] Updated archive memory: ${memory.content.substring(0, 50)}...`);
+    return memory;
+  }
+
+  /**
    * Delete an archive memory by ID
    */
   static async deleteArchiveMemory(id: number): Promise<boolean> {

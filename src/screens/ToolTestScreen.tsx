@@ -47,6 +47,11 @@ export const ToolTestScreen: React.FC = () => {
     setBackendInfo(`${info.backend} - ${info.modelName}`);
     Logger.info('Tools supported?', AIService.areToolsSupported());
 
+    // Get current prompt type from LlamaService to persist selection
+    const currentPromptType = LlamaService.getPromptType();
+    setPromptType(currentPromptType);
+    Logger.info('📝 Current prompt type:', currentPromptType);
+
     // Check availability for all tools
     checkAllToolsAvailability(allTools);
   }, []);

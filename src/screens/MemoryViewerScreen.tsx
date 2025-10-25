@@ -189,6 +189,100 @@ export const MemoryViewerScreen: React.FC = () => {
     );
   };
 
+  const handleEditArchiveMemory = (memory: ArchiveMemory) => {
+    Alert.prompt(
+      'Edit Archive Memory',
+      'Edit content:',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Save',
+          onPress: async (newContent?: string) => {
+            if (!newContent || newContent.trim() === '') {
+              Alert.alert('Error', 'Content cannot be empty');
+              return;
+            }
+            try {
+              // Update the memory by deleting and re-inserting with same ID
+              await MockDatabaseService.updateArchiveMemory(memory.id, {
+                content: newContent.trim(),
+              });
+              await loadData();
+              Alert.alert('Success', 'Memory updated');
+            } catch (error) {
+              console.error('Failed to update memory:', error);
+              Alert.alert('Error', 'Failed to update memory');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      memory.content,
+    );
+  };
+
+  const handleEditTask = (task: Task) => {
+    Alert.prompt(
+      'Edit Task',
+      'Edit task title:',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Save',
+          onPress: async (newTitle?: string) => {
+            if (!newTitle || newTitle.trim() === '') {
+              Alert.alert('Error', 'Title cannot be empty');
+              return;
+            }
+            try {
+              await MockDatabaseService.updateTask(task.id, {
+                title: newTitle.trim(),
+              });
+              await loadData();
+              Alert.alert('Success', 'Task updated');
+            } catch (error) {
+              console.error('Failed to update task:', error);
+              Alert.alert('Error', 'Failed to update task');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      task.title,
+    );
+  };
+
+  const handleEditUserFact = (fact: UserFact) => {
+    Alert.prompt(
+      'Edit User Fact',
+      'Edit fact:',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Save',
+          onPress: async (newFact?: string) => {
+            if (!newFact || newFact.trim() === '') {
+              Alert.alert('Error', 'Fact cannot be empty');
+              return;
+            }
+            try {
+              await MockDatabaseService.updateUserFact(fact.id, {
+                fact: newFact.trim(),
+              });
+              await loadData();
+              Alert.alert('Success', 'Fact updated');
+            } catch (error) {
+              console.error('Failed to update fact:', error);
+              Alert.alert('Error', 'Failed to update fact');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      fact.fact,
+    );
+  };
+
   const renderCoreMemory = () => (
     <ScrollView
       style={styles.content}
@@ -274,6 +368,11 @@ export const MemoryViewerScreen: React.FC = () => {
               </Text>
               <View style={styles.cardActions}>
                 <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => handleEditArchiveMemory(memory)}>
+                  <Text style={styles.editButtonText}>✏️ Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDeleteArchiveMemory(memory.id)}>
                   <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
@@ -351,11 +450,18 @@ export const MemoryViewerScreen: React.FC = () => {
             </Text>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDeleteTask(task.id)}>
-          <Text style={styles.deleteButtonText}>🗑️</Text>
-        </TouchableOpacity>
+        <View style={styles.taskActions}>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.editIconButton]}
+            onPress={() => handleEditTask(task)}>
+            <Text style={styles.iconButtonText}>✏️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.deleteIconButton]}
+            onPress={() => handleDeleteTask(task.id)}>
+            <Text style={styles.iconButtonText}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -394,6 +500,11 @@ export const MemoryViewerScreen: React.FC = () => {
               Last confirmed: {new Date(fact.last_confirmed).toLocaleDateString()}
             </Text>
             <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditUserFact(fact)}>
+                <Text style={styles.editButtonText}>✏️ Edit</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => handleDeleteUserFact(fact.id)}>
@@ -742,6 +853,7 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: 8,
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
@@ -768,5 +880,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  taskActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editIconButton: {
+    backgroundColor: '#007AFF',
+  },
+  deleteIconButton: {
+    backgroundColor: '#FF3B30',
+  },
+  iconButtonText: {
+    fontSize: 16,
   },
 });
