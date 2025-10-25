@@ -8,6 +8,7 @@ import {getChatTemplate, generateId} from '../utils/helpers';
 import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
+import {getModelConfig, ModelConfig} from '../types/modelConfig';
 
 export class LlamaService {
   private static context: LlamaContext | null = null;
@@ -17,6 +18,7 @@ export class LlamaService {
   private static toolsEnabled: boolean = false;
   private static availableTools: Tool[] = [];
   private static useLangchainPrompt: boolean = true; // Default to Langchain mode
+  private static modelConfig: ModelConfig | null = null; // Model-specific configuration
 
   /**
    * Initialize and load a model
@@ -50,7 +52,17 @@ export class LlamaService {
       this.currentModelName = modelName;
       this.isInitialized = true;
 
+      // Detect and configure model-specific settings
+      this.modelConfig = getModelConfig(modelName);
+      Logger.info('📋 Model type detected:', this.modelConfig.type);
+      Logger.info('🔧 Tool format:', this.modelConfig.toolFormat);
+      Logger.info('📝 Needs examples:', this.modelConfig.needsToolExamples);
+
+      // Apply model-specific settings
+      this.useLangchainPrompt = this.modelConfig.useLangchainPrompt;
+
       Logger.info('✅ Model loaded successfully:', modelName);
+      Logger.info(`   Using ${this.modelConfig.displayName} configuration`);
     } catch (error) {
       Logger.error('Failed to load model:', error);
       this.isInitialized = false;
@@ -294,6 +306,30 @@ export class LlamaService {
   }
 
   /**
+   * Set model configuration mode (1B vs 8B)
+   */
+  static setModelMode(modelType: import('../types/modelConfig').ModelType): void {
+    const config = getModelConfig(modelType);
+    this.modelConfig = config;
+
+    // Apply model-specific settings
+    this.useLangchainPrompt = config.useLangchainPrompt;
+
+    Logger.info('📋 Model mode changed to:', config.displayName);
+    Logger.info('🔧 Tool format:', config.toolFormat);
+    Logger.info('🌡️  Temperature:', config.toolDetectionTemp);
+    Logger.info('📊 Max tokens:', config.toolDetectionMaxTokens);
+    Logger.info('📝 Needs examples:', config.needsToolExamples);
+  }
+
+  /**
+   * Get current model configuration
+   */
+  static getModelConfig(): ModelConfig | null {
+    return this.modelConfig;
+  }
+
+  /**
    * Get system prompt with tool definitions
    * Format compatible with Llama 3.2 1B Function Calling model
    * Based on: nguyenthanhthuan/Llama-3.2-1B-Instruct-function-calling-v2
@@ -355,7 +391,11 @@ export class LlamaService {
 
     const toolsJson = JSON.stringify(toolSchemas, null, 2);
 
-    return `You have access to the following tools:
+    // Get model config to determine if examples are needed
+    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+    const needsExamples = modelConfig.needsToolExamples;
+
+    let prompt = `You have access to the following tools:
 
 ${toolsJson}
 
@@ -374,7 +414,11 @@ CRITICAL TOOL USAGE RULES:
 3. TIME/DATE - Use for time-related queries:
    - Keywords: "what time", "what day", "date", "when is"
 
-Format: [tool_name(param="value")]
+Format: [tool_name(param="value")]`;
+
+    // Only add examples if the model needs them (1B model)
+    if (needsExamples) {
+      prompt += `
 
 CRITICAL EXAMPLES - Learn these patterns:
 
@@ -403,6 +447,19 @@ REMEMBER:
 - ALWAYS check archival_memory_search when user asks about themselves
 - ALWAYS save important info with archival_memory_insert or core_memory_append
 - DO NOT confuse web search with memory search!`;
+    } else {
+      // 8B model with native tool support - simpler, more concise instructions
+      prompt += `
+
+To call a tool, output: [tool_name(param="value")]
+
+REMEMBER:
+- Check archival_memory_search when user asks about themselves
+- Save important info with archival_memory_insert or core_memory_append
+- Use search_web only for current events/news, not for user information`;
+    }
+
+    return prompt;
   }
 
   /**
@@ -616,14 +673,21 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       const messagesWithTools = [systemMessage, ...messages];
 
       // First LLM call - check if it wants to use a tool
-      // Use lower temperature for more structured/deterministic output
+      // Use model-specific temperature and maxTokens
       // Don't stream to UI during tool detection phase
+      const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
       const toolDetectionConfig = {
         ...config,
-        temperature: 0.7, // Increased from 0.1 - too low may cause repetitive/stuck behavior
+        temperature: modelConfig.toolDetectionTemp, // Model-specific temperature
         topP: 0.9,
-        maxTokens: 150, // Increased from 100 - tool calls may need more tokens
+        maxTokens: modelConfig.toolDetectionMaxTokens, // Model-specific token limit
       };
+
+      Logger.debug('🎯 Tool detection config:', {
+        modelType: modelConfig.type,
+        temperature: toolDetectionConfig.temperature,
+        maxTokens: toolDetectionConfig.maxTokens,
+      });
 
       Logger.info('🔍 Starting tool detection phase (not streaming to UI)...');
       const firstResponse = await this.chatCompletion(
