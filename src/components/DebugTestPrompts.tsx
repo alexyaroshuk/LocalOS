@@ -35,6 +35,24 @@ const TEST_PROMPTS = [
       'Search for Llama 3.2 release',
     ],
   },
+  {
+    category: 'Memory - Write (Should Use Tools)',
+    prompts: [
+      'I prefer TypeScript over JavaScript',
+      'Remember that I work best in the mornings',
+      'My favorite color is blue',
+      'I am working on LocalOS',
+    ],
+  },
+  {
+    category: 'Memory - Read (Should Use Tools)',
+    prompts: [
+      'What do you know about me?',
+      'What are my preferences?',
+      'Search memory for TypeScript',
+      'What did we discuss before?',
+    ],
+  },
 ];
 
 export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({

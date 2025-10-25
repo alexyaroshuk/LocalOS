@@ -19,11 +19,14 @@ import {
 import {ChatScreen} from './src/screens/ChatScreen';
 import {ModelsScreen} from './src/screens/ModelsScreen';
 import {ToolTestScreen} from './src/screens/ToolTestScreen';
+import {MemoryViewerScreen} from './src/screens/MemoryViewerScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
+import MemoryService from './src/services/MemoryService';
+import {MockDatabaseService} from './src/services/MockDatabaseService';
 
-type Screen = 'chat' | 'models' | 'tools';
+type Screen = 'chat' | 'models' | 'tools' | 'memory';
 
 function App() {
   return (
@@ -50,6 +53,13 @@ function AppContent() {
     try {
       // Initialize model storage
       await ModelStorageService.initialize();
+
+      // Initialize memory service
+      await MemoryService.initialize();
+
+      // Initialize mock database (for testing)
+      await MockDatabaseService.initialize();
+
       console.log('App initialized successfully');
       setIsInitialized(true);
     } catch (error) {
@@ -95,6 +105,8 @@ function AppContent() {
           currentModel={currentModel}
           onModelLoaded={handleModelLoaded}
         />
+      ) : currentScreen === 'memory' ? (
+        <MemoryViewerScreen />
       ) : (
         <ToolTestScreen />
       )}
@@ -143,6 +155,21 @@ function AppContent() {
               currentScreen === 'tools' && styles.navButtonTextActive,
             ]}>
             Tools
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'memory' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('memory')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'memory' && styles.navButtonTextActive,
+            ]}>
+            Memory
           </Text>
         </TouchableOpacity>
       </View>

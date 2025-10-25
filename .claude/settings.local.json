@@ -21,7 +21,9 @@
       "Bash(npm view @react-native-ai/apple@0.11.0)",
       "Bash(npm install web-streams-polyfill)",
       "Bash(npx tsc --noEmit)",
-      "Bash(npx tsc --noEmit --skipLibCheck src/services/AppleIntelligenceService.ts)"
+      "Bash(npx tsc --noEmit --skipLibCheck src/services/AppleIntelligenceService.ts)",
+      "Bash(npx tsc --noEmit --skipLibCheck src/services/MemoryService.ts src/services/ArchiveMemoryTools.ts src/services/MockDatabaseService.ts)",
+      "Bash(npx tsc --noEmit --skipLibCheck src/services/LettaMemoryTools.ts src/components/DebugTestPrompts.tsx src/screens/MemoryViewerScreen.tsx)"
     ],
     "deny": [],
     "ask": []
