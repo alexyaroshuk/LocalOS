@@ -91,6 +91,8 @@ export class AIService {
     onToolUsage?: (
       stage: 'tool_call' | 'tool_result' | 'generating',
       toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
     if (!this.initializationAttempted) {

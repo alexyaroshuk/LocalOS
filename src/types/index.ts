@@ -103,3 +103,24 @@ export interface MessageWithTools extends Message {
   tool_calls?: ToolCall[];
   tool_result?: ToolResult;
 }
+
+// Agent action tracking types
+export type AgentActionType = 'thinking' | 'tool_call' | 'tool_result' | 'generating';
+
+export interface AgentAction {
+  id: string;
+  type: AgentActionType;
+  startTime: number;
+  endTime?: number;
+  duration?: number; // in milliseconds
+  toolName?: string;
+  toolArgs?: Record<string, any>;
+  toolResult?: any;
+  error?: string;
+  thinkingContent?: string; // For storing the thought process if available
+}
+
+// Extended message type to support agent actions
+export interface MessageWithActions extends Message {
+  actions?: AgentAction[];
+}
