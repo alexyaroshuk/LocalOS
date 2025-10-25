@@ -17,6 +17,7 @@ import {LlamaService} from '../services/LlamaService';
 import {Tool, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
+import {ModelType, MODEL_CONFIGS} from '../types/modelConfig';
 
 export const ToolTestScreen: React.FC = () => {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -26,6 +27,7 @@ export const ToolTestScreen: React.FC = () => {
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
   const [useLangchain, setUseLangchain] = useState(true);
+  const [modelMode, setModelMode] = useState<ModelType>('llama-3.2-1b-function-calling');
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
 
@@ -80,6 +82,25 @@ export const ToolTestScreen: React.FC = () => {
     Alert.alert(
       'Prompting Mode Changed',
       `Now using ${value ? 'Langchain-style JSON schema' : 'Legacy simplified'} prompts for tool calling.\n\nTest the tools to compare performance!`,
+    );
+  };
+
+  const handleToggleModelMode = (value: boolean) => {
+    const newMode: ModelType = value ? 'llama-3.1-8b-instruct' : 'llama-3.2-1b-function-calling';
+    setModelMode(newMode);
+    LlamaService.setModelMode(newMode);
+
+    const config = MODEL_CONFIGS[newMode];
+    Logger.info(`Switched to ${config.displayName}`);
+
+    Alert.alert(
+      'Model Mode Changed',
+      `${config.displayName}\n\n` +
+      `Tool Format: ${config.toolFormat}\n` +
+      `Temperature: ${config.toolDetectionTemp}\n` +
+      `Max Tokens: ${config.toolDetectionMaxTokens}\n` +
+      `Context Size: ${config.contextSize.toLocaleString()}\n\n` +
+      `${config.description}`,
     );
   };
 
@@ -344,6 +365,43 @@ export const ToolTestScreen: React.FC = () => {
           </Text>
         </View>
 
+        <View style={styles.modelModeCard}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Model Configuration</Text>
+              <Text style={styles.modelModeSubtitle}>
+                {MODEL_CONFIGS[modelMode].displayName}
+              </Text>
+            </View>
+            <Switch
+              value={modelMode === 'llama-3.1-8b-instruct'}
+              onValueChange={handleToggleModelMode}
+              trackColor={{false: '#D1D1D6', true: '#FF9500'}}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.toggleDescription}>
+            {MODEL_CONFIGS[modelMode].description}
+          </Text>
+          <View style={styles.modelConfigDetails}>
+            <Text style={styles.configDetailText}>
+              Tool Format: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolFormat}</Text>
+            </Text>
+            <Text style={styles.configDetailText}>
+              Temperature: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionTemp}</Text>
+            </Text>
+            <Text style={styles.configDetailText}>
+              Max Tokens: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].toolDetectionMaxTokens}</Text>
+            </Text>
+            <Text style={styles.configDetailText}>
+              Context Size: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].contextSize.toLocaleString()}</Text>
+            </Text>
+            <Text style={styles.configDetailText}>
+              Needs Examples: <Text style={styles.configDetailValue}>{MODEL_CONFIGS[modelMode].needsToolExamples ? 'Yes' : 'No'}</Text>
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>How Tool Testing Works</Text>
           <Text style={styles.infoText}>
@@ -410,6 +468,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#34C759',
   },
+  modelModeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginBottom: 8,
+    marginTop: 0,
+    borderWidth: 2,
+    borderColor: '#FF9500',
+  },
   toggleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -430,10 +498,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#34C759',
   },
+  modelModeSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF9500',
+  },
   toggleDescription: {
     fontSize: 13,
     color: '#666',
     lineHeight: 18,
+  },
+  modelConfigDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  configDetailText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  configDetailValue: {
+    fontWeight: '600',
+    color: '#000',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   infoBox: {
     backgroundColor: '#E3F2FD',
