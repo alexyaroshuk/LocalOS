@@ -56,7 +56,7 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolDetectionTemp: 0.3, // Lower temp for more precise tool calling
     toolDetectionMaxTokens: 512, // Increased from 200 - need room for complete XML tool calls
     useLangchainPrompt: false, // Use native transformers format
-    contextSize: 131072, // 128k context!
+    contextSize: 8192, // 8K context - realistic for mobile (128K theoretical max, but memory intensive)
     description: 'Official Meta model with native tool calling via transformers chat templates. Better tool calling accuracy.',
   },
 };

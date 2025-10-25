@@ -36,10 +36,21 @@ export class LlamaService {
 
       Logger.info('Loading model from:', modelPath);
 
+      // Detect and configure model-specific settings FIRST
+      this.modelConfig = getModelConfig(modelName);
+      Logger.info('📋 Model type detected:', this.modelConfig.type);
+      Logger.info('🔧 Tool format:', this.modelConfig.toolFormat);
+      Logger.info('📝 Needs examples:', this.modelConfig.needsToolExamples);
+      Logger.info('📏 Context size:', this.modelConfig.contextSize);
+
+      // Use model-specific context size, not the hardcoded default
       const llamaConfig = {
         ...DEFAULT_LLAMA_CONFIG,
+        contextSize: this.modelConfig.contextSize, // Use model's actual context size
         ...config,
       };
+
+      Logger.info('🚀 Initializing model with context size:', llamaConfig.contextSize);
 
       // Initialize llama context
       this.context = await initLlama({
@@ -54,17 +65,12 @@ export class LlamaService {
       this.currentModelName = modelName;
       this.isInitialized = true;
 
-      // Detect and configure model-specific settings
-      this.modelConfig = getModelConfig(modelName);
-      Logger.info('📋 Model type detected:', this.modelConfig.type);
-      Logger.info('🔧 Tool format:', this.modelConfig.toolFormat);
-      Logger.info('📝 Needs examples:', this.modelConfig.needsToolExamples);
-
       // Apply model-specific settings
       this.useLangchainPrompt = this.modelConfig.useLangchainPrompt;
 
       Logger.info('✅ Model loaded successfully:', modelName);
       Logger.info(`   Using ${this.modelConfig.displayName} configuration`);
+      Logger.info(`   Context window: ${llamaConfig.contextSize} tokens`);
     } catch (error) {
       Logger.error('Failed to load model:', error);
       this.isInitialized = false;
