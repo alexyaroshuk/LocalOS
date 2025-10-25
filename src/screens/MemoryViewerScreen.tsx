@@ -9,7 +9,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import MemoryService from '../services/MemoryService';
+import MemoryService, {CoreMemoryBlocks} from '../services/MemoryService';
 import {MockDatabaseService} from '../services/MockDatabaseService';
 import type {
   CoreMemoryBlock,
@@ -174,7 +174,7 @@ export const MemoryViewerScreen: React.FC = () => {
               return;
             }
             try {
-              MemoryService.updateCoreMemory(blockName, newContent.trim());
+              await MemoryService.updateCoreMemoryBlock(blockName as keyof CoreMemoryBlocks, newContent.trim());
               await loadData();
               Alert.alert('Success', 'Core memory updated');
             } catch (error) {
