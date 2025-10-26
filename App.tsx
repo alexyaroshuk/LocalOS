@@ -20,13 +20,14 @@ import {ChatScreen} from './src/screens/ChatScreen';
 import {ModelsScreen} from './src/screens/ModelsScreen';
 import {ToolTestScreen} from './src/screens/ToolTestScreen';
 import {MemoryViewerScreen} from './src/screens/MemoryViewerScreen';
+import {VectorSearchTestScreen} from './src/screens/VectorSearchTestScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
 
-type Screen = 'chat' | 'models' | 'tools' | 'memory';
+type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector';
 
 function App() {
   return (
@@ -144,6 +145,12 @@ function AppContent() {
             <ToolTestScreen />
           </View>
         )}
+
+        {currentScreen === 'vector' && (
+          <View style={styles.screenContainer}>
+            <VectorSearchTestScreen />
+          </View>
+        )}
       </View>
 
       {/* Bottom Navigation */}
@@ -205,6 +212,21 @@ function AppContent() {
               currentScreen === 'memory' && styles.navButtonTextActive,
             ]}>
             Memory
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'vector' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('vector')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'vector' && styles.navButtonTextActive,
+            ]}>
+            Vector
           </Text>
         </TouchableOpacity>
       </View>

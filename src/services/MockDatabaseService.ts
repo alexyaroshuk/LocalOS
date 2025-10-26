@@ -21,6 +21,7 @@ export interface ArchiveMemory {
   importance: number; // 1-10
   created_at: number;
   metadata: string; // JSON string
+  embedding?: number[]; // Vector embedding (384 dimensions for all-MiniLM-L6-v2)
 }
 
 export interface Task {
