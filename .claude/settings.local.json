@@ -52,7 +52,8 @@
       "Bash(mkdir -p md/sample-vault/Personal)",
       "Bash(mkdir -p md/sample-vault/Projects)",
       "Bash(cat package.json)",
-      "Bash(npx tsc --noEmit --skipLibCheck src/services/DatabaseService.ts src/services/EmbeddingService.ts src/services/LlamaService.ts src/screens/VectorSearchTestScreen.tsx)"
+      "Bash(npx tsc --noEmit --skipLibCheck src/services/DatabaseService.ts src/services/EmbeddingService.ts src/services/LlamaService.ts src/screens/VectorSearchTestScreen.tsx)",
+      "Bash(npx react-native start --reset-cache)"
     ],
     "deny": [],
     "ask": []
