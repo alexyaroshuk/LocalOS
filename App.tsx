@@ -111,21 +111,33 @@ function AppContent() {
         styles.container,
         {paddingTop: safeAreaInsets.top, paddingBottom: safeAreaInsets.bottom},
       ]}>
-      {/* Main Content */}
-      {currentScreen === 'chat' ? (
+      {/* Main Content - Keep ChatScreen mounted to prevent generation interruption */}
+      <View style={[styles.screenContainer, currentScreen !== 'chat' && styles.hiddenScreen]}>
         <ChatScreen
           currentModel={currentModel}
           onModelSelect={handleModelSelect}
         />
-      ) : currentScreen === 'models' ? (
-        <ModelsScreen
-          currentModel={currentModel}
-          onModelLoaded={handleModelLoaded}
-        />
-      ) : currentScreen === 'memory' ? (
-        <MemoryViewerScreen />
-      ) : (
-        <ToolTestScreen />
+      </View>
+
+      {currentScreen === 'models' && (
+        <View style={styles.screenContainer}>
+          <ModelsScreen
+            currentModel={currentModel}
+            onModelLoaded={handleModelLoaded}
+          />
+        </View>
+      )}
+
+      {currentScreen === 'memory' && (
+        <View style={styles.screenContainer}>
+          <MemoryViewerScreen />
+        </View>
+      )}
+
+      {currentScreen === 'tools' && (
+        <View style={styles.screenContainer}>
+          <ToolTestScreen />
+        </View>
       )}
 
       {/* Bottom Navigation */}
@@ -206,6 +218,18 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     color: '#666',
+  },
+  screenContainer: {
+    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  hiddenScreen: {
+    opacity: 0,
+    pointerEvents: 'none',
   },
   bottomNav: {
     flexDirection: 'row',
