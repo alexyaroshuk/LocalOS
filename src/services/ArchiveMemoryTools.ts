@@ -5,6 +5,9 @@
 
 import {Tool} from '../types';
 import {DatabaseProxy} from './DatabaseProxy';
+import {LlamaService} from './LlamaService';
+import {DatabaseService} from './DatabaseService';
+import {Logger} from '../utils/Logger';
 
 export class ArchiveMemoryTools {
   /**
@@ -41,15 +44,33 @@ export class ArchiveMemoryTools {
         try {
           const {content, category, importance} = args;
 
+          // Save memory first (without embedding)
           const memory = await DatabaseProxy.saveMemory(
             content,
             category,
             importance
           );
 
+          // Generate embedding if model is loaded (async, non-blocking)
+          if (LlamaService.isEmbeddingModelLoaded()) {
+            Logger.info('[MemoryTool] Auto-generating embedding for new memory');
+            // Don't await - let it happen in background
+            LlamaService.generateEmbedding(content)
+              .then(embedding => {
+                return DatabaseService.updateMemoryEmbedding(memory.id, embedding);
+              })
+              .then(() => {
+                Logger.info('[MemoryTool] ✅ Embedding saved for memory', memory.id);
+              })
+              .catch(error => {
+                Logger.error('[MemoryTool] Failed to generate embedding:', error);
+              });
+          }
+
           return {
             success: true,
-            message: 'Memory saved to archive',
+            message: 'Memory saved to archive' +
+              (LlamaService.isEmbeddingModelLoaded() ? ' (embedding generating...)' : ''),
             memory_id: memory.id,
           };
         } catch (error) {
@@ -65,12 +86,13 @@ export class ArchiveMemoryTools {
   /**
    * Tool: search_archive
    * Search archive memory for relevant information
+   * Uses semantic vector search when embedding model is loaded!
    */
   static getSearchArchiveTool(): Tool {
     return {
       name: 'search_archive',
       description:
-        'Search long-term archive memory for relevant information. Use this to recall past conversations, facts, or events.',
+        'Search long-term archive memory for relevant information using semantic search. Use this to recall past conversations, facts, or events.',
       parameters: [
         {
           name: 'query',
@@ -89,7 +111,24 @@ export class ArchiveMemoryTools {
         try {
           const {query, limit = 5} = args;
 
-          const memories = await DatabaseProxy.searchArchive(query, limit);
+          let memories: any[];
+
+          // Use semantic vector search if embedding model is loaded
+          if (LlamaService.isEmbeddingModelLoaded()) {
+            Logger.info(`[MemoryTool] Using SEMANTIC SEARCH for: "${query}"`);
+
+            // Generate embedding for the query
+            const queryEmbedding = await LlamaService.generateEmbedding(query);
+
+            // Hybrid search (FTS5 + vector similarity)
+            memories = await DatabaseService.searchHybrid(query, queryEmbedding, limit);
+
+            Logger.info(`[MemoryTool] Found ${memories.length} results via semantic search`);
+          } else {
+            // Fallback to keyword search
+            Logger.info(`[MemoryTool] Using KEYWORD SEARCH for: "${query}"`);
+            memories = await DatabaseProxy.searchArchive(query, limit);
+          }
 
           if (memories.length === 0) {
             return {

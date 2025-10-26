@@ -14,6 +14,7 @@ import {
 import {ToolService} from '../services/ToolService';
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
+import {DatabaseService} from '../services/DatabaseService';
 import {Tool, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
@@ -49,6 +50,15 @@ export const ToolTestScreen: React.FC = () => {
   // Prompt viewer state
   const [showPromptViewer, setShowPromptViewer] = useState<boolean>(false);
 
+  // Embedding model debug state
+  const [embeddingModelStatus, setEmbeddingModelStatus] = useState<{
+    loaded: boolean;
+    name: string | null;
+    chatModelLoaded: boolean;
+    chatModelName: string | null;
+  }>({loaded: false, name: null, chatModelLoaded: false, chatModelName: null});
+  const [lastEmbeddingTest, setLastEmbeddingTest] = useState<string>('');
+
   useEffect(() => {
     // Initialize tool service and get all tools
     ToolService.initialize();
@@ -71,7 +81,88 @@ export const ToolTestScreen: React.FC = () => {
 
     // Check availability for all tools
     checkAllToolsAvailability(allTools);
+
+    // Check embedding model status
+    checkEmbeddingModelStatus();
   }, []);
+
+  const checkEmbeddingModelStatus = () => {
+    const embedLoaded = LlamaService.isEmbeddingModelLoaded();
+    const embedInfo = LlamaService.getEmbeddingModelInfo();
+    const chatInfo = LlamaService.getCurrentModel();
+
+    setEmbeddingModelStatus({
+      loaded: embedLoaded,
+      name: embedInfo?.name || null,
+      chatModelLoaded: LlamaService.isModelLoaded(),
+      chatModelName: chatInfo?.name || null,
+    });
+
+    Logger.info('🔢 [EmbedDebug] Embedding model loaded:', embedLoaded);
+    Logger.info('🔢 [EmbedDebug] Embedding model name:', embedInfo?.name || 'none');
+    Logger.info('🤖 [EmbedDebug] Chat model loaded:', LlamaService.isModelLoaded());
+    Logger.info('🤖 [EmbedDebug] Chat model name:', chatInfo?.name || 'none');
+  };
+
+  const testEmbeddingGeneration = async () => {
+    try {
+      const testText = "Test semantic search with embeddings";
+      Logger.info('🔢 [EmbedTest] Testing embedding generation...');
+      Logger.info('🔢 [EmbedTest] Input:', testText);
+
+      const startTime = Date.now();
+      const embedding = await LlamaService.generateEmbedding(testText);
+      const elapsed = Date.now() - startTime;
+
+      Logger.info('🔢 [EmbedTest] ✅ SUCCESS!');
+      Logger.info('🔢 [EmbedTest] Generated in:', elapsed + 'ms');
+      Logger.info('🔢 [EmbedTest] Dimensions:', embedding.length);
+      Logger.info('🔢 [EmbedTest] First 10 values:', embedding.slice(0, 10));
+
+      setLastEmbeddingTest(`✅ Generated ${embedding.length}D embedding in ${elapsed}ms`);
+      Alert.alert('Success', `Embedding generated!\nDimensions: ${embedding.length}\nTime: ${elapsed}ms`);
+    } catch (error) {
+      Logger.error('🔢 [EmbedTest] ❌ FAILED:', error);
+      setLastEmbeddingTest(`❌ Failed: ${error}`);
+      Alert.alert('Error', `Failed to generate embedding: ${error}`);
+    }
+  };
+
+  const testMemorySearchTool = async () => {
+    try {
+      Logger.info('🔍 [MemoryToolTest] Testing search_archive tool...');
+
+      // Find the search_archive tool
+      const searchTool = tools.find(t => t.name === 'search_archive');
+      if (!searchTool) {
+        throw new Error('search_archive tool not found');
+      }
+
+      const query = "programming languages preferences";
+      Logger.info('🔍 [MemoryToolTest] Query:', query);
+      Logger.info('🔍 [MemoryToolTest] Embedding model loaded:', LlamaService.isEmbeddingModelLoaded());
+
+      const startTime = Date.now();
+      const result = await searchTool.execute({query, limit: 5});
+      const elapsed = Date.now() - startTime;
+
+      Logger.info('🔍 [MemoryToolTest] ✅ COMPLETE!');
+      Logger.info('🔍 [MemoryToolTest] Time:', elapsed + 'ms');
+      Logger.info('🔍 [MemoryToolTest] Result:', JSON.stringify(result, null, 2));
+
+      setLastEmbeddingTest(`✅ Search completed in ${elapsed}ms - ${LlamaService.isEmbeddingModelLoaded() ? 'SEMANTIC' : 'KEYWORD'}`);
+      Alert.alert(
+        'Search Result',
+        `Search type: ${LlamaService.isEmbeddingModelLoaded() ? 'SEMANTIC' : 'KEYWORD'}\n` +
+        `Time: ${elapsed}ms\n` +
+        `Memories: ${result.memories?.length || 0}`
+      );
+    } catch (error) {
+      Logger.error('🔍 [MemoryToolTest] ❌ FAILED:', error);
+      setLastEmbeddingTest(`❌ Search failed: ${error}`);
+      Alert.alert('Error', `Search failed: ${error}`);
+    }
+  };
 
   const checkAllToolsAvailability = async (toolsList: Tool[]) => {
     const availabilityMap = new Map<string, {available: boolean; reason?: string}>();
@@ -731,6 +822,70 @@ export const ToolTestScreen: React.FC = () => {
           </Text>
         </View>
 
+        <View style={styles.embeddingDebugCard}>
+          <Text style={styles.infoTitle}>🔢 Embedding Model Debug</Text>
+
+          <View style={styles.modelStatusRow}>
+            <Text style={styles.infoText}>
+              🤖 Chat Model: {embeddingModelStatus.chatModelLoaded ? '✅' : '❌'}
+              {embeddingModelStatus.chatModelName && ` ${embeddingModelStatus.chatModelName}`}
+            </Text>
+          </View>
+
+          <View style={styles.modelStatusRow}>
+            <Text style={styles.infoText}>
+              🔢 Embedding Model: {embeddingModelStatus.loaded ? '✅' : '❌'}
+              {embeddingModelStatus.name && ` ${embeddingModelStatus.name}`}
+            </Text>
+          </View>
+
+          {embeddingModelStatus.chatModelLoaded && embeddingModelStatus.loaded && (
+            <View style={styles.dualModeIndicator}>
+              <Text style={styles.dualModeText}>
+                🎉 DUAL INSTANCE MODE ACTIVE!
+              </Text>
+              <Text style={styles.dualModeSubtext}>
+                Agent can use semantic search
+              </Text>
+            </View>
+          )}
+
+          {lastEmbeddingTest && (
+            <View style={styles.testResultBox}>
+              <Text style={styles.testResultText}>{lastEmbeddingTest}</Text>
+            </View>
+          )}
+
+          <View style={styles.debugButtonRow}>
+            <TouchableOpacity
+              style={styles.debugButton}
+              onPress={checkEmbeddingModelStatus}>
+              <Text style={styles.debugButtonText}>🔄 Refresh Status</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.debugButton, styles.testButton]}
+              onPress={testEmbeddingGeneration}
+              disabled={!embeddingModelStatus.loaded}>
+              <Text style={styles.debugButtonText}>
+                {embeddingModelStatus.loaded ? '🧪 Test Embedding' : '⚠️ No Model'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.debugButton, styles.searchTestButton]}
+            onPress={testMemorySearchTool}>
+            <Text style={styles.debugButtonText}>
+              🔍 Test Memory Search Tool
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.debugHint}>
+            Check logs for detailed output (Logger.info)
+          </Text>
+        </View>
+
         {tools.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No tools registered</Text>
@@ -1241,5 +1396,75 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 24,
+  },
+  embeddingDebugCard: {
+    backgroundColor: '#1E1E1E',
+    margin: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#9C27B0',
+  },
+  modelStatusRow: {
+    marginBottom: 8,
+  },
+  dualModeIndicator: {
+    backgroundColor: '#00800020',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#008000',
+  },
+  dualModeText: {
+    color: '#00FF00',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  dualModeSubtext: {
+    color: '#90EE90',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  testResultBox: {
+    backgroundColor: '#2A2A2A',
+    padding: 10,
+    borderRadius: 6,
+    marginVertical: 8,
+  },
+  testResultText: {
+    color: '#FFF',
+    fontFamily: 'monospace',
+    fontSize: 12,
+  },
+  debugButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 8,
+  },
+  debugButton: {
+    flex: 1,
+    backgroundColor: '#424242',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  debugButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchTestButton: {
+    backgroundColor: '#9C27B0',
+    marginTop: 8,
+  },
+  debugHint: {
+    color: '#999',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

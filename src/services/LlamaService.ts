@@ -12,10 +12,18 @@ import {getModelConfig, ModelConfig} from '../types/modelConfig';
 import {SYSTEM_PROMPTS, SystemPromptType, getDefaultPromptType} from './SystemPrompts';
 
 export class LlamaService {
+  // Chat/Agent model context (primary)
   private static context: LlamaContext | null = null;
   private static currentModelPath: string | null = null;
   private static currentModelName: string | null = null;
   private static isInitialized: boolean = false;
+
+  // Embedding model context (separate instance - runs alongside chat model!)
+  private static embeddingContext: LlamaContext | null = null;
+  private static embeddingModelPath: string | null = null;
+  private static embeddingModelName: string | null = null;
+  private static embeddingInitialized: boolean = false;
+
   private static toolsEnabled: boolean = false;
   private static availableTools: Tool[] = [];
   private static useLangchainPrompt: boolean = true; // Default to Langchain mode
@@ -79,7 +87,63 @@ export class LlamaService {
   }
 
   /**
-   * Release the current model and free resources
+   * Load an embedding model as a separate instance
+   * This runs alongside the chat model!
+   */
+  static async loadEmbeddingModel(
+    modelPath: string,
+    modelName: string,
+  ): Promise<void> {
+    try {
+      // Release existing embedding context if any
+      await this.releaseEmbeddingModel();
+
+      Logger.info('[EmbedModel] Loading embedding model from:', modelPath);
+
+      // Initialize a SEPARATE llama context for embeddings
+      this.embeddingContext = await initLlama({
+        model: modelPath,
+        embedding: true, // Enable embedding mode
+        use_mlock: true,
+        use_mmap: true,
+        n_ctx: 512, // Small context for embeddings
+      });
+
+      this.embeddingModelPath = modelPath;
+      this.embeddingModelName = modelName;
+      this.embeddingInitialized = true;
+
+      Logger.info('[EmbedModel] ✅ Embedding model loaded successfully');
+      Logger.info('[EmbedModel] Chat model:', this.currentModelName || 'none');
+      Logger.info('[EmbedModel] Embed model:', this.embeddingModelName);
+      Logger.info('[EmbedModel] 🎉 DUAL INSTANCE MODE ACTIVE!');
+    } catch (error) {
+      Logger.error('[EmbedModel] Failed to load:', error);
+      this.embeddingInitialized = false;
+      throw error;
+    }
+  }
+
+  /**
+   * Release the embedding model (keeps chat model running)
+   */
+  static async releaseEmbeddingModel(): Promise<void> {
+    if (this.embeddingContext) {
+      try {
+        await this.embeddingContext.release();
+        Logger.info('[EmbedModel] Embedding context released');
+      } catch (error) {
+        Logger.error('[EmbedModel] Failed to release:', error);
+      }
+      this.embeddingContext = null;
+      this.embeddingModelPath = null;
+      this.embeddingModelName = null;
+      this.embeddingInitialized = false;
+    }
+  }
+
+  /**
+   * Release the current chat model and free resources
    */
   static async releaseModel(): Promise<void> {
     if (this.context) {
@@ -291,27 +355,46 @@ export class LlamaService {
 
   /**
    * Generate embedding vector for text
-   * NOTE: Requires an embedding model (e.g., all-MiniLM-L6-v2, nomic-embed-text)
-   * NOT a chat/completion model
+   * Uses the dedicated embedding model instance
    */
   static async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.context) {
-      throw new Error('Model not loaded');
+    if (!this.embeddingContext) {
+      throw new Error('Embedding model not loaded. Call loadEmbeddingModel() first.');
     }
 
     try {
-      Logger.debug(`Generating embedding for text: ${text.substring(0, 50)}...`);
-      const result = await this.context.embedding(text);
-      Logger.debug(`Embedding generated: ${result.embedding.length} dimensions`);
+      Logger.debug(`[EmbedModel] Generating embedding for: ${text.substring(0, 50)}...`);
+      const result = await this.embeddingContext.embedding(text);
+      Logger.debug(`[EmbedModel] Generated: ${result.embedding.length} dimensions`);
       return result.embedding;
     } catch (error) {
-      Logger.error('Embedding generation error:', error);
+      Logger.error('[EmbedModel] Generation error:', error);
       throw error;
     }
   }
 
   /**
-   * Check if current model supports embeddings
+   * Check if embedding model is loaded
+   */
+  static isEmbeddingModelLoaded(): boolean {
+    return this.embeddingInitialized && this.embeddingContext !== null;
+  }
+
+  /**
+   * Get embedding model info
+   */
+  static getEmbeddingModelInfo(): {path: string; name: string} | null {
+    if (!this.embeddingModelPath || !this.embeddingModelName) {
+      return null;
+    }
+    return {
+      path: this.embeddingModelPath,
+      name: this.embeddingModelName,
+    };
+  }
+
+  /**
+   * Check if current model supports embeddings (legacy)
    * Embedding models typically have "embed" in their name
    */
   static isEmbeddingModel(): boolean {

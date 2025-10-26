@@ -9,20 +9,17 @@ import {DatabaseService} from './DatabaseService';
 import {Logger} from '../utils/Logger';
 
 export class EmbeddingService {
-  private static embeddingModelLoaded: boolean = false;
-  private static embeddingModelPath: string | null = null;
-
   /**
-   * Load an embedding model
-   * Note: This is separate from the chat model
+   * Load an embedding model (separate instance from chat model!)
+   * This runs alongside the chat model
    */
   static async loadEmbeddingModel(modelPath: string, modelName: string): Promise<void> {
     try {
       Logger.info('[EmbeddingService] Loading embedding model:', modelName);
-      await LlamaService.loadModel(modelPath, modelName);
-      this.embeddingModelLoaded = true;
-      this.embeddingModelPath = modelPath;
-      Logger.info('[EmbeddingService] Embedding model loaded successfully');
+      // Use the new dual-instance API
+      await LlamaService.loadEmbeddingModel(modelPath, modelName);
+      Logger.info('[EmbeddingService] ✅ Embedding model loaded');
+      Logger.info('[EmbeddingService] 🎉 Agent can now use semantic search!');
     } catch (error) {
       Logger.error('[EmbeddingService] Failed to load embedding model:', error);
       throw error;
@@ -31,9 +28,10 @@ export class EmbeddingService {
 
   /**
    * Generate embedding for a single text
+   * Uses the dedicated embedding instance
    */
   static async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.embeddingModelLoaded) {
+    if (!LlamaService.isEmbeddingModelLoaded()) {
       throw new Error('Embedding model not loaded. Call loadEmbeddingModel() first.');
     }
 
@@ -175,36 +173,42 @@ export class EmbeddingService {
   }
 
   /**
-   * Get embedding statistics
+   * Get embedding statistics (includes both models!)
    */
   static async getStats(): Promise<{
     modelLoaded: boolean;
     modelPath: string | null;
+    modelName: string | null;
+    chatModelLoaded: boolean;
+    chatModelName: string | null;
     dbStats: {total: number; withEmbeddings: number; percentage: number};
   }> {
     const dbStats = await DatabaseService.getEmbeddingStats();
+    const embeddingInfo = LlamaService.getEmbeddingModelInfo();
+    const chatInfo = LlamaService.getCurrentModel();
 
     return {
-      modelLoaded: this.embeddingModelLoaded,
-      modelPath: this.embeddingModelPath,
+      modelLoaded: LlamaService.isEmbeddingModelLoaded(),
+      modelPath: embeddingInfo?.path || null,
+      modelName: embeddingInfo?.name || null,
+      chatModelLoaded: LlamaService.isModelLoaded(),
+      chatModelName: chatInfo?.name || null,
       dbStats,
     };
   }
 
   /**
-   * Unload embedding model
+   * Unload embedding model (keeps chat model running!)
    */
   static async unloadModel(): Promise<void> {
-    await LlamaService.releaseModel();
-    this.embeddingModelLoaded = false;
-    this.embeddingModelPath = null;
-    Logger.info('[EmbeddingService] Embedding model unloaded');
+    await LlamaService.releaseEmbeddingModel();
+    Logger.info('[EmbeddingService] Embedding model unloaded (chat still active)');
   }
 
   /**
    * Check if embedding model is loaded
    */
   static isModelLoaded(): boolean {
-    return this.embeddingModelLoaded;
+    return LlamaService.isEmbeddingModelLoaded();
   }
 }
