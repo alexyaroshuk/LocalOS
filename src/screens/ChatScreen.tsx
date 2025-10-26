@@ -592,10 +592,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     );
 
     try {
-      // STEP 1: Call stopCompletion and WAIT for it to complete
+      // STEP 1: Call stopCompletion (sets interrupt flag)
       Logger.info('⏳ Calling stopCompletion()...');
       await AIService.stopGeneration();
-      Logger.info('✅ stopCompletion() completed successfully');
+      Logger.info('✅ stopCompletion() called (interrupt flag set)');
+
+      // STEP 2: Wait for generation loop to actually check flag and exit
+      // The flag is checked during each token generation, so give it time
+      Logger.info('⏳ Waiting 1 second for generation to stop...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      Logger.info('✅ Generation should be stopped now');
 
       // STEP 2: ONLY AFTER stop completes, set flags and update UI
       generationStoppedRef.current = true;
