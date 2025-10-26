@@ -4,7 +4,7 @@
  */
 
 import {Tool} from '../types';
-import {MockDatabaseService} from './MockDatabaseService';
+import {DatabaseService} from './DatabaseService';
 
 export class ArchiveMemoryTools {
   /**
@@ -41,7 +41,7 @@ export class ArchiveMemoryTools {
         try {
           const {content, category, importance} = args;
 
-          const memory = await MockDatabaseService.saveMemory(
+          const memory = await DatabaseService.saveMemory(
             content,
             category,
             importance
@@ -89,7 +89,7 @@ export class ArchiveMemoryTools {
         try {
           const {query, limit = 5} = args;
 
-          const memories = await MockDatabaseService.searchArchive(query, limit);
+          const memories = await DatabaseService.searchArchive(query, limit);
 
           if (memories.length === 0) {
             return {
@@ -165,7 +165,7 @@ export class ArchiveMemoryTools {
             dueDateMs = new Date(due_date).getTime();
           }
 
-          const task = await MockDatabaseService.createTask(
+          const task = await DatabaseService.createTask(
             title,
             description,
             dueDateMs,
@@ -241,7 +241,7 @@ export class ArchiveMemoryTools {
             updates.completed_at = Date.now();
           }
 
-          const task = await MockDatabaseService.updateTask(task_id, updates);
+          const task = await DatabaseService.updateTask(task_id, updates);
 
           if (!task) {
             return {
@@ -294,19 +294,19 @@ export class ArchiveMemoryTools {
           let tasks;
           switch (filter) {
             case 'today':
-              tasks = await MockDatabaseService.getTasksDueToday();
+              tasks = await DatabaseService.getTasksDueToday();
               break;
             case 'overdue':
-              tasks = await MockDatabaseService.getOverdueTasks();
+              tasks = await DatabaseService.getOverdueTasks();
               break;
             case 'upcoming':
-              tasks = await MockDatabaseService.getUpcomingTasks(7);
+              tasks = await DatabaseService.getUpcomingTasks(7);
               break;
             case 'completed':
-              tasks = await MockDatabaseService.getTasks('completed');
+              tasks = await DatabaseService.getTasks('completed');
               break;
             default:
-              tasks = await MockDatabaseService.getTasks('pending');
+              tasks = await DatabaseService.getTasks('pending');
           }
 
           if (tasks.length === 0) {

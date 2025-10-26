@@ -10,13 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import MemoryService, {CoreMemoryBlocks} from '../services/MemoryService';
-import {MockDatabaseService} from '../services/MockDatabaseService';
+import {DatabaseService} from '../services/DatabaseService';
 import type {
   CoreMemoryBlock,
   ArchiveMemory,
   Task,
   UserFact,
-} from '../services/MockDatabaseService';
+} from '../services/DatabaseService';
 
 export const MemoryViewerScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -47,15 +47,15 @@ export const MemoryViewerScreen: React.FC = () => {
           setCoreMemory(core);
           break;
         case 'archive':
-          const archive = await MockDatabaseService.getRecentMemories(20);
+          const archive = await DatabaseService.getRecentMemories(20);
           setArchiveMemories(archive);
           break;
         case 'tasks':
-          const allTasks = await MockDatabaseService.getTasks();
+          const allTasks = await DatabaseService.getTasks();
           setTasks(allTasks);
           break;
         case 'facts':
-          const facts = await MockDatabaseService.getAllUserFacts();
+          const facts = await DatabaseService.getAllUserFacts();
           setUserFacts(facts);
           break;
       }
@@ -79,7 +79,7 @@ export const MemoryViewerScreen: React.FC = () => {
 
     try {
       if (activeTab === 'archive') {
-        const results = await MockDatabaseService.searchArchive(searchQuery, 20);
+        const results = await DatabaseService.searchArchive(searchQuery, 20);
         setArchiveMemories(results);
       }
     } catch (error) {
@@ -99,7 +99,7 @@ export const MemoryViewerScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await MockDatabaseService.deleteArchiveMemory(id);
+              await DatabaseService.deleteArchiveMemory(id);
               await loadData();
               Alert.alert('Success', 'Memory deleted');
             } catch (error) {
@@ -123,7 +123,7 @@ export const MemoryViewerScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await MockDatabaseService.deleteTask(id);
+              await DatabaseService.deleteTask(id);
               await loadData();
               Alert.alert('Success', 'Task deleted');
             } catch (error) {
@@ -147,7 +147,7 @@ export const MemoryViewerScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await MockDatabaseService.deleteUserFact(id);
+              await DatabaseService.deleteUserFact(id);
               await loadData();
               Alert.alert('Success', 'Fact deleted');
             } catch (error) {
@@ -204,7 +204,7 @@ export const MemoryViewerScreen: React.FC = () => {
             }
             try {
               // Update the memory by deleting and re-inserting with same ID
-              await MockDatabaseService.updateArchiveMemory(memory.id, {
+              await DatabaseService.updateArchiveMemory(memory.id, {
                 content: newContent.trim(),
               });
               await loadData();
@@ -235,7 +235,7 @@ export const MemoryViewerScreen: React.FC = () => {
               return;
             }
             try {
-              await MockDatabaseService.updateTask(task.id, {
+              await DatabaseService.updateTask(task.id, {
                 title: newTitle.trim(),
               });
               await loadData();
@@ -266,7 +266,7 @@ export const MemoryViewerScreen: React.FC = () => {
               return;
             }
             try {
-              await MockDatabaseService.updateUserFact(fact.id, {
+              await DatabaseService.updateUserFact(fact.id, {
                 fact: newFact.trim(),
               });
               await loadData();

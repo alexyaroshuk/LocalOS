@@ -24,7 +24,7 @@ import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
-import {MockDatabaseService} from './src/services/MockDatabaseService';
+import {DatabaseService} from './src/services/DatabaseService';
 
 type Screen = 'chat' | 'models' | 'tools' | 'memory';
 
@@ -57,8 +57,8 @@ function AppContent() {
       // Initialize memory service
       await MemoryService.initialize();
 
-      // Initialize mock database (for testing)
-      await MockDatabaseService.initialize();
+      // Initialize database (SQLite)
+      await DatabaseService.initialize();
 
       // Load the last used model (if any)
       const {StorageService} = require('./src/services/StorageService');

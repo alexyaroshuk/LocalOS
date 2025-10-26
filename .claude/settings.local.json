@@ -30,7 +30,11 @@
       "Bash(npx tsc --noEmit --skipLibCheck)",
       "Bash(npx tsc --noEmit --skipLibCheck src/types/index.ts src/components/ActionCard.tsx src/screens/ChatScreen.tsx src/services/AIService.ts src/services/LlamaService.ts)",
       "Bash(npx tsc --noEmit --skipLibCheck App.tsx src/screens/ChatScreen.tsx)",
-      "Bash(cat node_modules/llama.rn/android/src/main/java/com/rnllama/LlamaContext.java)"
+      "Bash(cat node_modules/llama.rn/android/src/main/java/com/rnllama/LlamaContext.java)",
+      "Bash(npm install @op-engineering/op-sqlite)",
+      "Bash(cat node_modules/@op-engineering/op-sqlite/lib/typescript/index.d.ts)",
+      "Bash(cat node_modules/@op-engineering/op-sqlite/lib/typescript/src/index.d.ts)",
+      "Bash(cat node_modules/@op-engineering/op-sqlite/lib/typescript/src/types.d.ts)"
     ],
     "deny": [],
     "ask": []
