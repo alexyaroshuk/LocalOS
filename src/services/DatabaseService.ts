@@ -112,33 +112,39 @@ export class DatabaseService {
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance DESC);');
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at DESC);');
 
-    // FTS5 virtual table for full-text search
-    this.db.executeSync(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
-        content,
-        content=memories,
-        content_rowid=id
-      );
-    `);
+    // Try to create FTS5 virtual table (may not be available on all platforms)
+    try {
+      this.db.executeSync(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+          content,
+          content=memories,
+          content_rowid=id
+        );
+      `);
 
-    // Triggers to keep FTS index in sync
-    this.db.executeSync(`
-      CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
-        INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content);
-      END;
-    `);
+      // Triggers to keep FTS index in sync
+      this.db.executeSync(`
+        CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+          INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content);
+        END;
+      `);
 
-    this.db.executeSync(`
-      CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
-        DELETE FROM memories_fts WHERE rowid = old.id;
-      END;
-    `);
+      this.db.executeSync(`
+        CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+          DELETE FROM memories_fts WHERE rowid = old.id;
+        END;
+      `);
 
-    this.db.executeSync(`
-      CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
-        UPDATE memories_fts SET content = new.content WHERE rowid = old.id;
-      END;
-    `);
+      this.db.executeSync(`
+        CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+          UPDATE memories_fts SET content = new.content WHERE rowid = old.id;
+        END;
+      `);
+
+      console.log('[Database] FTS5 full-text search enabled');
+    } catch (ftsError) {
+      console.warn('[Database] FTS5 not available, using LIKE search fallback');
+    }
 
     // Tasks table
     this.db.executeSync(`
@@ -288,19 +294,32 @@ export class DatabaseService {
   }
 
   static async searchArchive(query: string, limit: number = 5): Promise<ArchiveMemory[]> {
-    // Use FTS5 for full-text search
-    const result = this.db.executeSync(
-      `
-      SELECT m.* FROM memories_fts
-      JOIN memories m ON memories_fts.rowid = m.id
-      WHERE memories_fts MATCH ?
-      ORDER BY m.importance DESC, m.created_at DESC
-      LIMIT ?;
-      `,
-      [query, limit]
-    );
-
-    return result.rows || [];
+    // Try FTS5 first, fallback to LIKE search
+    try {
+      const result = this.db.executeSync(
+        `
+        SELECT m.* FROM memories_fts
+        JOIN memories m ON memories_fts.rowid = m.id
+        WHERE memories_fts MATCH ?
+        ORDER BY m.importance DESC, m.created_at DESC
+        LIMIT ?;
+        `,
+        [query, limit]
+      );
+      return result.rows || [];
+    } catch (error) {
+      // Fallback to LIKE search if FTS5 not available
+      const result = this.db.executeSync(
+        `
+        SELECT * FROM memories
+        WHERE content LIKE ?
+        ORDER BY importance DESC, created_at DESC
+        LIMIT ?;
+        `,
+        [`%${query}%`, limit]
+      );
+      return result.rows || [];
+    }
   }
 
   static async getRecentMemories(limit: number = 10): Promise<ArchiveMemory[]> {

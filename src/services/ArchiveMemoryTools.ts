@@ -4,7 +4,7 @@
  */
 
 import {Tool} from '../types';
-import {DatabaseService} from './DatabaseService';
+import {DatabaseProxy} from './DatabaseProxy';
 
 export class ArchiveMemoryTools {
   /**
@@ -41,7 +41,7 @@ export class ArchiveMemoryTools {
         try {
           const {content, category, importance} = args;
 
-          const memory = await DatabaseService.saveMemory(
+          const memory = await DatabaseProxy.saveMemory(
             content,
             category,
             importance
@@ -89,7 +89,7 @@ export class ArchiveMemoryTools {
         try {
           const {query, limit = 5} = args;
 
-          const memories = await DatabaseService.searchArchive(query, limit);
+          const memories = await DatabaseProxy.searchArchive(query, limit);
 
           if (memories.length === 0) {
             return {
@@ -165,7 +165,7 @@ export class ArchiveMemoryTools {
             dueDateMs = new Date(due_date).getTime();
           }
 
-          const task = await DatabaseService.createTask(
+          const task = await DatabaseProxy.createTask(
             title,
             description,
             dueDateMs,
@@ -241,7 +241,7 @@ export class ArchiveMemoryTools {
             updates.completed_at = Date.now();
           }
 
-          const task = await DatabaseService.updateTask(task_id, updates);
+          const task = await DatabaseProxy.updateTask(task_id, updates);
 
           if (!task) {
             return {
@@ -294,19 +294,19 @@ export class ArchiveMemoryTools {
           let tasks;
           switch (filter) {
             case 'today':
-              tasks = await DatabaseService.getTasksDueToday();
+              tasks = await DatabaseProxy.getTasksDueToday();
               break;
             case 'overdue':
-              tasks = await DatabaseService.getOverdueTasks();
+              tasks = await DatabaseProxy.getOverdueTasks();
               break;
             case 'upcoming':
-              tasks = await DatabaseService.getUpcomingTasks(7);
+              tasks = await DatabaseProxy.getUpcomingTasks(7);
               break;
             case 'completed':
-              tasks = await DatabaseService.getTasks('completed');
+              tasks = await DatabaseProxy.getTasks('completed');
               break;
             default:
-              tasks = await DatabaseService.getTasks('pending');
+              tasks = await DatabaseProxy.getTasks('pending');
           }
 
           if (tasks.length === 0) {

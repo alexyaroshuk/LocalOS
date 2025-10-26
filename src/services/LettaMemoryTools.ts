@@ -6,7 +6,7 @@
 
 import {Tool} from '../types';
 import MemoryService from './MemoryService';
-import {DatabaseService} from './DatabaseService';
+import {DatabaseProxy} from './DatabaseProxy';
 
 export class LettaMemoryTools {
   /**
@@ -202,7 +202,7 @@ export class LettaMemoryTools {
             Math.max(5, Math.ceil(content.length / 100) + tags.length)
           );
 
-          const memory = await DatabaseService.saveMemory(
+          const memory = await DatabaseProxy.saveMemory(
             content,
             'fact', // Default category
             importance,
@@ -266,7 +266,7 @@ export class LettaMemoryTools {
           const {query, tags = [], top_k = 5} = args;
 
           // Search archive
-          let memories = await DatabaseService.searchArchive(
+          let memories = await DatabaseProxy.searchArchive(
             query,
             top_k
           );
@@ -349,7 +349,7 @@ export class LettaMemoryTools {
           const {query, limit = 5} = args;
 
           const conversations =
-            await DatabaseService.getRecentConversations(limit);
+            await DatabaseProxy.getRecentConversations(limit);
 
           // Simple keyword search in summaries
           const lowerQuery = query.toLowerCase();
@@ -463,7 +463,7 @@ export class LettaMemoryTools {
           const {id} = args;
 
           // Delete from mock database
-          const result = await DatabaseService.deleteArchiveMemory(id);
+          const result = await DatabaseProxy.deleteArchiveMemory(id);
 
           if (result) {
             return {

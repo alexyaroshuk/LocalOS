@@ -47,5 +47,10 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "op-sqlite": {
+    "fts5": true,
+    "rtree": false,
+    "performanceMode": false
   }
 }

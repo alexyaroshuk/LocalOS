@@ -1,81 +1,45 @@
-Tasks: 4
-MockDatabaseService.ts:274   - Conversations: 2
-MockDatabaseService.ts:275   - User facts: 4
-App.tsx:69 Loading last used model: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
-Logger.ts:80 Loading model from: /data/user/0/com.localosapp/files/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf
-Logger.ts:80 📋 Model type detected: llama-3.2-1b-function-calling
-Logger.ts:80 🔧 Tool format: langchain-pydantic
-Logger.ts:80 📝 Needs examples: true
-Logger.ts:80 📏 Context size: 4096
-Logger.ts:80 🚀 Initializing model with context size: 4096
-Logger.ts:80 ✅ Model loaded successfully: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
-Logger.ts:82    Using Llama 3.2 1B (Custom Function Calling) configuration
-Logger.ts:82    Context window: 4096 tokens
-App.tsx:73 Last used model loaded successfully
-App.tsx:80 App initialized successfully
-Logger.ts:82 🔍 Initializing AI backend...
-Logger.ts:82 ==================================================
-Logger.ts:82 🔍 AI BACKEND DETECTION
-Logger.ts:82 ==================================================
-Logger.ts:80 Platform: android
-Logger.ts:80 Platform Version: 31
-Logger.ts:82 --------------------------------------------------
-Logger.ts:82 Detection Process
-Logger.ts:82 --------------------------------------------------
-Logger.ts:82 ✅ Using Llama.cpp as default backend
-Logger.ts:82 Load a GGUF model from Models screen to start chatting
-Logger.ts:82 You can switch to Apple Intelligence from the Chat screen if available
-Logger.ts:82 ==================================================
-Logger.ts:80 ✅ AI Backend: llama
-Logger.ts:80 ✅ Model: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
-ToolService.ts:37 Tool registered: get_current_datetime
-ToolService.ts:37 Tool registered: search_web
-ToolService.ts:37 Tool registered: core_memory_append
-ToolService.ts:37 Tool registered: core_memory_replace
-ToolService.ts:37 Tool registered: core_memory_clear
-ToolService.ts:37 Tool registered: archival_memory_insert
-ToolService.ts:37 Tool registered: archival_memory_search
-ToolService.ts:37 Tool registered: archival_memory_delete
-ToolService.ts:37 Tool registered: conversation_search
-ToolService.ts:29 ToolService initialized with 9 tools
-Logger.ts:82 🔧 Tools enabled: 9 tools available
-Welcome to React Native DevTools
-Debugger integration: Android Bridgeless (ReactHostImpl)
-Logger.ts:82 🗑️ CHAT CLEARED - User cleared all messages in chat
-Logger.ts:82 Previous message count: 3
-Logger.ts:82 ✅ New chat session created
-Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Logger.ts:82 💬 CHAT MESSAGE (from Chat Screen)
-Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Logger.ts:82 User: Hi
-Logger.ts:82 Tools enabled: true
-Logger.ts:82 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-Logger.ts:80 ✅ Tools are enabled. Available tools: get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search
-Logger.ts:80 👤 User prompt: Hi
-Logger.ts:80 📝 System prompt type: letta
-Logger.ts:82 🔍 Starting tool detection phase (not streaming to UI)...
-Logger.ts:82 🛑 User clicked stop button
-Logger.ts:80 Current state - isGenerating: true
-Logger.ts:82 ⏳ Calling AIService.stopGeneration()...
-Logger.ts:82 ⏳ Waiting for previous generation to stop...
-Logger.ts:82 ⚠️ Stop did not complete in time, proceeding anyway
-anonymous @ console.js:662
-overrideMethod @ backend.js:17416
-anonymous @ setUpDeveloperTools.js:42
-registerWarning @ LogBox.js:222
-anonymous @ LogBox.js:84
-addLog @ Logger.ts:82
-warn @ Logger.ts:105
-?anon_0_ @ ChatScreen.tsx:264
-asyncGeneratorStep @ asyncToGenerator.js:3
-_next @ asyncToGenerator.js:17
-Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Logger.ts:82 💬 CHAT MESSAGE (from Chat Screen)
-Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Logger.ts:82 User: What is React Native?
-Logger.ts:82 Tools enabled: true
-Logger.ts:82 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-Logger.ts:80 ✅ Tools are enabled. Available tools: get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search
-Logger.ts:80 👤 User prompt: What is React Native?
-Logger.ts:80 📝 System prompt type: letta
-Logger.ts:82 🔍 Starting tool detection phase (not streaming to UI)...
+ld not find generated setter for class com.facebook.react.views.textinput.ReactTextInputShadowNode
+10-26 22:26:16.331  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:16.531  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:16.632  1849  5828 I WindowManagerService: Physical orientation applied, rotation=0 sfOrientation=ORIENTATION_0
+10-26 22:26:16.638 31922  2292 I ReactNativeJS: [MemoryService] Core memory loaded from storage
+10-26 22:26:16.645 31922  2292 I ReactNativeJS: [Database] Initializing SQLite database...
+10-26 22:26:16.649  1849  5828 I WindowManagerService: Physical orientation applied, rotation=0 sfOrientation=ORIENTATION_0
+10-26 22:26:16.650 31922  2292 W BridgelessReactContext: [WARNING] Bridgeless doesn't support CatalystInstance. Accessing an API that's not part of the new architecture is not encouraged usage.
+10-26 22:26:16.655 31922  2292 I ReactNativeJS: [Database] Database opened successfully
+10-26 22:26:16.656 31922  2292 I ReactNativeJS: [Database] Creating tables...
+10-26 22:26:16.679 31922  2292 E ReactNativeJS: '[Database] Failed to initialize:', [Error: Exception in HostFunction: [op-sqlite] statement execution error: 
+no such module: fts5]
+10-26 22:26:16.689 31922  2292 E ReactNativeJS: 'Failed to initialize app:', [Error: Exception in HostFunction: [op-sqlite] statement execution error: no such module: fts5]
+10-26 22:26:16.696  1849  5828 W InputManager-JNI: Input channel object '26dd2e4 com.localosapp/com.localosapp.MainActivity (client)' was disposed without first being removed with the input manager!
+10-26 22:26:16.703  1849  5828 D WindowManager: Input focus has changed to Window{c919a70 u0 com.localosapp/com.localosapp.MainActivity} display=0 updateInputWindows = false
+10-26 22:26:16.726 31922 31922 D IS_CTS_MODE: true
+10-26 22:26:16.726 31922 31922 D MULTI_WINDOW_SWITCH_ENABLED: false
+10-26 22:26:16.731  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:16.754  1849  2918 D WindowManager: Input focus has changed to Window{bd3b0c5 u0 com.localosapp/com.localosapp.MainActivity} display=0 updateInputWindows = false
+10-26 22:26:16.773  1849  2918 I WindowManagerService: Physical orientation applied, rotation=0 sfOrientation=ORIENTATION_0
+10-26 22:26:16.792  1849  2918 D WindowManager: finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING Window{bd3b0c5 u0 com.localosapp/com.localosapp.MainActivity} in Surface(name=com.localosapp/com.localosapp.MainActivity)/@0xc64ff27
+10-26 22:26:16.793 31922 31922 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+10-26 22:26:16.802  3936  3936 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2054 
+10-26 22:26:16.803  3936  3936 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 0, locked = false        
+10-26 22:26:16.804  3936  3936 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1315 onStartInput(EditorInfo{EditorInfo{packageName=com.localosapp, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+10-26 22:26:16.805  3936  3936 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 1, locked = false        
+10-26 22:26:16.805 31922 31922 D DecorView[]: onWindowFocusChanged hasWindowFocus false
+10-26 22:26:16.816 31922 31922 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+10-26 22:26:16.931  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:17.132  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:17.332  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:17.532  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:17.732  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:17.789 26639 26639 W ThreadPoolForeg: type=1400 audit(0.0:46840): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=27910 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 app=com.google.android.gms
+10-26 22:26:17.933  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:18.133  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:18.333  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:18.419  1849  2179 D HeapUsage Monitor: HeapAllocSize : 62MB; monitorSize : 500MB
+10-26 22:26:18.534  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:18.734  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:18.935  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:19.135  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off
+10-26 22:26:19.248  1448  1492 I com.milink.runtime:new_milink:DataContentProvider: Call content://provider.milink.mi.com/messenger#poll from com.milink.service, content://provider.milink.mi.com/messenger#poll
+10-26 22:26:19.250  1401  1519 I com.milink.service:new_milink:MessengerClient: empty packet, skip it.
+10-26 22:26:19.335  2959  8783 I SarService: Receiver polling >>>> Change receiver mode: off

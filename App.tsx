@@ -24,7 +24,7 @@ import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
-import {DatabaseService} from './src/services/DatabaseService';
+import {DatabaseProxy} from './src/services/DatabaseProxy';
 
 type Screen = 'chat' | 'models' | 'tools' | 'memory';
 
@@ -57,8 +57,11 @@ function AppContent() {
       // Initialize memory service
       await MemoryService.initialize();
 
-      // Initialize database (SQLite)
+      // Initialize SQLite database
+      const {DatabaseService} = require('./src/services/DatabaseService');
       await DatabaseService.initialize();
+      DatabaseProxy.setUsingSQLite(true);
+      console.log('[App] SQLite database initialized');
 
       // Load the last used model (if any)
       const {StorageService} = require('./src/services/StorageService');
