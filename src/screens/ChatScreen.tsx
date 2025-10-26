@@ -169,7 +169,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   useEffect(() => {
     if (aiBackend === 'llama' && toolsEnabled && messages.length > 0) {
       try {
-        const stats = LlamaService.getContextStats(messages);
+        // Filter out action messages - only count user/assistant/system messages
+        const regularMessages = messages.filter(msg => msg.role !== 'action') as Message[];
+        const stats = LlamaService.getContextStats(regularMessages);
         setContextStats({
           totalTokens: stats.totalTokens,
           remainingTokens: stats.remainingTokens,
@@ -553,6 +555,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Alert.alert('Tools ' + (newToolsState ? 'Enabled' : 'Disabled'), toolMessage);
   };
 
+  const handleStopGeneration = async () => {
+    try {
+      await AIService.stopGeneration();
+      setIsGenerating(false);
+      setStreamingText('');
+      setToolUsageState({stage: null});
+
+      // Add a system message indicating generation was stopped
+      const stopMessage: Message = {
+        id: generateId(),
+        role: 'system',
+        content: 'Generation stopped by user.',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, stopMessage]);
+
+      Logger.info('🛑 Generation stopped by user');
+    } catch (error) {
+      Logger.error('Failed to stop generation:', error);
+    }
+  };
+
   const switchBackend = async () => {
     const targetBackend = aiBackend === 'apple' ? 'llama' : 'apple';
 
@@ -698,6 +722,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           )}
         </View>
         <View style={styles.headerRight}>
+          {isGenerating && (
+            <TouchableOpacity onPress={handleStopGeneration} style={styles.stopButton}>
+              <Text style={styles.stopButtonText}>⏹ Stop</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
             <Text style={styles.backendButtonText}>
               {aiBackend === 'apple' ? '🔄 → Llama' : '🔄 → Apple'}
@@ -901,6 +930,17 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#666',
     fontWeight: '500',
+  },
+  stopButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+  },
+  stopButtonText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   backendButton: {
     paddingHorizontal: 10,
