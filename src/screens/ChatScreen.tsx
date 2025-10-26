@@ -68,6 +68,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   // Track current action being worked on
   const currentActionIdRef = useRef<string | null>(null);
+  // Track if generation was stopped by user
+  const generationStoppedRef = useRef<boolean>(false);
+  // Track if we're currently stopping (to prevent new messages during stop)
+  const isStoppingRef = useRef<boolean>(false);
+  // Track the current generation promise to abort it
+  const currentGenerationRef = useRef<Promise<any> | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -248,6 +254,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const handleSend = async () => {
     if (!inputText.trim() || isGenerating) return;
 
+    // Wait if we're currently stopping (releasing/reloading model)
+    if (isStoppingRef.current) {
+      Logger.info('⏳ Model is being reloaded after stop, waiting...');
+      // Wait up to 5 seconds for model reload
+      const startWait = Date.now();
+      while (isStoppingRef.current && Date.now() - startWait < 5000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (isStoppingRef.current) {
+        Logger.error('❌ Model reload timed out');
+        Alert.alert('Error', 'Model is not ready. Please try again or reload from Models screen.');
+        return;
+      }
+      Logger.info('✅ Model reload completed, ready to generate');
+    }
+
     // Check if AI backend is ready
     if (!AIService.isReady()) {
       Alert.alert(
@@ -262,6 +284,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       );
       return;
     }
+
+    // Reset stopped flag for new generation
+    generationStoppedRef.current = false;
 
     const userMessage: Message = {
       id: generateId(),
@@ -448,6 +473,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         fullResponse = response;
       }
 
+      // Check if user stopped generation
+      if (generationStoppedRef.current) {
+        Logger.info('⚠️ Generation was stopped by user, skipping message addition');
+        // Don't return here - let finally block run
+        return; // Actually we need to exit, but finally will still run
+      }
+
       // Clear tool usage state
       setToolUsageState({stage: null});
 
@@ -492,6 +524,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         Logger.info(`💬 Regular response (no tools used)`);
       }
     } catch (error) {
+      // Don't show error if user stopped generation
+      if (generationStoppedRef.current) {
+        Logger.info('⚠️ Error during stopped generation, ignoring');
+        // Still need to clean up - let finally block handle it
+        return;
+      }
+
       Logger.error('Generation error:', error);
       Logger.error('Error details:', {
         message: error instanceof Error ? error.message : String(error),
@@ -512,7 +551,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       setMessages(prev => [...prev, errorMessage]);
       setToolUsageState({stage: null});
     } finally {
-      setIsGenerating(false);
+      // Always ensure we're not stuck in generating state
+      if (!generationStoppedRef.current) {
+        setIsGenerating(false);
+      }
+      // Note: We reset generationStoppedRef at the START of handleSend (line 269)
+      // not here, to avoid race conditions
     }
   };
 
@@ -555,25 +599,90 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Alert.alert('Tools ' + (newToolsState ? 'Enabled' : 'Disabled'), toolMessage);
   };
 
-  const handleStopGeneration = async () => {
-    try {
-      await AIService.stopGeneration();
-      setIsGenerating(false);
-      setStreamingText('');
-      setToolUsageState({stage: null});
+  const handleStopGeneration = () => {
+    Logger.info('🛑 User clicked stop button - FORCE RELOAD approach');
+    Logger.info('Current state - isGenerating:', isGenerating, 'currentActionId:', currentActionIdRef.current);
 
-      // Add a system message indicating generation was stopped
+    // Set flag to signal handleSend to abort
+    generationStoppedRef.current = true;
+    isStoppingRef.current = true;
+
+    // Immediately reset UI state to show Send button
+    const wasGenerating = isGenerating;
+    setIsGenerating(false);
+    setStreamingText('');
+    setToolUsageState({stage: null});
+
+    // Complete any in-progress action messages
+    if (currentActionIdRef.current) {
+      const now = Date.now();
+      const currentActionId = currentActionIdRef.current;
+      currentActionIdRef.current = null;
+
+      setMessages(prev =>
+        prev.map(msg => {
+          if (msg.id === currentActionId && msg.role === 'action') {
+            const actionMsg = msg as ActionMessage;
+            const duration = now - actionMsg.startTime;
+            return {
+              ...actionMsg,
+              content: `Interrupted after ${(duration / 1000).toFixed(1)}s`,
+              endTime: now,
+              duration,
+              isComplete: true,
+              error: 'Stopped by user',
+            };
+          }
+          return msg;
+        }),
+      );
+    }
+
+    // Add interruption message
+    if (wasGenerating) {
       const stopMessage: Message = {
         id: generateId(),
         role: 'system',
-        content: 'Generation stopped by user.',
+        content: 'Interrupted',
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, stopMessage]);
+    }
 
-      Logger.info('🛑 Generation stopped by user');
-    } catch (error) {
-      Logger.error('Failed to stop generation:', error);
+    // RADICAL APPROACH: Release and reload the model to force stop
+    if (aiBackend === 'llama' && currentModel) {
+      // Show alert immediately so user knows it's working
+      Alert.alert(
+        'Stopping Generation',
+        'Resetting model context...\n\nThis may take a few seconds.',
+        [],
+        {cancelable: false}
+      );
+
+      const {LlamaService} = require('../services/LlamaService');
+
+      // Run reload in background and update alert
+      LlamaService.forceReloadModel()
+        .then(() => {
+          Logger.info('✅ Model reloaded successfully');
+          Alert.alert('Success', 'Generation stopped and model reset.');
+        })
+        .catch((error: Error) => {
+          Logger.error('❌ Failed to reload model:', error);
+          Alert.alert('Error', 'Failed to reset model. Please reload manually from Models screen.');
+        })
+        .finally(() => {
+          isStoppingRef.current = false;
+          Logger.info('✅ Stop handler completed');
+        });
+    } else {
+      // For Apple Intelligence, just try to stop normally
+      AIService.stopGeneration()
+        .then(() => Logger.info('✅ Apple Intelligence generation stopped'))
+        .catch((error: Error) => Logger.error('❌ Failed to stop Apple Intelligence:', error))
+        .finally(() => {
+          isStoppingRef.current = false;
+        });
     }
   };
 
@@ -722,11 +831,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           )}
         </View>
         <View style={styles.headerRight}>
-          {isGenerating && (
-            <TouchableOpacity onPress={handleStopGeneration} style={styles.stopButton}>
-              <Text style={styles.stopButtonText}>⏹ Stop</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
             <Text style={styles.backendButtonText}>
               {aiBackend === 'apple' ? '🔄 → Llama' : '🔄 → Apple'}
@@ -810,19 +914,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           maxLength={MAX_MESSAGE_LENGTH}
           editable={!isGenerating}
         />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!inputText.trim() || isGenerating) && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!inputText.trim() || isGenerating}>
-          {isGenerating ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
+        {isGenerating ? (
+          <TouchableOpacity
+            style={styles.stopButton}
+            onPress={handleStopGeneration}>
+            <Text style={styles.stopButtonText}>⏹ Stop</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSend}
+            disabled={!inputText.trim()}>
             <Text style={styles.sendButtonText}>Send</Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Toast Notification */}
@@ -932,15 +1040,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   stopButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
     backgroundColor: '#FF3B30',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 70,
+    height: 40,
   },
   stopButtonText: {
-    fontSize: 13,
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   backendButton: {
     paddingHorizontal: 10,

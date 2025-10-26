@@ -111,34 +111,37 @@ function AppContent() {
         styles.container,
         {paddingTop: safeAreaInsets.top, paddingBottom: safeAreaInsets.bottom},
       ]}>
-      {/* Main Content - Keep ChatScreen mounted to prevent generation interruption */}
-      <View style={[styles.screenContainer, currentScreen !== 'chat' && styles.hiddenScreen]}>
-        <ChatScreen
-          currentModel={currentModel}
-          onModelSelect={handleModelSelect}
-        />
-      </View>
-
-      {currentScreen === 'models' && (
-        <View style={styles.screenContainer}>
-          <ModelsScreen
+      {/* Main Content Area */}
+      <View style={styles.contentContainer}>
+        {/* Keep ChatScreen mounted to prevent generation interruption */}
+        <View style={[styles.screenContainer, currentScreen !== 'chat' && styles.hiddenScreen]}>
+          <ChatScreen
             currentModel={currentModel}
-            onModelLoaded={handleModelLoaded}
+            onModelSelect={handleModelSelect}
           />
         </View>
-      )}
 
-      {currentScreen === 'memory' && (
-        <View style={styles.screenContainer}>
-          <MemoryViewerScreen />
-        </View>
-      )}
+        {currentScreen === 'models' && (
+          <View style={styles.screenContainer}>
+            <ModelsScreen
+              currentModel={currentModel}
+              onModelLoaded={handleModelLoaded}
+            />
+          </View>
+        )}
 
-      {currentScreen === 'tools' && (
-        <View style={styles.screenContainer}>
-          <ToolTestScreen />
-        </View>
-      )}
+        {currentScreen === 'memory' && (
+          <View style={styles.screenContainer}>
+            <MemoryViewerScreen />
+          </View>
+        )}
+
+        {currentScreen === 'tools' && (
+          <View style={styles.screenContainer}>
+            <ToolTestScreen />
+          </View>
+        )}
+      </View>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
@@ -219,8 +222,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
   },
-  screenContainer: {
+  contentContainer: {
     flex: 1,
+    position: 'relative',
+  },
+  screenContainer: {
     position: 'absolute',
     top: 0,
     left: 0,

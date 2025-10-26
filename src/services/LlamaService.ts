@@ -97,6 +97,29 @@ export class LlamaService {
   }
 
   /**
+   * Force reload the model (useful for interrupting stuck generations)
+   * This releases and reloads the model to get a fresh context
+   */
+  static async forceReloadModel(): Promise<void> {
+    const modelPath = this.currentModelPath;
+    const modelName = this.currentModelName;
+
+    if (!modelPath || !modelName) {
+      throw new Error('No model currently loaded to reload');
+    }
+
+    Logger.info('🔄 Force reloading model:', modelName);
+
+    // Release current context (this may hang if generation is stuck)
+    await this.releaseModel();
+
+    // Reload with same model
+    await this.loadModel(modelPath, modelName);
+
+    Logger.info('✅ Model force-reloaded successfully');
+  }
+
+  /**
    * Check if model is loaded and ready
    */
   static isModelLoaded(): boolean {

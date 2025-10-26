@@ -1,100 +1,81 @@
-n/sh -c /Users/builder/clone/ios/build/Build/Intermediates.noindex/LocalOSApp.build/Release-iphoneos/LocalOSApp.build/Script-00DD1BFF1BD5951E006B06BC.sh
-Node found at: /usr/local/bin/node
-+ DEST=/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app
-+ [[ ! -n '' ]]
-+ [[ Release = *Debug* ]]
-+ [[ -n '' ]]
-+ case "$CONFIGURATION" in
-+ DEV=false
-+++ dirname /Users/builder/clone/ios/Pods/../../node_modules/react-native/scripts/react-native-xcode.sh
-++ cd /Users/builder/clone/ios/Pods/../../node_modules/react-native/scripts/..
-++ pwd
-+ REACT_NATIVE_DIR=/Users/builder/clone/node_modules/react-native
-+ PROJECT_ROOT=/Users/builder/clone/ios/..
-+ cd /Users/builder/clone/ios/..
-+ [[ -n '' ]]
-+ [[ -s index.ios.js ]]
-+ ENTRY_FILE=index.js
-+ source /Users/builder/clone/node_modules/react-native/scripts/node-binary.sh
-++ '[' -z /usr/local/bin/node ']'
-++ type /usr/local/bin/node
-+ HERMES_ENGINE_PATH=/Users/builder/clone/ios/Pods/hermes-engine
-+ '[' -z '' ']'
-+ HERMES_CLI_PATH=/Users/builder/clone/ios/Pods/hermes-engine/destroot/bin/hermesc
-+ [[ true != false ]]
-+ [[ -f /Users/builder/clone/ios/Pods/hermes-engine ]]
-+ '[' -z '' ']'
-+ export NODE_ARGS=
-+ NODE_ARGS=
-+ '[' -z '' ']'
-+ CLI_PATH=/Users/builder/clone/node_modules/react-native/scripts/bundle.js
-+ '[' -z '' ']'
-+ BUNDLE_COMMAND=bundle
-+ '[' -z '' ']'
-+ COMPOSE_SOURCEMAP_PATH=/Users/builder/clone/node_modules/react-native/scripts/compose-source-maps.js
-+ [[ -z '' ]]
-+ CONFIG_ARG=
-+ [[ -z '' ]]
-+ BUNDLE_NAME=main
-+ BUNDLE_FILE=/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle
-+ EXTRA_ARGS=()
-+ case "$PLATFORM_NAME" in
-+ BUNDLE_PLATFORM=ios
-+ '[' '' = YES ']'
-+ EMIT_SOURCEMAP=
-+ [[ ! -z '' ]]
-+ PACKAGER_SOURCEMAP_FILE=
-+ [[ '' == true ]]
-+ [[ true != false ]]
-+ [[ false == false ]]
-+ EXTRA_ARGS+=("--minify" "false")
-+ [[ -n '' ]]
-+ [[ -n '' ]]
-+ EXTRA_ARGS+=("--config-cmd" "'$NODE_BINARY' $NODE_ARGS '$REACT_NATIVE_DIR/cli.js' config")
-+ /usr/local/bin/node /Users/builder/clone/node_modules/react-native/scripts/bundle.js bundle --entry-file index.js --platform ios --dev false --reset-cache --bundle-output /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle --assets-dest /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app --minify false --config-cmd ''\''/usr/local/bin/node'\''  '\''/Users/builder/clone/node_modules/react-native/cli.js'\'' config'
-
-                        ▒▒▓▓▓▓▒▒
-                     ▒▓▓▓▒▒░░▒▒▓▓▓▒
-                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒
-                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓
-                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓
-                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓
-                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓
-                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓
-                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓
-                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒
-                     ▒▓▓▓▒░░░░▒▓▓▓▒
-                        ▒▒▓▓▓▓▒▒
-
-
- WARN  the transform cache was reset.
-                Welcome to Metro v0.83.3
-              Fast - Scalable - Integrated
-
-
-LOG:Writing bundle output to: /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle
-LOG:Done writing bundle output
-+ [[ true == false ]]
-+ EXTRA_COMPILER_ARGS=
-+ [[ false == true ]]
-+ EXTRA_COMPILER_ARGS=-O
-+ [[ '' == true ]]
-+ /Users/builder/clone/ios/Pods/hermes-engine/destroot/bin/hermesc -emit-binary -max-diagnostic-width=80 -O -out /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/LocalOSApp.app/main.jsbundle /Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle
-/Users/builder/clone/ios/build/Build/Products/Release-iphoneos/main.jsbundle:57811:31: error: Invalid regular expression: Parenthesized expression not closed
-        var pythonicPattern = /[([w_]+)((.*?))]/s;
-                              ^~~~~~~~~~~~~~~~~~~
-
-warning: Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
-warning: Run script build phase 'Bundle React Native code and images' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'LocalOSApp' from project 'LocalOSApp')
-note: Run script build phase '[CP-User] [RN]Check FBReactNativeSpec' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
-** BUILD FAILED **
-
-
-The following build commands failed:
-	PhaseScriptExecution Bundle\ React\ Native\ code\ and\ images /Users/builder/clone/ios/build/Build/Intermediates.noindex/LocalOSApp.build/Release-iphoneos/LocalOSApp.build/Script-00DD1BFF1BD5951E006B06BC.sh (in target 'LocalOSApp' from project 'LocalOSApp')
-	Building workspace LocalOSApp with scheme LocalOSApp and configuration Release
-(2 failures)
-
-
-Build failed :|
-Step 4 script `Build iOS Release for Device` exited with status code 65
+Tasks: 4
+MockDatabaseService.ts:274   - Conversations: 2
+MockDatabaseService.ts:275   - User facts: 4
+App.tsx:69 Loading last used model: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
+Logger.ts:80 Loading model from: /data/user/0/com.localosapp/files/models/Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0.gguf
+Logger.ts:80 📋 Model type detected: llama-3.2-1b-function-calling
+Logger.ts:80 🔧 Tool format: langchain-pydantic
+Logger.ts:80 📝 Needs examples: true
+Logger.ts:80 📏 Context size: 4096
+Logger.ts:80 🚀 Initializing model with context size: 4096
+Logger.ts:80 ✅ Model loaded successfully: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
+Logger.ts:82    Using Llama 3.2 1B (Custom Function Calling) configuration
+Logger.ts:82    Context window: 4096 tokens
+App.tsx:73 Last used model loaded successfully
+App.tsx:80 App initialized successfully
+Logger.ts:82 🔍 Initializing AI backend...
+Logger.ts:82 ==================================================
+Logger.ts:82 🔍 AI BACKEND DETECTION
+Logger.ts:82 ==================================================
+Logger.ts:80 Platform: android
+Logger.ts:80 Platform Version: 31
+Logger.ts:82 --------------------------------------------------
+Logger.ts:82 Detection Process
+Logger.ts:82 --------------------------------------------------
+Logger.ts:82 ✅ Using Llama.cpp as default backend
+Logger.ts:82 Load a GGUF model from Models screen to start chatting
+Logger.ts:82 You can switch to Apple Intelligence from the Chat screen if available
+Logger.ts:82 ==================================================
+Logger.ts:80 ✅ AI Backend: llama
+Logger.ts:80 ✅ Model: Llama_3.2_1B_Intruct_Tool_Calling_V2.Q8_0
+ToolService.ts:37 Tool registered: get_current_datetime
+ToolService.ts:37 Tool registered: search_web
+ToolService.ts:37 Tool registered: core_memory_append
+ToolService.ts:37 Tool registered: core_memory_replace
+ToolService.ts:37 Tool registered: core_memory_clear
+ToolService.ts:37 Tool registered: archival_memory_insert
+ToolService.ts:37 Tool registered: archival_memory_search
+ToolService.ts:37 Tool registered: archival_memory_delete
+ToolService.ts:37 Tool registered: conversation_search
+ToolService.ts:29 ToolService initialized with 9 tools
+Logger.ts:82 🔧 Tools enabled: 9 tools available
+Welcome to React Native DevTools
+Debugger integration: Android Bridgeless (ReactHostImpl)
+Logger.ts:82 🗑️ CHAT CLEARED - User cleared all messages in chat
+Logger.ts:82 Previous message count: 3
+Logger.ts:82 ✅ New chat session created
+Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Logger.ts:82 💬 CHAT MESSAGE (from Chat Screen)
+Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Logger.ts:82 User: Hi
+Logger.ts:82 Tools enabled: true
+Logger.ts:82 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+Logger.ts:80 ✅ Tools are enabled. Available tools: get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search
+Logger.ts:80 👤 User prompt: Hi
+Logger.ts:80 📝 System prompt type: letta
+Logger.ts:82 🔍 Starting tool detection phase (not streaming to UI)...
+Logger.ts:82 🛑 User clicked stop button
+Logger.ts:80 Current state - isGenerating: true
+Logger.ts:82 ⏳ Calling AIService.stopGeneration()...
+Logger.ts:82 ⏳ Waiting for previous generation to stop...
+Logger.ts:82 ⚠️ Stop did not complete in time, proceeding anyway
+anonymous @ console.js:662
+overrideMethod @ backend.js:17416
+anonymous @ setUpDeveloperTools.js:42
+registerWarning @ LogBox.js:222
+anonymous @ LogBox.js:84
+addLog @ Logger.ts:82
+warn @ Logger.ts:105
+?anon_0_ @ ChatScreen.tsx:264
+asyncGeneratorStep @ asyncToGenerator.js:3
+_next @ asyncToGenerator.js:17
+Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Logger.ts:82 💬 CHAT MESSAGE (from Chat Screen)
+Logger.ts:82 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Logger.ts:82 User: What is React Native?
+Logger.ts:82 Tools enabled: true
+Logger.ts:82 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+Logger.ts:80 ✅ Tools are enabled. Available tools: get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search
+Logger.ts:80 👤 User prompt: What is React Native?
+Logger.ts:80 📝 System prompt type: letta
+Logger.ts:82 🔍 Starting tool detection phase (not streaming to UI)...
