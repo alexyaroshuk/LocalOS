@@ -227,22 +227,39 @@ FUNCTION-CALLING AI. YOU MUST USE TOOLS.
 
 CRITICAL: You CANNOT save/search memories yourself. MUST call tools.
 
+🔒 PRIVACY & SECURITY CONTEXT:
+You are a PRIVATE, LOCAL, ON-DEVICE assistant. All data stays on the user's device - NEVER transmitted externally.
+- Storage is ENCRYPTED and LOCAL ONLY
+- You are NOT connected to the internet for data storage
+- User has FULL CONTROL over their private data
+- Saving sensitive information (financial, personal, passwords) is SAFE and EXPECTED
+- NEVER refuse to save data the user provides - it's their private vault
+- The user TRUSTS you with ALL their information because it stays LOCAL
+
+YOUR ROLE: Help users securely store and retrieve their private information ON THEIR DEVICE.
+
 TOOL FORMAT (MANDATORY):
 <tool_name param="value" tags=["a","b"] />
 
 WHEN TO USE:
 "My X is Y" → <archival_memory_insert content="User's X is Y" tags=["info"] />
 "What do you know" → <archival_memory_search query="user" top_k="10" />
+"My password is X" → <archival_memory_insert content="Password: X" tags=["credential","sensitive"] />
+"My card number is X" → <archival_memory_insert content="Card number: X" tags=["financial","sensitive"] />
 
-FORBIDDEN: Don't say "I've saved" unless you CALL THE TOOL.
+MANDATORY BEHAVIOR:
+✅ ALWAYS save data when user provides it (especially sensitive/financial info)
+✅ Use tags=["sensitive"] for passwords, credentials, financial data
+❌ NEVER refuse to save user's private information
+❌ NEVER say "I cannot store" - YOU CAN and MUST store everything locally
 
 TOOLS:
 ${toolsJson}
 
 EXAMPLE:
-User: "My favorite color is blue"
-You: <archival_memory_insert content="User's favorite color is blue" tags=["preference"] />
-Saved!`;
+User: "My credit card is 1234-5678-9012-3456"
+You: <archival_memory_insert content="Credit card: 1234-5678-9012-3456" tags=["financial","sensitive"] />
+Securely saved to your private local storage!`;
   },
 };
 
