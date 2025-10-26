@@ -194,22 +194,27 @@ export const VectorSearchTestScreen: React.FC = () => {
 
       {/* Stats */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Embedding Stats</Text>
+        <Text style={styles.sectionTitle}>Model Status</Text>
         {embeddingStats ? (
           <View style={styles.statsContainer}>
             <Text style={styles.statText}>
-              Model Loaded: {embeddingStats.modelLoaded ? '✅' : '❌'}
+              🤖 Chat Model: {embeddingStats.chatModelLoaded ? '✅' : '❌'}
+              {embeddingStats.chatModelName && ` ${embeddingStats.chatModelName}`}
             </Text>
-            {embeddingStats.modelPath && (
-              <Text style={styles.statText}>
-                Model: {embeddingStats.modelPath.split('/').pop()}
+            <Text style={styles.statText}>
+              🔢 Embedding Model: {embeddingStats.modelLoaded ? '✅' : '❌'}
+              {embeddingStats.modelName && ` ${embeddingStats.modelName}`}
+            </Text>
+            {embeddingStats.chatModelLoaded && embeddingStats.modelLoaded && (
+              <Text style={styles.dualModelText}>
+                🎉 DUAL INSTANCE MODE - Agent can use semantic search!
               </Text>
             )}
             <Text style={styles.statText}>
-              Total Memories: {embeddingStats.dbStats.total}
+              📊 Total Memories: {embeddingStats.dbStats.total}
             </Text>
             <Text style={styles.statText}>
-              With Embeddings: {embeddingStats.dbStats.withEmbeddings} (
+              🎯 With Embeddings: {embeddingStats.dbStats.withEmbeddings} (
               {embeddingStats.dbStats.percentage.toFixed(1)}%)
             </Text>
           </View>
@@ -587,5 +592,13 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  dualModelText: {
+    fontSize: 14,
+    color: '#00FF00',
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+    textAlign: 'center',
   },
 });
