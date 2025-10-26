@@ -70,10 +70,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const currentActionIdRef = useRef<string | null>(null);
   // Track if generation was stopped by user
   const generationStoppedRef = useRef<boolean>(false);
-  // Track if we're currently stopping (to prevent new messages during stop)
-  const isStoppingRef = useRef<boolean>(false);
-  // Track the current generation promise to abort it
-  const currentGenerationRef = useRef<Promise<any> | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -253,22 +249,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleSend = async () => {
     if (!inputText.trim() || isGenerating) return;
-
-    // Wait if we're currently stopping (releasing/reloading model)
-    if (isStoppingRef.current) {
-      Logger.info('⏳ Model is being reloaded after stop, waiting...');
-      // Wait up to 5 seconds for model reload
-      const startWait = Date.now();
-      while (isStoppingRef.current && Date.now() - startWait < 5000) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      if (isStoppingRef.current) {
-        Logger.error('❌ Model reload timed out');
-        Alert.alert('Error', 'Model is not ready. Please try again or reload from Models screen.');
-        return;
-      }
-      Logger.info('✅ Model reload completed, ready to generate');
-    }
 
     // Check if AI backend is ready
     if (!AIService.isReady()) {
@@ -599,90 +579,76 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Alert.alert('Tools ' + (newToolsState ? 'Enabled' : 'Disabled'), toolMessage);
   };
 
-  const handleStopGeneration = () => {
-    Logger.info('🛑 User clicked stop button - FORCE RELOAD approach');
+  const handleStopGeneration = async () => {
+    Logger.info('🛑 User clicked stop button');
     Logger.info('Current state - isGenerating:', isGenerating, 'currentActionId:', currentActionIdRef.current);
 
-    // Set flag to signal handleSend to abort
-    generationStoppedRef.current = true;
-    isStoppingRef.current = true;
+    // Show alert immediately - user needs to know we're stopping
+    Alert.alert(
+      'Stopping Generation',
+      'Please wait...',
+      [],
+      {cancelable: false}
+    );
 
-    // Immediately reset UI state to show Send button
-    const wasGenerating = isGenerating;
-    setIsGenerating(false);
-    setStreamingText('');
-    setToolUsageState({stage: null});
+    try {
+      // STEP 1: Call stopCompletion and WAIT for it to complete
+      Logger.info('⏳ Calling stopCompletion()...');
+      await AIService.stopGeneration();
+      Logger.info('✅ stopCompletion() completed successfully');
 
-    // Complete any in-progress action messages
-    if (currentActionIdRef.current) {
-      const now = Date.now();
+      // STEP 2: ONLY AFTER stop completes, set flags and update UI
+      generationStoppedRef.current = true;
+
+      const wasGenerating = isGenerating;
       const currentActionId = currentActionIdRef.current;
+
+      // Reset UI state
+      setIsGenerating(false);
+      setStreamingText('');
+      setToolUsageState({stage: null});
       currentActionIdRef.current = null;
 
-      setMessages(prev =>
-        prev.map(msg => {
-          if (msg.id === currentActionId && msg.role === 'action') {
-            const actionMsg = msg as ActionMessage;
-            const duration = now - actionMsg.startTime;
-            return {
-              ...actionMsg,
-              content: `Interrupted after ${(duration / 1000).toFixed(1)}s`,
-              endTime: now,
-              duration,
-              isComplete: true,
-              error: 'Stopped by user',
-            };
-          }
-          return msg;
-        }),
-      );
-    }
+      // Complete any in-progress action messages
+      if (currentActionId) {
+        const now = Date.now();
+        setMessages(prev =>
+          prev.map(msg => {
+            if (msg.id === currentActionId && msg.role === 'action') {
+              const actionMsg = msg as ActionMessage;
+              const duration = now - actionMsg.startTime;
+              return {
+                ...actionMsg,
+                content: `Interrupted after ${(duration / 1000).toFixed(1)}s`,
+                endTime: now,
+                duration,
+                isComplete: true,
+                error: 'Stopped by user',
+              };
+            }
+            return msg;
+          }),
+        );
+      }
 
-    // Add interruption message
-    if (wasGenerating) {
-      const stopMessage: Message = {
-        id: generateId(),
-        role: 'system',
-        content: 'Interrupted',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, stopMessage]);
-    }
+      // Add interruption message
+      if (wasGenerating) {
+        const stopMessage: Message = {
+          id: generateId(),
+          role: 'system',
+          content: 'Interrupted',
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, stopMessage]);
+      }
 
-    // RADICAL APPROACH: Release and reload the model to force stop
-    if (aiBackend === 'llama' && currentModel) {
-      // Show alert immediately so user knows it's working
-      Alert.alert(
-        'Stopping Generation',
-        'Resetting model context...\n\nThis may take a few seconds.',
-        [],
-        {cancelable: false}
-      );
+      // Dismiss alert and show success
+      Alert.alert('Stopped', 'Generation stopped successfully.');
+      Logger.info('✅ Stop handler completed');
 
-      const {LlamaService} = require('../services/LlamaService');
-
-      // Run reload in background and update alert
-      LlamaService.forceReloadModel()
-        .then(() => {
-          Logger.info('✅ Model reloaded successfully');
-          Alert.alert('Success', 'Generation stopped and model reset.');
-        })
-        .catch((error: Error) => {
-          Logger.error('❌ Failed to reload model:', error);
-          Alert.alert('Error', 'Failed to reset model. Please reload manually from Models screen.');
-        })
-        .finally(() => {
-          isStoppingRef.current = false;
-          Logger.info('✅ Stop handler completed');
-        });
-    } else {
-      // For Apple Intelligence, just try to stop normally
-      AIService.stopGeneration()
-        .then(() => Logger.info('✅ Apple Intelligence generation stopped'))
-        .catch((error: Error) => Logger.error('❌ Failed to stop Apple Intelligence:', error))
-        .finally(() => {
-          isStoppingRef.current = false;
-        });
+    } catch (error) {
+      Logger.error('❌ Failed to stop generation:', error);
+      Alert.alert('Error', 'Failed to stop generation. Please try again.');
     }
   };
 
