@@ -103,6 +103,7 @@ export class DatabaseService {
         created_at INTEGER NOT NULL,
         updated_at INTEGER,
         metadata TEXT,
+        embedding BLOB,
         CHECK (category IN ('fact', 'event', 'preference', 'conversation')),
         CHECK (importance >= 1 AND importance <= 10)
       );
@@ -272,23 +273,81 @@ export class DatabaseService {
     console.log(`[Database] Updated core memory block: ${blockName}`);
   }
 
+  // ============== VECTOR UTILITIES ==============
+
+  /**
+   * Convert Float32Array or number[] to Uint8Array for SQLite storage
+   */
+  private static vectorToBlob(vector: number[] | Float32Array): Uint8Array {
+    const float32Array = vector instanceof Float32Array ? vector : new Float32Array(vector);
+    return new Uint8Array(float32Array.buffer);
+  }
+
+  /**
+   * Convert Uint8Array from SQLite to number array
+   */
+  private static blobToVector(blob: Uint8Array): number[] {
+    const float32Array = new Float32Array(blob.buffer, blob.byteOffset, blob.length / 4);
+    return Array.from(float32Array);
+  }
+
+  /**
+   * Calculate cosine similarity between two vectors
+   * Returns value between -1 (opposite) and 1 (identical)
+   */
+  private static cosineSimilarity(vecA: number[], vecB: number[]): number {
+    if (vecA.length !== vecB.length) {
+      throw new Error('Vectors must have same dimensions');
+    }
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < vecA.length; i++) {
+      dotProduct += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
+    }
+
+    const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+    return magnitude === 0 ? 0 : dotProduct / magnitude;
+  }
+
   // ============== ARCHIVE MEMORY OPERATIONS ==============
 
   static async saveMemory(
     content: string,
     category: ArchiveMemory['category'],
     importance: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
+    embedding?: number[] | Float32Array
   ): Promise<ArchiveMemory> {
     const now = Date.now();
-    const result = this.db.executeSync(
-      'INSERT INTO memories (content, category, importance, created_at, metadata) VALUES (?, ?, ?, ?, ?);',
-      [content, category, importance, now, JSON.stringify(metadata || {})]
-    );
+
+    let result;
+    if (embedding) {
+      const embeddingBlob = this.vectorToBlob(embedding);
+      result = this.db.executeSync(
+        'INSERT INTO memories (content, category, importance, created_at, metadata, embedding) VALUES (?, ?, ?, ?, ?, ?);',
+        [content, category, importance, now, JSON.stringify(metadata || {}), embeddingBlob]
+      );
+    } else {
+      result = this.db.executeSync(
+        'INSERT INTO memories (content, category, importance, created_at, metadata) VALUES (?, ?, ?, ?, ?);',
+        [content, category, importance, now, JSON.stringify(metadata || {})]
+      );
+    }
 
     const insertId = result.insertId;
     const selectResult = this.db.executeSync('SELECT * FROM memories WHERE id = ?;', [insertId]);
     const memory = selectResult.rows?.[0];
+
+    // Convert embedding blob to array if present
+    if (memory.embedding) {
+      memory.embedding = this.blobToVector(memory.embedding);
+    }
+
     console.log(`[Database] Saved archive memory: ${content.substring(0, 50)}...`);
     return memory;
   }
@@ -333,6 +392,105 @@ export class DatabaseService {
   static async getMemoriesByCategory(category: ArchiveMemory['category']): Promise<ArchiveMemory[]> {
     const result = this.db.executeSync('SELECT * FROM memories WHERE category = ? ORDER BY importance DESC;', [category]);
     return result.rows || [];
+  }
+
+  /**
+   * Update embedding for an existing memory
+   */
+  static async updateMemoryEmbedding(id: number, embedding: number[] | Float32Array): Promise<void> {
+    const embeddingBlob = this.vectorToBlob(embedding);
+    this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBlob, id]);
+    console.log(`[Database] Updated embedding for memory ${id}`);
+  }
+
+  /**
+   * Vector similarity search
+   * Finds memories most similar to the query embedding
+   */
+  static async searchByVector(
+    queryEmbedding: number[] | Float32Array,
+    limit: number = 5,
+    minSimilarity: number = 0.0
+  ): Promise<Array<ArchiveMemory & {similarity: number}>> {
+    // Get all memories with embeddings
+    const result = this.db.executeSync('SELECT * FROM memories WHERE embedding IS NOT NULL;');
+    const memories = result.rows || [];
+
+    // Convert query to array if needed
+    const queryVector = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
+
+    // Calculate similarity for each memory
+    const memoriesWithSimilarity = memories
+      .map((memory: any) => {
+        const embedding = this.blobToVector(memory.embedding);
+        const similarity = this.cosineSimilarity(queryVector, embedding);
+        return {
+          ...memory,
+          embedding, // Convert to array for return
+          similarity,
+        };
+      })
+      .filter((m: any) => m.similarity >= minSimilarity)
+      .sort((a: any, b: any) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    console.log(`[Database] Vector search found ${memoriesWithSimilarity.length} results`);
+    return memoriesWithSimilarity;
+  }
+
+  /**
+   * Hybrid search: Combines FTS5 keyword search with vector similarity
+   * 1. Use FTS5 to narrow down to top candidates
+   * 2. Re-rank by vector similarity
+   */
+  static async searchHybrid(
+    query: string,
+    queryEmbedding: number[] | Float32Array,
+    limit: number = 5,
+    ftsMultiplier: number = 3
+  ): Promise<Array<ArchiveMemory & {similarity?: number; source: 'vector' | 'keyword' | 'hybrid'}>> {
+    // Step 1: Get FTS5 candidates (3x the limit to have a good pool)
+    const ftsResults = await this.searchArchive(query, limit * ftsMultiplier);
+
+    if (ftsResults.length === 0) {
+      // If no FTS results, fall back to pure vector search
+      const vectorResults = await this.searchByVector(queryEmbedding, limit);
+      return vectorResults.map(r => ({...r, source: 'vector' as const}));
+    }
+
+    // Step 2: Get embeddings for FTS results and calculate similarity
+    const queryVector = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
+    const resultsWithSimilarity = ftsResults
+      .map((memory: any) => {
+        if (!memory.embedding) {
+          return {...memory, similarity: 0, source: 'keyword' as const};
+        }
+        // Check if embedding is already an array or needs conversion
+        const embedding = Array.isArray(memory.embedding)
+          ? memory.embedding
+          : this.blobToVector(memory.embedding);
+        const similarity = this.cosineSimilarity(queryVector, embedding);
+        return {...memory, embedding, similarity, source: 'hybrid' as const};
+      })
+      .sort((a: any, b: any) => (b.similarity || 0) - (a.similarity || 0))
+      .slice(0, limit);
+
+    console.log(`[Database] Hybrid search: ${ftsResults.length} FTS candidates -> ${resultsWithSimilarity.length} final results`);
+    return resultsWithSimilarity;
+  }
+
+  /**
+   * Get count of memories with embeddings
+   */
+  static async getEmbeddingStats(): Promise<{total: number; withEmbeddings: number; percentage: number}> {
+    const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
+    const embeddedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL;');
+
+    const total = totalResult.rows?.[0]?.count || 0;
+    const withEmbeddings = embeddedResult.rows?.[0]?.count || 0;
+    const percentage = total > 0 ? (withEmbeddings / total) * 100 : 0;
+
+    return {total, withEmbeddings, percentage};
   }
 
   static async updateArchiveMemory(id: number, updates: Partial<ArchiveMemory>): Promise<ArchiveMemory | null> {

@@ -290,6 +290,39 @@ export class LlamaService {
   }
 
   /**
+   * Generate embedding vector for text
+   * NOTE: Requires an embedding model (e.g., all-MiniLM-L6-v2, nomic-embed-text)
+   * NOT a chat/completion model
+   */
+  static async generateEmbedding(text: string): Promise<number[]> {
+    if (!this.context) {
+      throw new Error('Model not loaded');
+    }
+
+    try {
+      Logger.debug(`Generating embedding for text: ${text.substring(0, 50)}...`);
+      const result = await this.context.embedding(text);
+      Logger.debug(`Embedding generated: ${result.embedding.length} dimensions`);
+      return result.embedding;
+    } catch (error) {
+      Logger.error('Embedding generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if current model supports embeddings
+   * Embedding models typically have "embed" in their name
+   */
+  static isEmbeddingModel(): boolean {
+    if (!this.currentModelName) {
+      return false;
+    }
+    const name = this.currentModelName.toLowerCase();
+    return name.includes('embed') || name.includes('embedding');
+  }
+
+  /**
    * Enable function calling with tools
    */
   static enableTools(tools?: Tool[]): void {
