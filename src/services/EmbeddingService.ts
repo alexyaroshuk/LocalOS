@@ -134,6 +134,9 @@ export class EmbeddingService {
     minSimilarity: number = 0.0
   ): Promise<Array<any>> {
     try {
+      // Log the query
+      Logger.info(`[EmbeddingService] Semantic search query: "${query}"`);
+
       // Generate embedding for query
       Logger.info('[EmbeddingService] Generating query embedding...');
       const queryEmbedding = await this.generateEmbedding(query);
@@ -141,7 +144,7 @@ export class EmbeddingService {
       // Search database
       const results = await DatabaseService.searchByVector(queryEmbedding, limit, minSimilarity);
 
-      Logger.info(`[EmbeddingService] Found ${results.length} semantic matches`);
+      Logger.info(`[EmbeddingService] Found ${results.length} semantic matches for "${query}"`);
       return results;
     } catch (error) {
       Logger.error('[EmbeddingService] Semantic search failed:', error);
@@ -157,6 +160,9 @@ export class EmbeddingService {
     limit: number = 5
   ): Promise<Array<any>> {
     try {
+      // Log the query
+      Logger.info(`[EmbeddingService] Hybrid search query: "${query}"`);
+
       // Generate embedding for query
       Logger.info('[EmbeddingService] Generating query embedding for hybrid search...');
       const queryEmbedding = await this.generateEmbedding(query);
@@ -164,7 +170,7 @@ export class EmbeddingService {
       // Hybrid search
       const results = await DatabaseService.searchHybrid(query, queryEmbedding, limit);
 
-      Logger.info(`[EmbeddingService] Hybrid search returned ${results.length} results`);
+      Logger.info(`[EmbeddingService] Hybrid search returned ${results.length} results for "${query}"`);
       return results;
     } catch (error) {
       Logger.error('[EmbeddingService] Hybrid search failed:', error);

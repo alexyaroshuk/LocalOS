@@ -139,23 +139,26 @@ export const ToolTestScreen: React.FC = () => {
       }
 
       const query = "programming languages preferences";
+      const searchType = 'vector'; // Options: 'vector', 'hybrid', 'keyword'
       Logger.info('🔍 [MemoryToolTest] Query:', query);
+      Logger.info('🔍 [MemoryToolTest] Search type:', searchType);
       Logger.info('🔍 [MemoryToolTest] Embedding model loaded:', LlamaService.isEmbeddingModelLoaded());
 
       const startTime = Date.now();
-      const result = await searchTool.execute({query, limit: 5});
+      const result = await searchTool.execute({query, search_type: searchType, top_k: 5});
       const elapsed = Date.now() - startTime;
 
       Logger.info('🔍 [MemoryToolTest] ✅ COMPLETE!');
       Logger.info('🔍 [MemoryToolTest] Time:', elapsed + 'ms');
       Logger.info('🔍 [MemoryToolTest] Result:', JSON.stringify(result, null, 2));
 
-      setLastEmbeddingTest(`✅ Search completed in ${elapsed}ms - ${LlamaService.isEmbeddingModelLoaded() ? 'SEMANTIC' : 'KEYWORD'}`);
+      setLastEmbeddingTest(`✅ ${searchType.toUpperCase()} search completed in ${elapsed}ms`);
       Alert.alert(
         'Search Result',
-        `Search type: ${LlamaService.isEmbeddingModelLoaded() ? 'SEMANTIC' : 'KEYWORD'}\n` +
+        `Search type: ${searchType.toUpperCase()}\n` +
         `Time: ${elapsed}ms\n` +
-        `Memories: ${result.memories?.length || 0}`
+        `Results: ${result.count || 0}\n` +
+        `Message: ${result.message}`
       );
     } catch (error) {
       Logger.error('🔍 [MemoryToolTest] ❌ FAILED:', error);

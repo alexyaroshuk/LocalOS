@@ -140,19 +140,19 @@ export const VectorSearchTestScreen: React.FC = () => {
 
   const clearDatabase = async () => {
     Alert.alert(
-      'Clear Database',
-      'Are you sure you want to clear all memories?',
+      'Clear All Memories',
+      'This will delete all archive memories (but keep core memory and tasks). Use this when switching embedding models to avoid dimension mismatch errors.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
-          text: 'Clear',
+          text: 'Clear Memories',
           style: 'destructive',
           onPress: async () => {
             try {
-              await DatabaseService.clear();
+              await DatabaseService.clearAllMemories();
               await loadStats();
               setSearchResults([]);
-              Alert.alert('Success', 'Database cleared');
+              Alert.alert('Success', 'All archive memories cleared. You can now load test data with your current embedding model.');
             } catch (error) {
               Alert.alert('Error', `Failed to clear: ${error}`);
             }
@@ -178,6 +178,21 @@ export const VectorSearchTestScreen: React.FC = () => {
       await loadStats();
     } catch (error) {
       Alert.alert('Error', `Backfill failed: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runMigration = async () => {
+    setLoading(true);
+    try {
+      Logger.info('[VectorTest] Running database migration...');
+      await DatabaseService.migrate();
+      Alert.alert('Success', 'Database migration completed! The embedding column has been added.');
+      await loadStats();
+    } catch (error) {
+      Logger.error('Migration failed:', error);
+      Alert.alert('Error', `Migration failed: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -217,6 +232,16 @@ export const VectorSearchTestScreen: React.FC = () => {
               🎯 With Embeddings: {embeddingStats.dbStats.withEmbeddings} (
               {embeddingStats.dbStats.percentage.toFixed(1)}%)
             </Text>
+            {embeddingStats.dbStats.dimensions && (
+              <Text style={styles.statText}>
+                📏 Embedding Dimensions: {embeddingStats.dbStats.dimensions}D
+              </Text>
+            )}
+            {embeddingStats.dbStats.dimensionMismatch && (
+              <Text style={styles.warningText}>
+                ⚠️ DIMENSION MISMATCH! Clear DB and reload with current model.
+              </Text>
+            )}
           </View>
         ) : (
           <ActivityIndicator />
@@ -234,6 +259,13 @@ export const VectorSearchTestScreen: React.FC = () => {
           <Text style={styles.buttonText}>
             {loading ? 'Loading...' : 'Load Test Dataset'}
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.migrationButton]}
+          onPress={runMigration}
+          disabled={loading}>
+          <Text style={styles.buttonText}>🔧 Run Database Migration</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -453,12 +485,31 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'monospace',
   },
+  warningText: {
+    fontSize: 14,
+    color: '#FF9500',
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
+  dualModelText: {
+    fontSize: 14,
+    color: '#34C759',
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
   button: {
     backgroundColor: '#007AFF',
     padding: 14,
     borderRadius: 8,
     marginBottom: 8,
     alignItems: 'center',
+  },
+  migrationButton: {
+    backgroundColor: '#FF9500',
   },
   secondaryButton: {
     backgroundColor: '#5856D6',
