@@ -216,7 +216,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       setLoadingModel(model.id);
 
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      Logger.info('🔄 LOADING MODEL');
+      Logger.info('🔄 LOADING CHAT MODEL');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       Logger.info(`Model Name: ${model.name}`);
       Logger.info(`Model ID: ${model.id}`);
@@ -235,13 +235,13 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       onModelLoaded(model);
 
-      Logger.info('✅ Model loaded successfully');
+      Logger.info('✅ Chat model loaded successfully');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-      Alert.alert('Success', `${model.name} loaded successfully!`);
+      Alert.alert('Success', `${model.name} loaded as CHAT model!`);
     } catch (error) {
       Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      Logger.error('❌ FAILED TO LOAD MODEL');
+      Logger.error('❌ FAILED TO LOAD CHAT MODEL');
       Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       Logger.error(`Model Name: ${model.name}`);
       Logger.error(`Model ID: ${model.id}`);
@@ -257,6 +257,83 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       Alert.alert(
         'Failed to Load Model',
+        `Error: ${errorMessage}\n\nPlease check the logs for more details.`,
+      );
+    } finally {
+      setLoadingModel(null);
+    }
+  };
+
+  const handleLoadEmbeddingModel = async (model: ModelInfo) => {
+    if (!model.downloaded || !model.localPath) {
+      Alert.alert('Not Downloaded', 'Please download this model first');
+      return;
+    }
+
+    // Check if this looks like an embedding model
+    const isEmbedModel = model.name.toLowerCase().includes('embed');
+    if (!isEmbedModel) {
+      Alert.alert(
+        'Warning',
+        'This doesn\'t look like an embedding model. Embedding models usually have "embed" in the name.\n\nContinue anyway?',
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {text: 'Load Anyway', onPress: () => loadEmbeddingModelConfirmed(model)},
+        ]
+      );
+      return;
+    }
+
+    await loadEmbeddingModelConfirmed(model);
+  };
+
+  const loadEmbeddingModelConfirmed = async (model: ModelInfo) => {
+    try {
+      setLoadingModel(model.id);
+
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info('🔢 LOADING EMBEDDING MODEL');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info(`Model Name: ${model.name}`);
+      Logger.info(`Model ID: ${model.id}`);
+      Logger.info(`Model Path: ${model.localPath}`);
+      Logger.info(`Model Size: ${formatBytes(model.size)}`);
+      Logger.info(`Quantization: ${model.quantization}`);
+
+      await LlamaService.loadEmbeddingModel(model.localPath, model.name);
+
+      await StorageService.addRecentModel(model);
+
+      // Update recent models list
+      const recent = await StorageService.loadRecentModels();
+      setRecentModels(recent);
+
+      Logger.info('✅ Embedding model loaded successfully');
+      Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      Alert.alert(
+        'Success',
+        `${model.name} loaded as EMBEDDING model!\n\n🎉 Dual instance mode active!\nAgent can now use semantic search.`
+      );
+    } catch (error) {
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error('❌ FAILED TO LOAD EMBEDDING MODEL');
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error(`Model Name: ${model.name}`);
+      Logger.error(`Model ID: ${model.id}`);
+      Logger.error(`Model Path: ${model.localPath}`);
+      Logger.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+      Logger.error('Error Message:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        Logger.error('Stack Trace:', error.stack);
+      }
+      Logger.error('Full Error Object:', error);
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert(
+        'Failed to Load Embedding Model',
         `Error: ${errorMessage}\n\nPlease check the logs for more details.`,
       );
     } finally {
@@ -448,18 +525,32 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
           <View style={styles.buttonContainer}>
             {model.downloaded ? (
               <>
-                <TouchableOpacity
-                  style={[styles.button, styles.loadButton]}
-                  onPress={() => handleLoadModel(model)}
-                  disabled={isLoading || isCurrent}>
-                  {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.buttonText}>
-                      {isCurrent ? 'Loaded' : 'Load'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                <View style={styles.loadButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.loadButton]}
+                    onPress={() => handleLoadModel(model)}
+                    disabled={isLoading || isCurrent}>
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.buttonText}>
+                        {isCurrent ? '✓ Chat' : '🤖 Chat'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.embedButton]}
+                    onPress={() => handleLoadEmbeddingModel(model)}
+                    disabled={isLoading}>
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.buttonText}>
+                        🔢 Embed
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
                   style={[styles.button, styles.deleteButton]}
                   onPress={() => handleDeleteModel(model)}
@@ -659,8 +750,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 40,
   },
+  loadButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
   loadButton: {
+    flex: 1,
     backgroundColor: '#007AFF',
+  },
+  embedButton: {
+    flex: 1,
+    backgroundColor: '#9C27B0',
   },
   downloadButton: {
     backgroundColor: '#34C759',

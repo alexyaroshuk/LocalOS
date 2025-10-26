@@ -39,17 +39,19 @@ const embedContext = await initLlama({ model: 'nomic-embed.gguf' });    // conte
 
 1. Open LocalOS app
 2. Go to **Models** tab
-3. Add your chat model
-4. Tap **"Load Model"**
+3. Add your chat model (or use existing)
+4. Tap **"🤖 Chat"** button
 5. Wait for it to load (~5-10 seconds)
+6. Success alert: "loaded as CHAT model!"
 
 ### Step 3: Load Embedding Model
 
 1. Stay in **Models** tab
-2. Add the embedding model
-3. Tap **"Load Model"** again
-4. **This will create a second instance!**
+2. Add the embedding model (or use existing)
+3. Tap **"🔢 Embed"** button (NOT "Chat"!)
+4. **This creates a second instance!**
 5. Wait for it to load (~3-5 seconds)
+6. Success alert: "🎉 Dual instance mode active!"
 
 ### Step 4: Verify Dual Mode
 
