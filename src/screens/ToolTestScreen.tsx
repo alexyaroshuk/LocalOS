@@ -130,12 +130,12 @@ export const ToolTestScreen: React.FC = () => {
 
   const testMemorySearchTool = async () => {
     try {
-      Logger.info('🔍 [MemoryToolTest] Testing search_archive tool...');
+      Logger.info('🔍 [MemoryToolTest] Testing archival_memory_search tool...');
 
-      // Find the search_archive tool
-      const searchTool = tools.find(t => t.name === 'search_archive');
+      // Find the archival_memory_search tool
+      const searchTool = tools.find(t => t.name === 'archival_memory_search');
       if (!searchTool) {
-        throw new Error('search_archive tool not found');
+        throw new Error('archival_memory_search tool not found');
       }
 
       const query = "programming languages preferences";

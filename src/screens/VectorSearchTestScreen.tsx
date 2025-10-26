@@ -34,7 +34,7 @@ const TEST_MEMORIES = [
   {content: 'I work on React Native applications', category: 'fact', importance: 9},
   {content: 'I build mobile apps using React Native', category: 'fact', importance: 9},
   {content: 'I prefer coffee over tea', category: 'preference', importance: 5},
-  {content: 'I wake up early in the morning', category: 'habit', importance: 7},
+  {content: 'I wake up early in the morning', category: 'preference', importance: 7},
   {content: 'Python is my second favorite language', category: 'preference', importance: 7},
   {content: 'I live in San Francisco', category: 'fact', importance: 8},
   {content: 'I like listening to jazz music', category: 'preference', importance: 6},
