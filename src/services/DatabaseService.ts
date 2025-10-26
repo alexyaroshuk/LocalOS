@@ -49,6 +49,9 @@ export class DatabaseService {
       // Create tables
       await this.createTables();
 
+      // Run migrations
+      await this.runMigrations();
+
       // Initialize with default data if empty
       await this.initializeDefaultData();
 
@@ -103,7 +106,7 @@ export class DatabaseService {
         created_at INTEGER NOT NULL,
         updated_at INTEGER,
         metadata TEXT,
-        embedding BLOB,
+        embedding TEXT,
         CHECK (category IN ('fact', 'event', 'preference', 'conversation')),
         CHECK (importance >= 1 AND importance <= 10)
       );
@@ -204,6 +207,101 @@ export class DatabaseService {
   }
 
   /**
+   * Run database migrations
+   */
+  private static async runMigrations(): Promise<void> {
+    const versionResult = this.db.executeSync('SELECT version FROM schema_version LIMIT 1;');
+    const currentVersion = versionResult.rows?.[0]?.version || 1;
+
+    console.log(`[Database] Current schema version: ${currentVersion}`);
+
+    // Migration 1 -> 2: Add embedding column to memories table
+    if (currentVersion < 2) {
+      console.log('[Database] Running migration 1 -> 2: Adding embedding column...');
+      try {
+        // Check if column already exists
+        const tableInfo = this.db.executeSync('PRAGMA table_info(memories);');
+        const hasEmbedding = tableInfo.rows?.some((row: any) => row.name === 'embedding');
+
+        if (!hasEmbedding) {
+          this.db.executeSync('ALTER TABLE memories ADD COLUMN embedding TEXT;');
+          console.log('[Database] Added embedding TEXT column to memories table');
+        } else {
+          console.log('[Database] Embedding column already exists');
+        }
+
+        // Update schema version
+        this.db.executeSync('UPDATE schema_version SET version = 2, applied_at = ?;', [Date.now()]);
+        console.log('[Database] Migration 1 -> 2 completed');
+      } catch (error) {
+        console.error('[Database] Migration 1 -> 2 failed:', error);
+        throw error;
+      }
+    }
+
+    // Migration 2 -> 3: Change embedding from BLOB to TEXT (for op-sqlite compatibility)
+    if (currentVersion < 3) {
+      console.log('[Database] Running migration 2 -> 3: Converting embedding to TEXT...');
+      try {
+        // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
+        // But if the column was just added as TEXT in migration 2, we're fine
+        const tableInfo = this.db.executeSync('PRAGMA table_info(memories);');
+        const embeddingCol = tableInfo.rows?.find((row: any) => row.name === 'embedding');
+
+        if (embeddingCol && embeddingCol.type === 'BLOB') {
+          console.log('[Database] Recreating memories table with TEXT embedding...');
+
+          // Create new table with TEXT embedding
+          this.db.executeSync(`
+            CREATE TABLE memories_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              content TEXT NOT NULL,
+              category TEXT NOT NULL,
+              importance INTEGER NOT NULL DEFAULT 5,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER,
+              metadata TEXT,
+              embedding TEXT,
+              CHECK (category IN ('fact', 'event', 'preference', 'conversation')),
+              CHECK (importance >= 1 AND importance <= 10)
+            );
+          `);
+
+          // Copy non-embedding data (embeddings in BLOB format are incompatible)
+          this.db.executeSync(`
+            INSERT INTO memories_new (id, content, category, importance, created_at, updated_at, metadata)
+            SELECT id, content, category, importance, created_at, updated_at, metadata FROM memories;
+          `);
+
+          // Drop old table
+          this.db.executeSync('DROP TABLE memories;');
+
+          // Rename new table
+          this.db.executeSync('ALTER TABLE memories_new RENAME TO memories;');
+
+          // Recreate indexes
+          this.db.executeSync('CREATE INDEX idx_memories_category ON memories(category);');
+          this.db.executeSync('CREATE INDEX idx_memories_importance ON memories(importance DESC);');
+          this.db.executeSync('CREATE INDEX idx_memories_created_at ON memories(created_at DESC);');
+
+          console.log('[Database] Table recreated with TEXT embedding (old BLOB embeddings dropped)');
+        } else {
+          console.log('[Database] Embedding is already TEXT or newly created');
+        }
+
+        // Update schema version
+        this.db.executeSync('UPDATE schema_version SET version = 3, applied_at = ?;', [Date.now()]);
+        console.log('[Database] Migration 2 -> 3 completed');
+      } catch (error) {
+        console.error('[Database] Migration 2 -> 3 failed:', error);
+        throw error;
+      }
+    }
+
+    console.log('[Database] All migrations completed');
+  }
+
+  /**
    * Initialize with default data
    */
   private static async initializeDefaultData(): Promise<void> {
@@ -276,19 +374,47 @@ export class DatabaseService {
   // ============== VECTOR UTILITIES ==============
 
   /**
-   * Convert Float32Array or number[] to Uint8Array for SQLite storage
+   * Convert Float32Array or number[] to base64 TEXT for SQLite storage
+   * NOTE: Using TEXT instead of BLOB due to op-sqlite BLOB bugs
    */
-  private static vectorToBlob(vector: number[] | Float32Array): Uint8Array {
+  private static vectorToBase64(vector: number[] | Float32Array): string {
     const float32Array = vector instanceof Float32Array ? vector : new Float32Array(vector);
-    return new Uint8Array(float32Array.buffer);
+    const uint8Array = new Uint8Array(float32Array.buffer);
+
+    // Convert to base64
+    let binary = '';
+    const len = uint8Array.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    return btoa(binary);
   }
 
   /**
-   * Convert Uint8Array from SQLite to number array
+   * Convert base64 TEXT from SQLite to number array
    */
-  private static blobToVector(blob: Uint8Array): number[] {
-    const float32Array = new Float32Array(blob.buffer, blob.byteOffset, blob.length / 4);
-    return Array.from(float32Array);
+  private static base64ToVector(base64: string): number[] {
+    if (!base64 || typeof base64 !== 'string') {
+      return [];
+    }
+
+    try {
+      // Decode base64 to binary string
+      const binary = atob(base64);
+      const len = binary.length;
+      const uint8Array = new Uint8Array(len);
+
+      for (let i = 0; i < len; i++) {
+        uint8Array[i] = binary.charCodeAt(i);
+      }
+
+      // Convert to Float32Array
+      const float32Array = new Float32Array(uint8Array.buffer);
+      return Array.from(float32Array);
+    } catch (error) {
+      console.error('[Database] base64ToVector error:', error);
+      return [];
+    }
   }
 
   /**
@@ -297,7 +423,15 @@ export class DatabaseService {
    */
   private static cosineSimilarity(vecA: number[], vecB: number[]): number {
     if (vecA.length !== vecB.length) {
-      throw new Error('Vectors must have same dimensions');
+      console.error(
+        `[Database] Vector dimension mismatch: ${vecA.length}D vs ${vecB.length}D. ` +
+        `This means you have embeddings from different models in your database. ` +
+        `Clear your database and reload test data with the current embedding model.`
+      );
+      throw new Error(
+        `Vectors must have same dimensions (${vecA.length}D vs ${vecB.length}D). ` +
+        `Clear database and reload with current model.`
+      );
     }
 
     let dotProduct = 0;
@@ -327,12 +461,17 @@ export class DatabaseService {
 
     let result;
     if (embedding) {
-      const embeddingBlob = this.vectorToBlob(embedding);
+      console.log(`[Database] Saving memory WITH embedding (${embedding.length}D)...`);
+      const embeddingBase64 = this.vectorToBase64(embedding);
+      console.log(`[Database] Converted to base64: ${embeddingBase64.length} chars`);
+
       result = this.db.executeSync(
         'INSERT INTO memories (content, category, importance, created_at, metadata, embedding) VALUES (?, ?, ?, ?, ?, ?);',
-        [content, category, importance, now, JSON.stringify(metadata || {}), embeddingBlob]
+        [content, category, importance, now, JSON.stringify(metadata || {}), embeddingBase64]
       );
+      console.log(`[Database] Inserted with ID: ${result.insertId}`);
     } else {
+      console.log(`[Database] Saving memory WITHOUT embedding...`);
       result = this.db.executeSync(
         'INSERT INTO memories (content, category, importance, created_at, metadata) VALUES (?, ?, ?, ?, ?);',
         [content, category, importance, now, JSON.stringify(metadata || {})]
@@ -340,12 +479,22 @@ export class DatabaseService {
     }
 
     const insertId = result.insertId;
-    const selectResult = this.db.executeSync('SELECT * FROM memories WHERE id = ?;', [insertId]);
+
+    // NOTE: op-sqlite has issues with BLOB columns in SELECT *
+    // We need to avoid selecting the BLOB, then attach the embedding we just saved
+    const selectResult = this.db.executeSync(
+      'SELECT id, content, category, importance, created_at, updated_at, metadata FROM memories WHERE id = ?;',
+      [insertId]
+    );
     const memory = selectResult.rows?.[0];
 
-    // Convert embedding blob to array if present
-    if (memory.embedding) {
-      memory.embedding = this.blobToVector(memory.embedding);
+    console.log(`[Database] Retrieved memory ${insertId} (without BLOB)`);
+
+    // If we had an embedding, attach it back from our original data
+    // (Since we just inserted it, we know what it was)
+    if (embedding) {
+      memory.embedding = Array.isArray(embedding) ? embedding : Array.from(embedding);
+      console.log(`[Database] Attached original embedding: ${memory.embedding.length}D`);
     }
 
     console.log(`[Database] Saved archive memory: ${content.substring(0, 50)}...`);
@@ -398,8 +547,8 @@ export class DatabaseService {
    * Update embedding for an existing memory
    */
   static async updateMemoryEmbedding(id: number, embedding: number[] | Float32Array): Promise<void> {
-    const embeddingBlob = this.vectorToBlob(embedding);
-    this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBlob, id]);
+    const embeddingBase64 = this.vectorToBlob(embedding);
+    this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBase64, id]);
     console.log(`[Database] Updated embedding for memory ${id}`);
   }
 
@@ -412,29 +561,73 @@ export class DatabaseService {
     limit: number = 5,
     minSimilarity: number = 0.0
   ): Promise<Array<ArchiveMemory & {similarity: number}>> {
+    // Debug: Check total memories and those with embeddings
+    const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
+    const totalCount = totalResult.rows?.[0]?.count || 0;
+    console.log(`[Database] Total memories in DB: ${totalCount}`);
+
+    const withEmbedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
+    const withEmbedCount = withEmbedResult.rows?.[0]?.count || 0;
+    console.log(`[Database] Memories with non-empty embeddings: ${withEmbedCount}`);
+
     // Get all memories with embeddings
-    const result = this.db.executeSync('SELECT * FROM memories WHERE embedding IS NOT NULL;');
+    const result = this.db.executeSync('SELECT id, content, category, importance, created_at, updated_at, metadata, embedding FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
     const memories = result.rows || [];
+
+    console.log(`[Database] Vector search: Found ${memories.length} memories with embeddings`);
+
+    if (memories.length === 0) {
+      console.log(`[Database] No memories with embeddings found`);
+      return [];
+    }
 
     // Convert query to array if needed
     const queryVector = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
+    console.log(`[Database] Query vector dimensions: ${queryVector.length}D`);
 
     // Calculate similarity for each memory
     const memoriesWithSimilarity = memories
-      .map((memory: any) => {
-        const embedding = this.blobToVector(memory.embedding);
+      .map((memory: any, index: number) => {
+        if (!memory.embedding) {
+          console.warn(`[Database] Memory ${memory.id} has NULL embedding despite WHERE clause!`);
+          return null;
+        }
+
+        // Convert base64 string to vector
+        const embedding = this.base64ToVector(memory.embedding);
+
+        // Debug first embedding
+        if (index === 0) {
+          console.log(`[Database] First memory embedding: base64 string (${memory.embedding.length} chars) -> ${embedding.length}D vector`);
+        }
+
+        if (embedding.length === 0) {
+          console.error(`[Database] Memory ${memory.id} has 0D embedding after conversion!`);
+          return null;
+        }
+
         const similarity = this.cosineSimilarity(queryVector, embedding);
+
+        // Log first few similarities for debugging
+        if (index < 3) {
+          console.log(`[Database] Memory ${memory.id} similarity: ${similarity.toFixed(4)}, content: "${memory.content.substring(0, 50)}..."`);
+        }
+
         return {
           ...memory,
           embedding, // Convert to array for return
           similarity,
         };
       })
-      .filter((m: any) => m.similarity >= minSimilarity)
+      .filter((m: any) => m !== null && m.similarity >= minSimilarity)
       .sort((a: any, b: any) => b.similarity - a.similarity)
       .slice(0, limit);
 
     console.log(`[Database] Vector search found ${memoriesWithSimilarity.length} results`);
+    if (memoriesWithSimilarity.length > 0) {
+      console.log(`[Database] Top result: similarity=${memoriesWithSimilarity[0].similarity.toFixed(4)}, content="${memoriesWithSimilarity[0].content.substring(0, 50)}..."`);
+      console.log(`[Database] Last result: similarity=${memoriesWithSimilarity[memoriesWithSimilarity.length - 1].similarity.toFixed(4)}`);
+    }
     return memoriesWithSimilarity;
   }
 
@@ -468,7 +661,7 @@ export class DatabaseService {
         // Check if embedding is already an array or needs conversion
         const embedding = Array.isArray(memory.embedding)
           ? memory.embedding
-          : this.blobToVector(memory.embedding);
+          : this.base64ToVector(memory.embedding);
         const similarity = this.cosineSimilarity(queryVector, embedding);
         return {...memory, embedding, similarity, source: 'hybrid' as const};
       })
@@ -480,9 +673,15 @@ export class DatabaseService {
   }
 
   /**
-   * Get count of memories with embeddings
+   * Get count of memories with embeddings and dimension info
    */
-  static async getEmbeddingStats(): Promise<{total: number; withEmbeddings: number; percentage: number}> {
+  static async getEmbeddingStats(): Promise<{
+    total: number;
+    withEmbeddings: number;
+    percentage: number;
+    dimensions: number | null;
+    dimensionMismatch: boolean;
+  }> {
     const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
     const embeddedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL;');
 
@@ -490,7 +689,35 @@ export class DatabaseService {
     const withEmbeddings = embeddedResult.rows?.[0]?.count || 0;
     const percentage = total > 0 ? (withEmbeddings / total) * 100 : 0;
 
-    return {total, withEmbeddings, percentage};
+    // Check dimensions of existing embeddings
+    let dimensions: number | null = null;
+    let dimensionMismatch = false;
+
+    if (withEmbeddings > 0) {
+      const sampleResult = this.db.executeSync(
+        'SELECT embedding FROM memories WHERE embedding IS NOT NULL LIMIT 10;'
+      );
+      const samples = sampleResult.rows || [];
+
+      if (samples.length > 0) {
+        const dims = new Set<number>();
+        for (const sample of samples) {
+          if (sample.embedding) {
+            const vec = this.base64ToVector(sample.embedding);
+            dims.add(vec.length);
+          }
+        }
+
+        if (dims.size > 1) {
+          dimensionMismatch = true;
+          console.warn(`[Database] Found embeddings with different dimensions: ${Array.from(dims).join(', ')}D`);
+        }
+
+        dimensions = Array.from(dims)[0] || null;
+      }
+    }
+
+    return {total, withEmbeddings, percentage, dimensions, dimensionMismatch};
   }
 
   static async updateArchiveMemory(id: number, updates: Partial<ArchiveMemory>): Promise<ArchiveMemory | null> {
@@ -533,6 +760,14 @@ export class DatabaseService {
     const result = this.db.executeSync('DELETE FROM memories WHERE id = ?;', [id]);
     console.log(`[Database] Deleted archive memory ${id}`);
     return result.rowsAffected > 0;
+  }
+
+  /**
+   * Clear all archive memories (useful when switching embedding models)
+   */
+  static async clearAllMemories(): Promise<void> {
+    this.db.executeSync('DELETE FROM memories;');
+    console.log('[Database] Cleared all archive memories');
   }
 
   // ============== TASK OPERATIONS ==============
@@ -769,6 +1004,18 @@ export class DatabaseService {
     this.db.executeSync('DELETE FROM conversations;');
     this.db.executeSync('DELETE FROM user_facts;');
     console.log('[Database] Database cleared');
+  }
+
+  /**
+   * Manually run migrations (useful for development)
+   */
+  static async migrate(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Database not initialized. Call initialize() first.');
+    }
+    console.log('[Database] Running migrations manually...');
+    await this.runMigrations();
+    console.log('[Database] Manual migration completed');
   }
 
   static async getStats() {

@@ -7,6 +7,9 @@
 import {Tool} from '../types';
 import MemoryService from './MemoryService';
 import {DatabaseProxy} from './DatabaseProxy';
+import {LlamaService} from './LlamaService';
+import {DatabaseService} from './DatabaseService';
+import {Logger} from '../utils/Logger';
 
 export class LettaMemoryTools {
   /**
@@ -247,6 +250,13 @@ export class LettaMemoryTools {
           required: true,
         },
         {
+          name: 'search_type',
+          type: 'string',
+          description:
+            'Search method: "vector" for pure semantic search (most accurate), "hybrid" for keyword+semantic (balanced), "keyword" for text matching. Defaults to "vector" if embedding model loaded.',
+          required: false,
+        },
+        {
           name: 'tags',
           type: 'array',
           description:
@@ -263,13 +273,29 @@ export class LettaMemoryTools {
       ],
       execute: async (args: Record<string, any>) => {
         try {
-          const {query, tags = [], top_k = 5} = args;
+          const {query, search_type = 'vector', tags = [], top_k = 5} = args;
 
-          // Search archive
-          let memories = await DatabaseProxy.searchArchive(
-            query,
-            top_k
-          );
+          Logger.info(`[MemoryTool] archival_memory_search query: "${query}", type: ${search_type}`);
+
+          let memories: any[];
+
+          // Use semantic search if embedding model is loaded
+          if (LlamaService.isEmbeddingModelLoaded() && (search_type === 'vector' || search_type === 'hybrid')) {
+            const queryEmbedding = await LlamaService.generateEmbedding(query);
+
+            if (search_type === 'vector') {
+              Logger.info(`[MemoryTool] Using VECTOR SEARCH (pure semantic) for: "${query}"`);
+              memories = await DatabaseService.searchByVector(queryEmbedding, top_k);
+            } else {
+              Logger.info(`[MemoryTool] Using HYBRID SEARCH (keyword+semantic) for: "${query}"`);
+              memories = await DatabaseService.searchHybrid(query, queryEmbedding, top_k);
+            }
+            Logger.info(`[MemoryTool] Found ${memories.length} results via ${search_type} search`);
+          } else {
+            Logger.info(`[MemoryTool] Using KEYWORD SEARCH for: "${query}"`);
+            memories = await DatabaseProxy.searchArchive(query, top_k);
+            Logger.info(`[MemoryTool] Found ${memories.length} results via keyword search`);
+          }
 
           // Filter by tags if provided
           if (tags.length > 0) {
@@ -305,6 +331,7 @@ export class LettaMemoryTools {
                 importance: m.importance,
                 created_at: new Date(m.created_at).toISOString(),
                 tags: metadata.tags || [],
+                similarity: m.similarity, // Include similarity score if available
               };
             }),
           };
