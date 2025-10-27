@@ -781,25 +781,27 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     // FIRST: Try XML self-closing tag format (8B model native format)
     // Example: <archival_memory_insert content="text" tags=["tag1", "tag2"] />
     // Also supports parameterless: <get_current_datetime />
-    const xmlPattern = /<([\w_]+)(?:\s+([^/>]+))?\s*\/>/;
+    // Match everything between <tool_name and />, handling paths with slashes
+    const xmlPattern = /<([\w_]+)((?:\s+[\w_]+\s*=\s*(?:"[^"]*"|'[^']*'|\[[^\]]*\]))*)\s*\/>/;
     const xmlMatch = xmlPattern.exec(text);
 
     if (xmlMatch) {
       const functionName = xmlMatch[1];
-      const attrsString = xmlMatch[2]; // May be undefined for parameterless tools
+      const attrsString = xmlMatch[2]; // May be undefined/empty for parameterless tools
       Logger.debug('✅ Found XML format tool:', functionName);
       Logger.debug('Attributes string:', attrsString || '(none)');
 
       // Parse XML attributes (if any)
       const args: Record<string, any> = {};
-      if (attrsString) {
+      if (attrsString && attrsString.trim()) {
         // Match: attr="value" or attr=["array", "items"]
+        // The pattern now handles values with slashes, quotes, etc.
         const attrPattern = /([\w_]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|\[([^\]]*)\])/g;
         let attrMatch;
         while ((attrMatch = attrPattern.exec(attrsString)) !== null) {
           const key = attrMatch[1];
           if (attrMatch[2] !== undefined) {
-            // Double-quoted string
+            // Double-quoted string (handles paths with / like "Books/File.md")
             args[key] = attrMatch[2];
           } else if (attrMatch[3] !== undefined) {
             // Single-quoted string
