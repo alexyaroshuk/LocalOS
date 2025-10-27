@@ -32,6 +32,11 @@ export class ToolService {
     this.registerTool(this.getReadVaultFileTool());
     this.registerTool(this.getSearchVaultTool());
 
+    // Register vault write tools
+    this.registerTool(this.getSuggestJournalEntryTool());
+    this.registerTool(this.getSaveVaultFileTool());
+    this.registerTool(this.getUpdateVaultFileTool());
+
     this.initialized = true;
     console.log(`ToolService initialized with ${this.tools.size} tools`);
   }
@@ -665,6 +670,188 @@ export class ToolService {
           return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to search vault',
+          };
+        }
+      },
+    };
+  }
+
+  // ============== VAULT WRITE TOOLS ==============
+
+  /**
+   * Tool: suggest_journal_entry
+   * Analyze user's daily update and propose a structured journal entry
+   */
+  private static getSuggestJournalEntryTool(): Tool {
+    return {
+      name: 'suggest_journal_entry',
+      description:
+        'When the user shares about their day, activities, thoughts, or experiences, use this tool to propose a structured journal entry. Analyzes the content and creates a well-formatted markdown note with sections for books, work, meals, events, etc.',
+      parameters: [
+        {
+          name: 'date',
+          type: 'string',
+          description: 'The date for the journal entry (YYYY-MM-DD format)',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'The structured markdown content for the journal entry',
+          required: true,
+        },
+        {
+          name: 'folder',
+          type: 'string',
+          description: 'The folder path where the entry should be saved (e.g., "Personal/Journal/2024")',
+          required: false,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const date = args.date as string;
+          const content = args.content as string;
+          const folder = (args.folder as string) || 'Personal/Journal';
+
+          // Extract year from date for folder organization
+          const year = date.substring(0, 4);
+          const folderPath = `${folder}/${year}`;
+          const fileName = `${date}.md`;
+
+          return {
+            success: true,
+            proposal: {
+              title: fileName,
+              folder: folderPath,
+              relativePath: `${folderPath}/${fileName}`,
+              content,
+              date,
+            },
+            message: 'Journal entry proposal created. Review and save when ready.',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create proposal',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: save_vault_file
+   * Save a new file to the vault
+   */
+  private static getSaveVaultFileTool(): Tool {
+    return {
+      name: 'save_vault_file',
+      description:
+        'Save a new markdown file to the vault. Creates the file and any necessary parent directories.',
+      parameters: [
+        {
+          name: 'path',
+          type: 'string',
+          description: 'The relative path where to save the file (e.g., "Personal/Journal/2024/2024-10-28.md")',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'The markdown content to write to the file',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const relativePath = args.path as string;
+          const content = args.content as string;
+
+          const vaultFile = await VaultService.writeFile(relativePath, content);
+
+          return {
+            success: true,
+            file: {
+              name: vaultFile.basename,
+              path: vaultFile.relativePath,
+              size: vaultFile.size,
+            },
+            message: `File saved successfully: ${vaultFile.relativePath}`,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to save file',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: update_vault_file
+   * Update an existing file in the vault
+   */
+  private static getUpdateVaultFileTool(): Tool {
+    return {
+      name: 'update_vault_file',
+      description:
+        'Update an existing markdown file in the vault with new content.',
+      parameters: [
+        {
+          name: 'path',
+          type: 'string',
+          description: 'The relative path of the file to update',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'The new markdown content',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const relativePath = args.path as string;
+          const content = args.content as string;
+
+          const vaultFile = await VaultService.updateFile(relativePath, content);
+
+          return {
+            success: true,
+            file: {
+              name: vaultFile.basename,
+              path: vaultFile.relativePath,
+              size: vaultFile.size,
+            },
+            message: `File updated successfully: ${vaultFile.relativePath}`,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to update file',
           };
         }
       },
