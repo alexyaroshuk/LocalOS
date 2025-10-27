@@ -72,6 +72,42 @@ const TEST_PROMPTS = [
       'Search for my credentials',
     ],
   },
+  {
+    category: 'Vault - Structure (Should Use Tools)',
+    prompts: [
+      'What folders are in my vault?',
+      'Show me the vault structure',
+      'What files are in the Learning folder?',
+      'List all my notes',
+    ],
+  },
+  {
+    category: 'Vault - File Location (Should Use Tools)',
+    prompts: [
+      'Where is Vector Search.md located?',
+      'Which folder contains LocalOS.md?',
+      'What files are in the Projects folder?',
+      'List files in Learning',
+    ],
+  },
+  {
+    category: 'Vault - Read Content (Should Use Tools)',
+    prompts: [
+      'Read Vector Search.md',
+      'What does LocalOS.md contain?',
+      'Show me the content of Preferences.md',
+      'Read Learning/Vector Search.md',
+    ],
+  },
+  {
+    category: 'Vault - Search (Should Use Tools)',
+    prompts: [
+      'Search vault for "embeddings"',
+      'Find notes about React Native',
+      'Search for "cosine similarity"',
+      'Find all notes with "AI" in them',
+    ],
+  },
 ];
 
 export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({

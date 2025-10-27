@@ -21,13 +21,14 @@ import {ModelsScreen} from './src/screens/ModelsScreen';
 import {ToolTestScreen} from './src/screens/ToolTestScreen';
 import {MemoryViewerScreen} from './src/screens/MemoryViewerScreen';
 import {VectorSearchTestScreen} from './src/screens/VectorSearchTestScreen';
+import {VaultBrowserScreen} from './src/screens/VaultBrowserScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
 
-type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector';
+type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault';
 
 function App() {
   return (
@@ -151,6 +152,12 @@ function AppContent() {
             <VectorSearchTestScreen />
           </View>
         )}
+
+        {currentScreen === 'vault' && (
+          <View style={styles.screenContainer}>
+            <VaultBrowserScreen />
+          </View>
+        )}
       </View>
 
       {/* Bottom Navigation */}
@@ -227,6 +234,21 @@ function AppContent() {
               currentScreen === 'vector' && styles.navButtonTextActive,
             ]}>
             Vector
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'vault' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('vault')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'vault' && styles.navButtonTextActive,
+            ]}>
+            Vault
           </Text>
         </TouchableOpacity>
       </View>
