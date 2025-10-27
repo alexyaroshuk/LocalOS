@@ -9,59 +9,8 @@ import type {
   ArchiveMemory,
   Task,
   ConversationSummary,
+  UserFact,
 } from './MockDatabaseService';
-
-// React Native compatible base64 encoding/decoding
-// Simple implementation without external dependencies
-const btoa = (str: string): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let output = '';
-
-  for (let i = 0; i < str.length; i += 3) {
-    const byte1 = str.charCodeAt(i);
-    const byte2 = i + 1 < str.length ? str.charCodeAt(i + 1) : 0;
-    const byte3 = i + 2 < str.length ? str.charCodeAt(i + 2) : 0;
-
-    const enc1 = byte1 >> 2;
-    const enc2 = ((byte1 & 3) << 4) | (byte2 >> 4);
-    const enc3 = ((byte2 & 15) << 2) | (byte3 >> 6);
-    const enc4 = byte3 & 63;
-
-    if (i + 1 >= str.length) {
-      output += chars.charAt(enc1) + chars.charAt(enc2) + '==';
-    } else if (i + 2 >= str.length) {
-      output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + '=';
-    } else {
-      output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + chars.charAt(enc4);
-    }
-  }
-
-  return output;
-};
-
-const atob = (str: string): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let output = '';
-
-  str = str.replace(/=+$/, '');
-
-  for (let i = 0; i < str.length; i += 4) {
-    const enc1 = chars.indexOf(str.charAt(i));
-    const enc2 = chars.indexOf(str.charAt(i + 1));
-    const enc3 = chars.indexOf(str.charAt(i + 2));
-    const enc4 = chars.indexOf(str.charAt(i + 3));
-
-    const byte1 = (enc1 << 2) | (enc2 >> 4);
-    const byte2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-    const byte3 = ((enc3 & 3) << 6) | enc4;
-
-    output += String.fromCharCode(byte1);
-    if (enc3 !== 64) output += String.fromCharCode(byte2);
-    if (enc4 !== 64) output += String.fromCharCode(byte3);
-  }
-
-  return output;
-};
 
 // Re-export types for external use
 export type {
@@ -69,6 +18,7 @@ export type {
   ArchiveMemory,
   Task,
   ConversationSummary,
+  UserFact,
 };
 
 /**
@@ -234,90 +184,24 @@ export class DatabaseService {
 
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_conversations_date ON conversations(date DESC);');
 
-    // ============== KNOWLEDGE SYSTEM TABLES ==============
-    // Flexible, Obsidian-style knowledge management
-
-    // Folders table - stores folder paths and optional schemas
+    // User facts table
     this.db.executeSync(`
-      CREATE TABLE IF NOT EXISTS folders (
+      CREATE TABLE IF NOT EXISTS user_facts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT NOT NULL UNIQUE,
-        schema TEXT,
-        created_at INTEGER NOT NULL
+        category TEXT NOT NULL,
+        fact TEXT NOT NULL,
+        confidence REAL NOT NULL DEFAULT 0.5,
+        source_conversation_id INTEGER,
+        last_confirmed INTEGER NOT NULL,
+        CHECK (category IN ('preference', 'habit', 'personality', 'relationship')),
+        CHECK (confidence >= 0.0 AND confidence <= 1.0),
+        FOREIGN KEY (source_conversation_id) REFERENCES conversations(id) ON DELETE SET NULL
       );
     `);
 
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);');
-
-    // Knowledge entries table - replaces rigid "memories" with flexible entries
-    this.db.executeSync(`
-      CREATE TABLE IF NOT EXISTS knowledge (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        folder_path TEXT NOT NULL,
-        name TEXT NOT NULL UNIQUE,
-        content TEXT NOT NULL,
-        properties TEXT,
-        embedding TEXT,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER,
-        FOREIGN KEY (folder_path) REFERENCES folders(path) ON DELETE CASCADE
-      );
-    `);
-
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_knowledge_folder_path ON knowledge(folder_path);');
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_knowledge_name ON knowledge(name);');
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_knowledge_created_at ON knowledge(created_at DESC);');
-
-    // FTS5 for knowledge full-text search
-    try {
-      this.db.executeSync(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
-          content,
-          content=knowledge,
-          content_rowid=id
-        );
-      `);
-
-      // Triggers to keep FTS index in sync
-      this.db.executeSync(`
-        CREATE TRIGGER IF NOT EXISTS knowledge_ai AFTER INSERT ON knowledge BEGIN
-          INSERT INTO knowledge_fts(rowid, content) VALUES (new.id, new.content);
-        END;
-      `);
-
-      this.db.executeSync(`
-        CREATE TRIGGER IF NOT EXISTS knowledge_ad AFTER DELETE ON knowledge BEGIN
-          DELETE FROM knowledge_fts WHERE rowid = old.id;
-        END;
-      `);
-
-      this.db.executeSync(`
-        CREATE TRIGGER IF NOT EXISTS knowledge_au AFTER UPDATE ON knowledge BEGIN
-          UPDATE knowledge_fts SET content = new.content WHERE rowid = old.id;
-        END;
-      `);
-
-      console.log('[Database] Knowledge FTS5 full-text search enabled');
-    } catch {
-      console.warn('[Database] Knowledge FTS5 not available, using LIKE search fallback');
-    }
-
-    // Links table - bidirectional links between knowledge entries
-    this.db.executeSync(`
-      CREATE TABLE IF NOT EXISTS links (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        from_id INTEGER NOT NULL,
-        to_id INTEGER NOT NULL,
-        link_text TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        FOREIGN KEY (from_id) REFERENCES knowledge(id) ON DELETE CASCADE,
-        FOREIGN KEY (to_id) REFERENCES knowledge(id) ON DELETE CASCADE
-      );
-    `);
-
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_links_from_id ON links(from_id);');
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_links_to_id ON links(to_id);');
-    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_links_both ON links(from_id, to_id);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_user_facts_category ON user_facts(category);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_user_facts_confidence ON user_facts(confidence DESC);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_user_facts_last_confirmed ON user_facts(last_confirmed DESC);');
 
     console.log('[Database] Tables created successfully');
   }
@@ -663,7 +547,7 @@ export class DatabaseService {
    * Update embedding for an existing memory
    */
   static async updateMemoryEmbedding(id: number, embedding: number[] | Float32Array): Promise<void> {
-    const embeddingBase64 = this.vectorToBase64(embedding);
+    const embeddingBase64 = this.vectorToBlob(embedding);
     this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBase64, id]);
     console.log(`[Database] Updated embedding for memory ${id}`);
   }
@@ -798,56 +682,39 @@ export class DatabaseService {
     dimensions: number | null;
     dimensionMismatch: boolean;
   }> {
-    // Count both memories (archive) and knowledge tables
-    const memoryTotalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
-    const memoryEmbeddedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL;');
+    const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
+    const embeddedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL;');
 
-    const knowledgeTotalResult = this.db.executeSync('SELECT COUNT(*) as count FROM knowledge;');
-    const knowledgeEmbeddedResult = this.db.executeSync('SELECT COUNT(*) as count FROM knowledge WHERE embedding IS NOT NULL;');
-
-    const total = (memoryTotalResult.rows?.[0]?.count || 0) + (knowledgeTotalResult.rows?.[0]?.count || 0);
-    const withEmbeddings = (memoryEmbeddedResult.rows?.[0]?.count || 0) + (knowledgeEmbeddedResult.rows?.[0]?.count || 0);
+    const total = totalResult.rows?.[0]?.count || 0;
+    const withEmbeddings = embeddedResult.rows?.[0]?.count || 0;
     const percentage = total > 0 ? (withEmbeddings / total) * 100 : 0;
 
-    // Check dimensions of existing embeddings from both tables
+    // Check dimensions of existing embeddings
     let dimensions: number | null = null;
     let dimensionMismatch = false;
 
     if (withEmbeddings > 0) {
-      const dims = new Set<number>();
-
-      // Check memories table
-      const memorySampleResult = this.db.executeSync(
-        'SELECT embedding FROM memories WHERE embedding IS NOT NULL LIMIT 5;'
+      const sampleResult = this.db.executeSync(
+        'SELECT embedding FROM memories WHERE embedding IS NOT NULL LIMIT 10;'
       );
-      const memorySamples = memorySampleResult.rows || [];
+      const samples = sampleResult.rows || [];
 
-      for (const sample of memorySamples) {
-        if (sample.embedding) {
-          const vec = this.base64ToVector(sample.embedding);
-          dims.add(vec.length);
+      if (samples.length > 0) {
+        const dims = new Set<number>();
+        for (const sample of samples) {
+          if (sample.embedding) {
+            const vec = this.base64ToVector(sample.embedding);
+            dims.add(vec.length);
+          }
         }
-      }
 
-      // Check knowledge table
-      const knowledgeSampleResult = this.db.executeSync(
-        'SELECT embedding FROM knowledge WHERE embedding IS NOT NULL LIMIT 5;'
-      );
-      const knowledgeSamples = knowledgeSampleResult.rows || [];
-
-      for (const sample of knowledgeSamples) {
-        if (sample.embedding) {
-          const vec = this.base64ToVector(sample.embedding);
-          dims.add(vec.length);
+        if (dims.size > 1) {
+          dimensionMismatch = true;
+          console.warn(`[Database] Found embeddings with different dimensions: ${Array.from(dims).join(', ')}D`);
         }
-      }
 
-      if (dims.size > 1) {
-        dimensionMismatch = true;
-        console.warn(`[Database] Found embeddings with different dimensions: ${Array.from(dims).join(', ')}D`);
+        dimensions = Array.from(dims)[0] || null;
       }
-
-      dimensions = Array.from(dims)[0] || null;
     }
 
     return {total, withEmbeddings, percentage, dimensions, dimensionMismatch};
@@ -1045,6 +912,89 @@ export class DatabaseService {
     return result.rows || [];
   }
 
+  // ============== USER FACTS OPERATIONS ==============
+
+  static async saveUserFact(
+    category: UserFact['category'],
+    fact: string,
+    confidence: number,
+    sourceConversationId?: number
+  ): Promise<UserFact> {
+    const result = this.db.executeSync(
+      'INSERT INTO user_facts (category, fact, confidence, source_conversation_id, last_confirmed) VALUES (?, ?, ?, ?, ?);',
+      [category, fact, confidence, sourceConversationId || null, Date.now()]
+    );
+
+    const insertId = result.insertId;
+    const selectResult = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [insertId]);
+    const userFact = selectResult.rows?.[0];
+    console.log(`[Database] Saved user fact: ${fact.substring(0, 50)}...`);
+    return userFact;
+  }
+
+  static async getUserFactsByCategory(category: UserFact['category']): Promise<UserFact[]> {
+    const result = this.db.executeSync(
+      'SELECT * FROM user_facts WHERE category = ? ORDER BY confidence DESC;',
+      [category]
+    );
+    return result.rows || [];
+  }
+
+  static async getAllUserFacts(): Promise<UserFact[]> {
+    const result = this.db.executeSync('SELECT * FROM user_facts ORDER BY confidence DESC;');
+    return result.rows || [];
+  }
+
+  static async updateUserFactConfidence(id: number, confidence: number): Promise<UserFact | null> {
+    this.db.executeSync(
+      'UPDATE user_facts SET confidence = ?, last_confirmed = ? WHERE id = ?;',
+      [confidence, Date.now(), id]
+    );
+
+    const result = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [id]);
+    const fact = result.rows?.[0];
+    console.log(`[Database] Updated user fact confidence: ${fact?.fact?.substring(0, 50)}...`);
+    return fact || null;
+  }
+
+  static async updateUserFact(id: number, updates: Partial<UserFact>): Promise<UserFact | null> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.category !== undefined) {
+      fields.push('category = ?');
+      values.push(updates.category);
+    }
+    if (updates.fact !== undefined) {
+      fields.push('fact = ?');
+      values.push(updates.fact);
+    }
+    if (updates.confidence !== undefined) {
+      fields.push('confidence = ?');
+      values.push(updates.confidence);
+    }
+
+    fields.push('last_confirmed = ?');
+    values.push(Date.now());
+    values.push(id);
+
+    if (fields.length > 1) {
+      this.db.executeSync(`UPDATE user_facts SET ${fields.join(', ')} WHERE id = ?;`, values);
+      console.log(`[Database] Updated user fact: ${id}`);
+
+      const result = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [id]);
+      return result.rows?.[0] || null;
+    }
+
+    return null;
+  }
+
+  static async deleteUserFact(id: number): Promise<boolean> {
+    const result = this.db.executeSync('DELETE FROM user_facts WHERE id = ?;', [id]);
+    console.log(`[Database] Deleted user fact ${id}`);
+    return result.rowsAffected > 0;
+  }
+
   // ============== UTILITY ==============
 
   static async clear(): Promise<void> {
@@ -1052,9 +1002,7 @@ export class DatabaseService {
     this.db.executeSync('DELETE FROM memories;');
     this.db.executeSync('DELETE FROM tasks;');
     this.db.executeSync('DELETE FROM conversations;');
-    this.db.executeSync('DELETE FROM knowledge;');
-    this.db.executeSync('DELETE FROM folders;');
-    this.db.executeSync('DELETE FROM links;');
+    this.db.executeSync('DELETE FROM user_facts;');
     console.log('[Database] Database cleared');
   }
 
@@ -1075,18 +1023,14 @@ export class DatabaseService {
     const memories = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
     const tasks = this.db.executeSync('SELECT COUNT(*) as count FROM tasks;');
     const conversations = this.db.executeSync('SELECT COUNT(*) as count FROM conversations;');
-    const knowledge = this.db.executeSync('SELECT COUNT(*) as count FROM knowledge;');
-    const folders = this.db.executeSync('SELECT COUNT(*) as count FROM folders;');
-    const links = this.db.executeSync('SELECT COUNT(*) as count FROM links;');
+    const userFacts = this.db.executeSync('SELECT COUNT(*) as count FROM user_facts;');
 
     return {
       coreMemoryBlocks: coreMemory.rows?.[0]?.count || 0,
       archiveMemories: memories.rows?.[0]?.count || 0,
       tasks: tasks.rows?.[0]?.count || 0,
       conversations: conversations.rows?.[0]?.count || 0,
-      knowledgeEntries: knowledge.rows?.[0]?.count || 0,
-      folders: folders.rows?.[0]?.count || 0,
-      links: links.rows?.[0]?.count || 0,
+      userFacts: userFacts.rows?.[0]?.count || 0,
     };
   }
 
@@ -1097,358 +1041,5 @@ export class DatabaseService {
       this.initialized = false;
       console.log('[Database] Database closed');
     }
-  }
-
-  // ============== KNOWLEDGE SYSTEM OPERATIONS ==============
-
-  /**
-   * Create or update folder
-   */
-  static async createFolder(path: string, schema?: Record<string, any>): Promise<void> {
-    const now = Date.now();
-    this.db.executeSync(
-      'INSERT INTO folders (path, schema, created_at) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET schema = ?;',
-      [path, JSON.stringify(schema || {}), now, JSON.stringify(schema || {})]
-    );
-    console.log(`[Database] Created/updated folder: ${path}`);
-  }
-
-  /**
-   * Get folder by path
-   */
-  static async getFolder(path: string): Promise<any | null> {
-    const result = this.db.executeSync('SELECT * FROM folders WHERE path = ?;', [path]);
-    return result.rows?.[0] || null;
-  }
-
-  /**
-   * List all folders
-   */
-  static async listFolders(parentPath?: string): Promise<any[]> {
-    if (parentPath) {
-      const result = this.db.executeSync(
-        'SELECT * FROM folders WHERE path LIKE ? ORDER BY path;',
-        [`${parentPath}/%`]
-      );
-      return result.rows || [];
-    }
-    const result = this.db.executeSync('SELECT * FROM folders ORDER BY path;');
-    return result.rows || [];
-  }
-
-  /**
-   * Parse path into folder and name
-   * e.g., "archive/favorites/movies/Batman" → {folder: "archive/favorites/movies", name: "Batman"}
-   */
-  private static parsePath(fullPath: string): {folderPath: string; name: string} {
-    const parts = fullPath.split('/');
-    const name = parts.pop() || '';
-    const folderPath = parts.join('/') || 'archive';
-    return {folderPath, name};
-  }
-
-  /**
-   * Create or update knowledge entry
-   */
-  static async createKnowledge(
-    path: string,
-    content: string,
-    properties?: Record<string, any>,
-    embedding?: number[] | Float32Array
-  ): Promise<any> {
-    const {folderPath, name} = this.parsePath(path);
-
-    if (!name) {
-      throw new Error('Knowledge entry must have a name');
-    }
-
-    // Auto-create folder if doesn't exist
-    await this.createFolder(folderPath);
-
-    const now = Date.now();
-
-    // Check if entry already exists
-    const existing = this.db.executeSync('SELECT id FROM knowledge WHERE name = ?;', [name]);
-
-    if (existing.rows && existing.rows.length > 0) {
-      // Update existing entry
-      const id = existing.rows[0].id;
-
-      if (embedding) {
-        const embeddingBase64 = this.vectorToBase64(embedding);
-        this.db.executeSync(
-          'UPDATE knowledge SET folder_path = ?, content = ?, properties = ?, embedding = ?, updated_at = ? WHERE id = ?;',
-          [folderPath, content, JSON.stringify(properties || {}), embeddingBase64, now, id]
-        );
-      } else {
-        this.db.executeSync(
-          'UPDATE knowledge SET folder_path = ?, content = ?, properties = ?, updated_at = ? WHERE id = ?;',
-          [folderPath, content, JSON.stringify(properties || {}), now, id]
-        );
-      }
-
-      console.log(`[Database] Updated knowledge: ${name}`);
-      const result = this.db.executeSync('SELECT * FROM knowledge WHERE id = ?;', [id]);
-      return result.rows?.[0];
-    } else {
-      // Create new entry
-      let result;
-      if (embedding) {
-        const embeddingBase64 = this.vectorToBase64(embedding);
-        result = this.db.executeSync(
-          'INSERT INTO knowledge (folder_path, name, content, properties, embedding, created_at) VALUES (?, ?, ?, ?, ?, ?);',
-          [folderPath, name, content, JSON.stringify(properties || {}), embeddingBase64, now]
-        );
-      } else {
-        result = this.db.executeSync(
-          'INSERT INTO knowledge (folder_path, name, content, properties, created_at) VALUES (?, ?, ?, ?, ?);',
-          [folderPath, name, content, JSON.stringify(properties || {}), now]
-        );
-      }
-
-      const insertId = result.insertId;
-      console.log(`[Database] Created knowledge: ${name} (ID: ${insertId})`);
-
-      // Parse links in content
-      await this.extractAndCreateLinks(insertId, content);
-
-      const selectResult = this.db.executeSync('SELECT * FROM knowledge WHERE id = ?;', [insertId]);
-      return selectResult.rows?.[0];
-    }
-  }
-
-  /**
-   * Extract [[Name]] links from content and create link records
-   */
-  private static async extractAndCreateLinks(fromId: number, content: string): Promise<void> {
-    // Match [[Name]] patterns
-    const linkPattern = /\[\[([^\]]+)\]\]/g;
-    const matches = Array.from(content.matchAll(linkPattern));
-
-    for (const match of matches) {
-      const linkText = match[1];
-
-      // Find knowledge entry by name
-      const result = this.db.executeSync('SELECT id FROM knowledge WHERE name = ?;', [linkText]);
-
-      if (result.rows && result.rows.length > 0) {
-        const toId = result.rows[0].id;
-
-        // Check if link already exists
-        const existingLink = this.db.executeSync(
-          'SELECT id FROM links WHERE from_id = ? AND to_id = ?;',
-          [fromId, toId]
-        );
-
-        if (!existingLink.rows || existingLink.rows.length === 0) {
-          // Create link
-          this.db.executeSync(
-            'INSERT INTO links (from_id, to_id, link_text, created_at) VALUES (?, ?, ?, ?);',
-            [fromId, toId, linkText, Date.now()]
-          );
-          console.log(`[Database] Created link: ${fromId} -> ${toId} (${linkText})`);
-        }
-      }
-    }
-  }
-
-  /**
-   * Get knowledge entry by name
-   */
-  static async getKnowledge(name: string, includeBacklinks: boolean = false): Promise<any | null> {
-    const result = this.db.executeSync('SELECT * FROM knowledge WHERE name = ?;', [name]);
-    const entry = result.rows?.[0] || null;
-
-    if (entry && includeBacklinks) {
-      // Get outgoing links (from this entry)
-      const outgoing = this.db.executeSync(
-        `SELECT k.id, k.name, k.content, l.link_text
-         FROM links l
-         JOIN knowledge k ON l.to_id = k.id
-         WHERE l.from_id = ?;`,
-        [entry.id]
-      );
-
-      // Get incoming links (to this entry)
-      const incoming = this.db.executeSync(
-        `SELECT k.id, k.name, k.content, l.link_text
-         FROM links l
-         JOIN knowledge k ON l.from_id = k.id
-         WHERE l.to_id = ?;`,
-        [entry.id]
-      );
-
-      entry.outgoing_links = outgoing.rows || [];
-      entry.incoming_links = incoming.rows || [];
-    }
-
-    return entry;
-  }
-
-  /**
-   * Search knowledge entries
-   */
-  static async searchKnowledge(query: string, folderPath?: string, limit: number = 10): Promise<any[]> {
-    // Try FTS5 first, fallback to LIKE search
-    try {
-      let sql = `
-        SELECT k.* FROM knowledge_fts
-        JOIN knowledge k ON knowledge_fts.rowid = k.id
-        WHERE knowledge_fts MATCH ?
-      `;
-      const params: any[] = [query];
-
-      if (folderPath) {
-        sql += ` AND k.folder_path LIKE ?`;
-        params.push(`${folderPath}%`);
-      }
-
-      sql += ` ORDER BY k.created_at DESC LIMIT ?;`;
-      params.push(limit);
-
-      const result = this.db.executeSync(sql, params);
-      return result.rows || [];
-    } catch {
-      // Fallback to LIKE search
-      let sql = 'SELECT * FROM knowledge WHERE content LIKE ?';
-      const params: any[] = [`%${query}%`];
-
-      if (folderPath) {
-        sql += ` AND folder_path LIKE ?`;
-        params.push(`${folderPath}%`);
-      }
-
-      sql += ` ORDER BY created_at DESC LIMIT ?;`;
-      params.push(limit);
-
-      const result = this.db.executeSync(sql, params);
-      return result.rows || [];
-    }
-  }
-
-  /**
-   * List knowledge entries in a folder
-   */
-  static async listKnowledge(folderPath: string, recursive: boolean = false): Promise<any[]> {
-    const pattern = recursive ? `${folderPath}%` : folderPath;
-    const result = this.db.executeSync(
-      'SELECT * FROM knowledge WHERE folder_path LIKE ? ORDER BY created_at DESC;',
-      [pattern]
-    );
-    return result.rows || [];
-  }
-
-  /**
-   * Move knowledge entry to different folder
-   */
-  static async moveKnowledge(name: string, newFolderPath: string): Promise<any | null> {
-    // Auto-create destination folder if doesn't exist
-    await this.createFolder(newFolderPath);
-
-    this.db.executeSync(
-      'UPDATE knowledge SET folder_path = ?, updated_at = ? WHERE name = ?;',
-      [newFolderPath, Date.now(), name]
-    );
-
-    console.log(`[Database] Moved knowledge: ${name} -> ${newFolderPath}`);
-
-    const result = this.db.executeSync('SELECT * FROM knowledge WHERE name = ?;', [name]);
-    return result.rows?.[0] || null;
-  }
-
-  /**
-   * Delete knowledge entry
-   */
-  static async deleteKnowledge(name: string): Promise<boolean> {
-    const result = this.db.executeSync('DELETE FROM knowledge WHERE name = ?;', [name]);
-    console.log(`[Database] Deleted knowledge: ${name}`);
-    return result.rowsAffected > 0;
-  }
-
-  /**
-   * Delete folder and all its contents
-   */
-  static async deleteFolder(path: string, recursive: boolean = false): Promise<number> {
-    if (recursive) {
-      // Delete all knowledge entries in this folder and subfolders
-      const result = this.db.executeSync('DELETE FROM knowledge WHERE folder_path LIKE ?;', [`${path}%`]);
-      const deletedEntries = result.rowsAffected;
-
-      // Delete folder and subfolders
-      this.db.executeSync('DELETE FROM folders WHERE path LIKE ?;', [`${path}%`]);
-
-      console.log(`[Database] Deleted folder recursively: ${path} (${deletedEntries} entries)`);
-      return deletedEntries;
-    } else {
-      // Only delete if empty
-      const entries = this.db.executeSync('SELECT COUNT(*) as count FROM knowledge WHERE folder_path = ?;', [path]);
-      const count = entries.rows?.[0]?.count || 0;
-
-      if (count > 0) {
-        throw new Error(`Cannot delete folder "${path}": contains ${count} entries`);
-      }
-
-      this.db.executeSync('DELETE FROM folders WHERE path = ?;', [path]);
-      console.log(`[Database] Deleted empty folder: ${path}`);
-      return 0;
-    }
-  }
-
-  /**
-   * Update knowledge entry embedding
-   */
-  static async updateKnowledgeEmbedding(name: string, embedding: number[] | Float32Array): Promise<void> {
-    const embeddingBase64 = this.vectorToBase64(embedding);
-    this.db.executeSync('UPDATE knowledge SET embedding = ?, updated_at = ? WHERE name = ?;', [embeddingBase64, Date.now(), name]);
-    console.log(`[Database] Updated embedding for knowledge: ${name}`);
-  }
-
-  /**
-   * Search knowledge by vector similarity
-   */
-  static async searchKnowledgeByVector(
-    queryEmbedding: number[] | Float32Array,
-    limit: number = 5,
-    folderPath?: string
-  ): Promise<Array<any & {similarity: number}>> {
-    // Get all knowledge with embeddings
-    let sql = 'SELECT * FROM knowledge WHERE embedding IS NOT NULL AND embedding != ""';
-    const params: any[] = [];
-
-    if (folderPath) {
-      sql += ' AND folder_path LIKE ?';
-      params.push(`${folderPath}%`);
-    }
-
-    const result = this.db.executeSync(sql, params);
-    const entries = result.rows || [];
-
-    if (entries.length === 0) {
-      return [];
-    }
-
-    const queryVector = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
-
-    // Calculate similarity for each entry
-    const entriesWithSimilarity = entries
-      .map((entry: any) => {
-        if (!entry.embedding) return null;
-
-        const embedding = this.base64ToVector(entry.embedding);
-        if (embedding.length === 0) return null;
-
-        const similarity = this.cosineSimilarity(queryVector, embedding);
-
-        return {
-          ...entry,
-          embedding,
-          similarity,
-        };
-      })
-      .filter((e: any) => e !== null)
-      .sort((a: any, b: any) => b.similarity - a.similarity)
-      .slice(0, limit);
-
-    return entriesWithSimilarity;
   }
 }
