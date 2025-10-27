@@ -417,11 +417,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 );
               }
 
-              // Check if this is a journal entry proposal
-              if (tool === 'suggest_journal_entry' && toolResult?.success && toolResult?.proposal) {
-                setProposedNote(toolResult.proposal);
-                setShowNoteProposal(true);
-              }
+              // Note: Journal proposals now show as a button in the chat
+              // User clicks the button to review/edit the proposal
 
               setToolUsageState({stage: 'processing'});
               currentActionIdRef.current = null;
@@ -728,7 +725,42 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           toolResult: actionMsg.toolResult,
           error: actionMsg.error,
         };
-        return <ActionCard action={action} />;
+
+        // Check if this is a suggest_journal_entry action with a proposal
+        const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
+                           actionMsg.toolResult?.success &&
+                           actionMsg.toolResult?.proposal;
+
+        return (
+          <View>
+            <ActionCard action={action} />
+            {hasProposal && (
+              <View style={styles.journalProposalCard}>
+                <View style={styles.journalProposalHeader}>
+                  <Text style={styles.journalProposalIcon}>📝</Text>
+                  <View style={styles.journalProposalInfo}>
+                    <Text style={styles.journalProposalTitle}>
+                      {actionMsg.toolResult.proposal.title}
+                    </Text>
+                    <Text style={styles.journalProposalSubtitle}>
+                      {actionMsg.toolResult.proposal.folder}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.journalProposalButton}
+                  onPress={() => {
+                    setProposedNote(actionMsg.toolResult.proposal);
+                    setShowNoteProposal(true);
+                  }}>
+                  <Text style={styles.journalProposalButtonText}>
+                    📄 Review & Edit Note
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        );
       } else {
         return (
           <ChatMessage
@@ -1237,5 +1269,49 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#856404',
     fontWeight: '600',
+  },
+  journalProposalCard: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 2,
+    borderColor: '#0EA5E9',
+    borderRadius: 12,
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    padding: 12,
+  },
+  journalProposalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  journalProposalIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  journalProposalInfo: {
+    flex: 1,
+  },
+  journalProposalTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0369A1',
+    marginBottom: 2,
+  },
+  journalProposalSubtitle: {
+    fontSize: 13,
+    color: '#0C4A6E',
+  },
+  journalProposalButton: {
+    backgroundColor: '#0EA5E9',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  journalProposalButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
