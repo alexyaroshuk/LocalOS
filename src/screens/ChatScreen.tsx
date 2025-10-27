@@ -20,6 +20,7 @@ import {ActionCard} from '../components/ActionCard';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Toast} from '../components/Toast';
+import {NoteProposalModal} from '../components/NoteProposalModal';
 import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage} from '../types';
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
@@ -65,6 +66,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
   const [editingMessage, setEditingMessage] = useState<{id: string; content: string} | null>(null);
+  const [proposedNote, setProposedNote] = useState<{
+    title: string;
+    folder: string;
+    relativePath: string;
+    content: string;
+    date: string;
+  } | null>(null);
+  const [showNoteProposal, setShowNoteProposal] = useState(false);
 
   // Track current action being worked on
   const currentActionIdRef = useRef<string | null>(null);
@@ -408,6 +417,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 );
               }
 
+              // Check if this is a journal entry proposal
+              if (tool === 'suggest_journal_entry' && toolResult?.success && toolResult?.proposal) {
+                setProposedNote(toolResult.proposal);
+                setShowNoteProposal(true);
+              }
+
               setToolUsageState({stage: 'processing'});
               currentActionIdRef.current = null;
             } else if (stage === 'generating') {
@@ -581,7 +596,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleStopGeneration = async () => {
     Logger.info('🛑 User clicked stop button');
-    Logger.info('Current state - isGenerating:', isGenerating, 'currentActionId:', currentActionIdRef.current);
+    Logger.info(`Current state - isGenerating: ${isGenerating}, currentActionId: ${currentActionIdRef.current}`);
 
     // Show alert immediately - user needs to know we're stopping
     Alert.alert(
@@ -600,7 +615,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       // STEP 2: Wait for generation loop to actually check flag and exit
       // The flag is checked during each token generation, so give it time
       Logger.info('⏳ Waiting 1 second for generation to stop...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
       Logger.info('✅ Generation should be stopped now');
 
       // STEP 2: ONLY AFTER stop completes, set flags and update UI
@@ -738,6 +753,71 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     };
 
     return <ChatMessage message={streamingMessage} />;
+  };
+
+  // Note proposal modal handlers
+  const handleCloseNoteProposal = () => {
+    setShowNoteProposal(false);
+  };
+
+  const handleRefineNote = () => {
+    setShowNoteProposal(false);
+    showToastMessage('Continue chatting to refine the note');
+  };
+
+  const handleSaveNote = async (content: string) => {
+    if (!proposedNote) {return;}
+
+    try {
+      // Send a message to trigger save_vault_file tool
+      const saveMessage = `Save this note to ${proposedNote.relativePath}:\n\n${content}`;
+
+      // Add user message
+      const userMessage: Message = {
+        id: generateId(),
+        role: 'user',
+        content: saveMessage,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Trigger AI to save the file
+      setIsGenerating(true);
+      const contextMessages = [...messages, userMessage]
+        .filter(msg => msg.role !== 'action') as Message[];
+
+      const result = await AIService.chatCompletionWithTools(
+        contextMessages,
+        [],
+        {},
+        () => {}, // No streaming needed
+        async (stage, tool, toolArgs, toolResult) => {
+          if (stage === 'tool_result' && tool === 'save_vault_file') {
+            if (toolResult?.success) {
+              showToastMessage(`Note saved to ${proposedNote.folder}/${proposedNote.title}`);
+              setShowNoteProposal(false);
+              setProposedNote(null);
+            } else {
+              Alert.alert('Error', toolResult?.error || 'Failed to save note');
+            }
+          }
+        },
+      );
+
+      // Add assistant response
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: result.response,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsGenerating(false);
+    } catch (error) {
+      Logger.error('Failed to save note:', error);
+      Alert.alert('Error', 'Failed to save note to vault');
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -919,6 +999,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         onRequestClose={() => setShowLogs(false)}>
         <LogViewerScreen onClose={() => setShowLogs(false)} />
       </Modal>
+
+      {/* Note Proposal Modal */}
+      <NoteProposalModal
+        visible={showNoteProposal}
+        proposal={proposedNote}
+        onClose={handleCloseNoteProposal}
+        onSave={handleSaveNote}
+        onRefine={handleRefineNote}
+      />
     </KeyboardAvoidingView>
   );
 };

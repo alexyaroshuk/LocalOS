@@ -13,7 +13,7 @@ interface LogEntry {
   data?: any;
 }
 
-const MAX_LOGS = 500; // Keep last 500 logs in memory
+const MAX_LOGS = 1500; // Keep last 500 logs in memory
 const STORAGE_KEY = '@localos_debug_logs';
 
 class LoggerService {

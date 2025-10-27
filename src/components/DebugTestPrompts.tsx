@@ -108,6 +108,31 @@ const TEST_PROMPTS = [
       'Find all notes with "AI" in them',
     ],
   },
+  {
+    category: 'Journal - Daily Updates (Should Use suggest_journal_entry)',
+    prompts: [
+      'Today I read "Deep Work" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View.',
+      'I learned to cook pad thai today and it turned out great! Also fixed a bug in the LocalOS app.',
+      'Had a productive day. Finished reading "Atomic Habits", went for a 5km run, and started learning Rust.',
+      'Today was tough. Interview at CityTech didn\'t go well. Need to practice algorithms more.',
+    ],
+  },
+  {
+    category: 'Journal - Simple Entries (Should Use suggest_journal_entry)',
+    prompts: [
+      'Watched Inception again today. Still my favorite movie.',
+      'Started learning React Native today.',
+      'Had coffee with Sarah. Discussed the startup idea.',
+      'Finished the LocalOS vault integration feature.',
+    ],
+  },
+  {
+    category: 'Journal - Complex Multi-Topic (Should Use suggest_journal_entry)',
+    prompts: [
+      'Busy day! Read "Sapiens" chapters 3-5, had lunch meeting with the team about Q4 goals, worked out at the gym for an hour, and learned about vector databases for the LocalOS project.',
+      'Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model.',
+    ],
+  },
 ];
 
 export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({

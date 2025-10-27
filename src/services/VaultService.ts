@@ -521,4 +521,124 @@ export class VaultService {
       throw error;
     }
   }
+
+  /**
+   * Ensure a directory path exists, creating it if necessary
+   */
+  static async ensureDirectoryExists(dirPath: string): Promise<void> {
+    try {
+      const exists = await RNFS.exists(dirPath);
+      if (!exists) {
+        await RNFS.mkdir(dirPath, {
+          // Create parent directories if they don't exist
+          NSURLIsExcludedFromBackupKey: false,
+        });
+        Logger.info(`Created directory: ${dirPath}`);
+      }
+    } catch (error) {
+      Logger.error('Failed to ensure directory exists:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Write a markdown file to the vault
+   * Creates parent directories if they don't exist
+   */
+  static async writeFile(
+    relativePath: string,
+    content: string,
+  ): Promise<VaultFile> {
+    try {
+      const config = await this.getVaultConfig();
+      if (!config) {
+        throw new Error('No vault configured');
+      }
+
+      // Construct full path
+      const fullPath = `${config.vaultPath}/${relativePath}`;
+
+      // Ensure the file ends with .md
+      const finalPath = fullPath.endsWith('.md') ? fullPath : `${fullPath}.md`;
+
+      // Ensure parent directory exists
+      const dirPath = finalPath.substring(0, finalPath.lastIndexOf('/'));
+      await this.ensureDirectoryExists(dirPath);
+
+      // Write file
+      await RNFS.writeFile(finalPath, content, 'utf8');
+      Logger.info(`Wrote file: ${finalPath}`);
+
+      // Get file stats
+      const stat = await RNFS.stat(finalPath);
+      const fileName = finalPath.split('/').pop() || '';
+      const basename = fileName.replace(/\.md$/i, '');
+
+      const vaultFile: VaultFile = {
+        path: finalPath,
+        relativePath: relativePath.endsWith('.md') ? relativePath : `${relativePath}.md`,
+        name: fileName,
+        basename,
+        folder: dirPath,
+        size: Number(stat.size),
+        mtime: new Date(stat.mtime),
+        isMarkdown: true,
+      };
+
+      return vaultFile;
+    } catch (error) {
+      Logger.error('Failed to write file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing file in the vault
+   */
+  static async updateFile(
+    relativePath: string,
+    content: string,
+  ): Promise<VaultFile> {
+    try {
+      const config = await this.getVaultConfig();
+      if (!config) {
+        throw new Error('No vault configured');
+      }
+
+      // Construct full path
+      const fullPath = `${config.vaultPath}/${relativePath}`;
+
+      // Check if file exists
+      const exists = await RNFS.exists(fullPath);
+      if (!exists) {
+        throw new Error(`File does not exist: ${relativePath}`);
+      }
+
+      // Write file
+      await RNFS.writeFile(fullPath, content, 'utf8');
+      Logger.info(`Updated file: ${fullPath}`);
+
+      // Get file stats
+      const stat = await RNFS.stat(fullPath);
+      const fileName = fullPath.split('/').pop() || '';
+      const basename = fileName.replace(/\.md$/i, '');
+      const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
+
+      const vaultFile: VaultFile = {
+        path: fullPath,
+        relativePath,
+        name: fileName,
+        basename,
+        folder: dirPath,
+        size: Number(stat.size),
+        mtime: new Date(stat.mtime),
+        isMarkdown: true,
+      };
+
+      return vaultFile;
+    } catch (error) {
+      Logger.error('Failed to update file:', error);
+      throw error;
+    }
+  }
 }
