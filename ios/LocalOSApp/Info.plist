@@ -47,6 +47,8 @@
 	<string>LocalOS needs access to save and load AI models</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>LocalOS needs access to save AI models</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>LocalOS needs access to read your Obsidian vault files</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
