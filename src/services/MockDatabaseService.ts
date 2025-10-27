@@ -43,15 +43,6 @@ export interface ConversationSummary {
   message_count: number;
 }
 
-export interface UserFact {
-  id: number;
-  category: 'preference' | 'habit' | 'personality' | 'relationship';
-  fact: string;
-  confidence: number; // 0.0-1.0
-  source_conversation_id: number | null;
-  last_confirmed: number;
-}
-
 /**
  * Mock Database Service
  */
@@ -60,7 +51,6 @@ export class MockDatabaseService {
   private static archiveMemories: ArchiveMemory[] = [];
   private static tasks: Task[] = [];
   private static conversations: ConversationSummary[] = [];
-  private static userFacts: UserFact[] = [];
   private static initialized: boolean = false;
   private static nextId: number = 1;
 
@@ -231,49 +221,12 @@ export class MockDatabaseService {
       },
     ];
 
-    // Initialize user facts
-    this.userFacts = [
-      {
-        id: this.nextId++,
-        category: 'preference',
-        fact: 'Prefers React Native for mobile development',
-        confidence: 0.95,
-        source_conversation_id: 1,
-        last_confirmed: now - 5 * dayInMs,
-      },
-      {
-        id: this.nextId++,
-        category: 'habit',
-        fact: 'Codes primarily in the morning hours',
-        confidence: 0.75,
-        source_conversation_id: 2,
-        last_confirmed: now - 5 * dayInMs,
-      },
-      {
-        id: this.nextId++,
-        category: 'personality',
-        fact: 'Direct communicator who values clarity',
-        confidence: 0.85,
-        source_conversation_id: 1,
-        last_confirmed: now - 1 * dayInMs,
-      },
-      {
-        id: this.nextId++,
-        category: 'relationship',
-        fact: 'Solo developer on LocalOS, no team members',
-        confidence: 0.9,
-        source_conversation_id: 1,
-        last_confirmed: now - 14 * dayInMs,
-      },
-    ];
-
     this.initialized = true;
     console.log('[MockDB] Database initialized with mock data');
     console.log(`  - Core memory blocks: ${this.coreMemory.length}`);
     console.log(`  - Archive memories: ${this.archiveMemories.length}`);
     console.log(`  - Tasks: ${this.tasks.length}`);
     console.log(`  - Conversations: ${this.conversations.length}`);
-    console.log(`  - User facts: ${this.userFacts.length}`);
   }
 
   // ============== CORE MEMORY OPERATIONS ==============
@@ -436,60 +389,6 @@ export class MockDatabaseService {
       .slice(0, limit);
   }
 
-  // ============== USER FACTS OPERATIONS ==============
-
-  static async saveUserFact(
-    category: UserFact['category'],
-    fact: string,
-    confidence: number,
-    sourceConversationId?: number
-  ): Promise<UserFact> {
-    const userFact: UserFact = {
-      id: this.nextId++,
-      category,
-      fact,
-      confidence,
-      source_conversation_id: sourceConversationId || null,
-      last_confirmed: Date.now(),
-    };
-    this.userFacts.push(userFact);
-    console.log(`[MockDB] Saved user fact: ${fact.substring(0, 50)}...`);
-    return userFact;
-  }
-
-  static async getUserFactsByCategory(category: UserFact['category']): Promise<UserFact[]> {
-    return this.userFacts
-      .filter(f => f.category === category)
-      .sort((a, b) => b.confidence - a.confidence);
-  }
-
-  static async getAllUserFacts(): Promise<UserFact[]> {
-    return [...this.userFacts].sort((a, b) => b.confidence - a.confidence);
-  }
-
-  static async updateUserFactConfidence(id: number, confidence: number): Promise<UserFact | null> {
-    const fact = this.userFacts.find(f => f.id === id);
-    if (!fact) return null;
-
-    fact.confidence = confidence;
-    fact.last_confirmed = Date.now();
-    console.log(`[MockDB] Updated user fact confidence: ${fact.fact.substring(0, 50)}...`);
-    return fact;
-  }
-
-  /**
-   * Update a user fact
-   */
-  static async updateUserFact(id: number, updates: Partial<UserFact>): Promise<UserFact | null> {
-    const fact = this.userFacts.find(f => f.id === id);
-    if (!fact) return null;
-
-    Object.assign(fact, updates);
-    fact.last_confirmed = Date.now();
-    console.log(`[MockDB] Updated user fact: ${fact.fact.substring(0, 50)}...`);
-    return fact;
-  }
-
   /**
    * Update an archive memory
    */
@@ -532,21 +431,6 @@ export class MockDatabaseService {
     return true;
   }
 
-  /**
-   * Delete a user fact by ID
-   */
-  static async deleteUserFact(id: number): Promise<boolean> {
-    const index = this.userFacts.findIndex(f => f.id === id);
-    if (index === -1) {
-      console.log(`[MockDB] User fact ${id} not found`);
-      return false;
-    }
-
-    this.userFacts.splice(index, 1);
-    console.log(`[MockDB] Deleted user fact ${id}`);
-    return true;
-  }
-
   // ============== UTILITY ==============
 
   static async clear(): Promise<void> {
@@ -554,7 +438,6 @@ export class MockDatabaseService {
     this.archiveMemories = [];
     this.tasks = [];
     this.conversations = [];
-    this.userFacts = [];
     this.nextId = 1;
     this.initialized = false;
     console.log('[MockDB] Database cleared');
@@ -566,7 +449,6 @@ export class MockDatabaseService {
       archiveMemories: this.archiveMemories.length,
       tasks: this.tasks.length,
       conversations: this.conversations.length,
-      userFacts: this.userFacts.length,
     };
   }
 }

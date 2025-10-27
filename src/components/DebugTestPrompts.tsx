@@ -72,6 +72,76 @@ const TEST_PROMPTS = [
       'Search for my credentials',
     ],
   },
+  {
+    category: 'Knowledge - Create Entries',
+    prompts: [
+      'I watched Batman and really liked it',
+      'Add to my favorite books: The Hobbit by Tolkien',
+      'I work with Sarah, she is great at design',
+      'My favorite restaurant is Olive Garden on Main Street',
+      'Create note for LocalOS mobile app development',
+    ],
+  },
+  {
+    category: 'Knowledge - With Properties',
+    prompts: [
+      'I watched Inception, rated 9/10, released in 2010',
+      'Add contact: John Doe, email john@example.com, phone 555-1234',
+      'Save recipe: Pasta Carbonara, prep time 15 min, difficulty easy',
+      'Book: "1984" by George Orwell, fiction, published 1949',
+    ],
+  },
+  {
+    category: 'Knowledge - Edit/Update',
+    prompts: [
+      'Update Batman rating to 10/10',
+      'Add note to LocalOS: using React Native and SQLite',
+      'Update Sarah - she also knows TypeScript',
+      'Change Inception rating to 10',
+    ],
+  },
+  {
+    category: 'Knowledge - Move',
+    prompts: [
+      'Move Batman from favorites to watched movies',
+      'Move Sarah from colleagues to friends',
+      'Relocate LocalOS to active projects folder',
+    ],
+  },
+  {
+    category: 'Knowledge - Delete',
+    prompts: [
+      'Delete Batman from knowledge',
+      'Remove The Hobbit entry',
+      'Delete John Doe contact',
+    ],
+  },
+  {
+    category: 'Knowledge - Linking',
+    prompts: [
+      'Link LocalOS to my work with Sarah',
+      'Batman reminds me of The Dark Knight',
+      'Discussed LocalOS with John at Olive Garden',
+    ],
+  },
+  {
+    category: 'Knowledge - Search & Query',
+    prompts: [
+      'What movies have I watched?',
+      'Show me all my favorite things',
+      'Find all contacts',
+      'What projects am I working on?',
+      'Search for anything about movies',
+    ],
+  },
+  {
+    category: 'Knowledge - Folders & Schema',
+    prompts: [
+      'Create folder for books with title, author, year',
+      'Make a contacts folder with name, email, phone',
+      'Create projects folder with status and deadline',
+    ],
+  },
 ];
 
 export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({

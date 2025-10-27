@@ -10,6 +10,7 @@ import {DatabaseProxy} from './DatabaseProxy';
 import {LlamaService} from './LlamaService';
 import {DatabaseService} from './DatabaseService';
 import {Logger} from '../utils/Logger';
+import {KnowledgeTools} from './KnowledgeTools';
 
 export class LettaMemoryTools {
   /**
@@ -518,7 +519,7 @@ export class LettaMemoryTools {
   }
 
   /**
-   * Get all Letta-compatible memory tools
+   * Get all Letta-compatible memory tools + Knowledge tools
    */
   static getAllTools(): Tool[] {
     return [
@@ -529,6 +530,8 @@ export class LettaMemoryTools {
       this.getArchivalMemorySearchTool(),
       this.getArchivalMemoryDeleteTool(),
       this.getConversationSearchTool(),
+      // Add Knowledge tools
+      ...KnowledgeTools.getAllTools(),
     ];
   }
 }

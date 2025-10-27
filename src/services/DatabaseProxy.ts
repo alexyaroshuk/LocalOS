@@ -9,7 +9,6 @@ import type {
   ArchiveMemory,
   Task,
   ConversationSummary,
-  UserFact,
 } from './MockDatabaseService';
 
 /**
@@ -162,49 +161,6 @@ export class DatabaseProxy {
       : MockDatabaseService.getRecentConversations(limit);
   }
 
-  // ============== USER FACTS OPERATIONS ==============
-
-  static async saveUserFact(
-    category: UserFact['category'],
-    fact: string,
-    confidence: number,
-    sourceConversationId?: number
-  ): Promise<UserFact> {
-    return this.usingSQLite
-      ? DatabaseService.saveUserFact(category, fact, confidence, sourceConversationId)
-      : MockDatabaseService.saveUserFact(category, fact, confidence, sourceConversationId);
-  }
-
-  static async getUserFactsByCategory(category: UserFact['category']): Promise<UserFact[]> {
-    return this.usingSQLite
-      ? DatabaseService.getUserFactsByCategory(category)
-      : MockDatabaseService.getUserFactsByCategory(category);
-  }
-
-  static async getAllUserFacts(): Promise<UserFact[]> {
-    return this.usingSQLite
-      ? DatabaseService.getAllUserFacts()
-      : MockDatabaseService.getAllUserFacts();
-  }
-
-  static async updateUserFactConfidence(id: number, confidence: number): Promise<UserFact | null> {
-    return this.usingSQLite
-      ? DatabaseService.updateUserFactConfidence(id, confidence)
-      : MockDatabaseService.updateUserFactConfidence(id, confidence);
-  }
-
-  static async updateUserFact(id: number, updates: Partial<UserFact>): Promise<UserFact | null> {
-    return this.usingSQLite
-      ? DatabaseService.updateUserFact(id, updates)
-      : MockDatabaseService.updateUserFact(id, updates);
-  }
-
-  static async deleteUserFact(id: number): Promise<boolean> {
-    return this.usingSQLite
-      ? DatabaseService.deleteUserFact(id)
-      : MockDatabaseService.deleteUserFact(id);
-  }
-
   // ============== UTILITY ==============
 
   static async clear(): Promise<void> {
@@ -226,5 +182,4 @@ export type {
   ArchiveMemory,
   Task,
   ConversationSummary,
-  UserFact,
 };
