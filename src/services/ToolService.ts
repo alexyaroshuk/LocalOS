@@ -5,6 +5,7 @@ import {Tool, ToolCall, ToolResult} from '../types';
 import {generateId} from '../utils/helpers';
 import MemoryService from './MemoryService';
 import {LettaMemoryTools} from './LettaMemoryTools';
+import {VaultService} from './VaultService';
 
 export class ToolService {
   private static tools: Map<string, Tool> = new Map();
@@ -24,6 +25,12 @@ export class ToolService {
 
     // Register Letta-compatible memory tools
     LettaMemoryTools.getAllTools().forEach(tool => this.registerTool(tool));
+
+    // Register vault tools
+    this.registerTool(this.getListVaultStructureTool());
+    this.registerTool(this.getListVaultFilesTool());
+    this.registerTool(this.getReadVaultFileTool());
+    this.registerTool(this.getSearchVaultTool());
 
     this.initialized = true;
     console.log(`ToolService initialized with ${this.tools.size} tools`);
@@ -342,6 +349,322 @@ export class ToolService {
             success: false,
             error: error instanceof Error ? error.message : 'Search failed',
             query: args.query as string,
+          };
+        }
+      },
+    };
+  }
+
+  // ============== VAULT TOOLS ==============
+
+  /**
+   * Tool: list_vault_structure
+   * Get the folder structure of the vault
+   */
+  private static getListVaultStructureTool(): Tool {
+    return {
+      name: 'list_vault_structure',
+      description:
+        'Get the folder structure of the Obsidian vault. Shows all folders and subfolders. Use this to understand the organization of notes.',
+      parameters: [],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async () => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {
+              success: false,
+              error: 'No vault configured',
+            };
+          }
+
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+
+          // Build folder hierarchy
+          const structure: Record<string, string[]> = {};
+          scanResult.folders.forEach(folder => {
+            const parentPath = folder.parent.replace(config.vaultPath, '').replace(/^\//, '') || 'root';
+            if (!structure[parentPath]) {
+              structure[parentPath] = [];
+            }
+            structure[parentPath].push(folder.name);
+          });
+
+          return {
+            success: true,
+            vault_name: config.vaultName,
+            vault_path: config.vaultPath,
+            total_folders: scanResult.totalFolders,
+            total_files: scanResult.totalFiles,
+            structure,
+            folders: scanResult.folders.map(f => ({
+              name: f.name,
+              path: f.relativePath,
+              parent: f.parent.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+            })),
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get vault structure',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: list_vault_files
+   * List all markdown files in the vault with their locations
+   */
+  private static getListVaultFilesTool(): Tool {
+    return {
+      name: 'list_vault_files',
+      description:
+        'List all markdown files in the vault with their folder locations. Use this to see what notes are available and where they are located.',
+      parameters: [
+        {
+          name: 'folder',
+          type: 'string',
+          description: 'Optional: Filter files by folder name (e.g., "Learning", "Projects")',
+          required: false,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {
+              success: false,
+              error: 'No vault configured',
+            };
+          }
+
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+          let files = scanResult.files;
+
+          // Filter by folder if specified
+          const folderFilter = args.folder as string | undefined;
+          if (folderFilter) {
+            files = files.filter(f =>
+              f.relativePath.toLowerCase().includes(folderFilter.toLowerCase())
+            );
+          }
+
+          return {
+            success: true,
+            total_files: files.length,
+            files: files.map(f => ({
+              name: f.basename,
+              full_name: f.name,
+              path: f.relativePath,
+              folder: f.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+              size: f.size,
+              modified: f.mtime.toISOString(),
+            })),
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to list vault files',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: read_vault_file
+   * Read the content of a specific file from the vault
+   */
+  private static getReadVaultFileTool(): Tool {
+    return {
+      name: 'read_vault_file',
+      description:
+        'Read the content of a specific markdown file from the vault. Provide the file name or relative path. Returns the file content, frontmatter metadata, tags, and links.',
+      parameters: [
+        {
+          name: 'file_path',
+          type: 'string',
+          description: 'The relative path or name of the file to read (e.g., "Vector Search.md" or "Learning/Vector Search.md")',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {
+              success: false,
+              error: 'No vault configured',
+            };
+          }
+
+          const filePath = args.file_path as string;
+
+          // Scan vault to find the file
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+
+          // Find file by name or relative path
+          const file = scanResult.files.find(f =>
+            f.name === filePath ||
+            f.basename === filePath.replace(/\.md$/i, '') ||
+            f.relativePath === filePath ||
+            f.relativePath.endsWith(filePath)
+          );
+
+          if (!file) {
+            return {
+              success: false,
+              error: `File not found: ${filePath}`,
+              available_files: scanResult.files.slice(0, 10).map(f => f.relativePath),
+            };
+          }
+
+          // Read the file
+          const markdownFile = await VaultService.readMarkdownFile(file.path);
+
+          return {
+            success: true,
+            file: {
+              name: markdownFile.file.basename,
+              path: markdownFile.file.relativePath,
+              folder: markdownFile.file.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+              size: markdownFile.file.size,
+              modified: markdownFile.file.mtime.toISOString(),
+            },
+            content: markdownFile.content,
+            frontmatter: markdownFile.frontmatter,
+            tags: markdownFile.tags,
+            links: markdownFile.links,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to read vault file',
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: search_vault
+   * Search for files in the vault by name or content
+   */
+  private static getSearchVaultTool(): Tool {
+    return {
+      name: 'search_vault',
+      description:
+        'Search for files in the vault by name, folder, or content keywords. Returns matching files with snippets.',
+      parameters: [
+        {
+          name: 'query',
+          type: 'string',
+          description: 'Search query (file name, folder name, or content keyword)',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {
+          available: hasVault,
+          reason: hasVault ? undefined : 'No vault configured',
+        };
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {
+              success: false,
+              error: 'No vault configured',
+            };
+          }
+
+          const query = (args.query as string).toLowerCase();
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+
+          // Search by file name or path
+          const nameMatches = scanResult.files.filter(f =>
+            f.basename.toLowerCase().includes(query) ||
+            f.relativePath.toLowerCase().includes(query)
+          );
+
+          // If no name matches, search content
+          if (nameMatches.length === 0) {
+            const contentMatches = [];
+            for (const file of scanResult.files.slice(0, 50)) { // Limit to first 50 files for performance
+              try {
+                const markdownFile = await VaultService.readMarkdownFile(file.path);
+                if (markdownFile.content.toLowerCase().includes(query)) {
+                  // Extract snippet around match
+                  const contentLower = markdownFile.content.toLowerCase();
+                  const matchIndex = contentLower.indexOf(query);
+                  const snippetStart = Math.max(0, matchIndex - 50);
+                  const snippetEnd = Math.min(markdownFile.content.length, matchIndex + query.length + 50);
+                  const snippet = markdownFile.content.substring(snippetStart, snippetEnd);
+
+                  contentMatches.push({
+                    name: file.basename,
+                    path: file.relativePath,
+                    folder: file.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+                    snippet: `...${snippet}...`,
+                    tags: markdownFile.tags,
+                  });
+                }
+              } catch (readError) {
+                // Skip files that can't be read
+              }
+            }
+
+            return {
+              success: true,
+              query,
+              search_type: 'content',
+              total_matches: contentMatches.length,
+              matches: contentMatches,
+            };
+          }
+
+          // Return name matches
+          return {
+            success: true,
+            query,
+            search_type: 'name',
+            total_matches: nameMatches.length,
+            matches: nameMatches.map(f => ({
+              name: f.basename,
+              path: f.relativePath,
+              folder: f.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+              size: f.size,
+              modified: f.mtime.toISOString(),
+            })),
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to search vault',
           };
         }
       },
