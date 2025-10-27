@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import RNFS from 'react-native-fs';
+import DocumentPicker from '@react-native-documents/picker';
 import {Logger} from '../utils/Logger';
 
 interface FolderNavigatorProps {
@@ -44,61 +45,80 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
   }, []);
 
   const initializeNavigator = async () => {
-    // Request storage permissions on Android
-    if (Platform.OS === 'android') {
-      try {
-        // Check Android version
-        const androidVersion = Platform.Version as number;
-        Logger.info(`Android version: ${androidVersion}`);
+    // On iOS, we use document picker instead of folder navigation
+    if (Platform.OS === 'ios') {
+      setLoading(false);
+      return;
+    }
 
-        if (androidVersion >= 30) {
-          // Android 11+ - MANAGE_EXTERNAL_STORAGE must be granted manually
-          // We can't programmatically check if it's granted, so just try to proceed
-          Logger.info('Android 11+ detected - proceeding with file access');
-          Logger.info('If access fails, user needs to grant "All Files Access" in Settings');
-        } else {
-          // Android 10 and below - Use normal permission
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-            {
-              title: 'Storage Permission',
-              message: 'LocalOS needs access to browse your folders and select your vault.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            },
+    // Android: Request storage permissions
+    try {
+      // Check Android version
+      const androidVersion = Platform.Version as number;
+      Logger.info(`Android version: ${androidVersion}`);
+
+      if (androidVersion >= 30) {
+        // Android 11+ - MANAGE_EXTERNAL_STORAGE must be granted manually
+        // We can't programmatically check if it's granted, so just try to proceed
+        Logger.info('Android 11+ detected - proceeding with file access');
+        Logger.info('If access fails, user needs to grant "All Files Access" in Settings');
+      } else {
+        // Android 10 and below - Use normal permission
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          {
+            title: 'Storage Permission',
+            message: 'LocalOS needs access to browse your folders and select your vault.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert(
+            'Permission Required',
+            'Storage permission is required to browse folders. Please grant permission in settings.',
           );
-
-          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            Alert.alert(
-              'Permission Required',
-              'Storage permission is required to browse folders. Please grant permission in settings.',
-            );
-            onCancel();
-            return;
-          }
+          onCancel();
+          return;
         }
-      } catch (err) {
-        Logger.error('Permission request error:', err);
-        Alert.alert('Error', 'Failed to request storage permission');
-        onCancel();
-        return;
+      }
+    } catch (err) {
+      Logger.error('Permission request error:', err);
+      Alert.alert('Error', 'Failed to request storage permission');
+      onCancel();
+      return;
+    }
+
+    // Start at Internal Storage root on Android
+    const rootPath = RNFS.ExternalStorageDirectoryPath; // /storage/emulated/0
+    Logger.info(`Starting navigation at: ${rootPath}`);
+    await navigateToFolder(rootPath);
+  };
+
+  const handlePickFolderIOS = async () => {
+    try {
+      Logger.info('Opening iOS document picker for folder selection');
+      setLoading(true);
+
+      const result = await DocumentPicker.pickDirectory();
+      Logger.info('Folder picked:', result.uri);
+
+      // DocumentPicker returns a URI, we need to use this directly
+      // The URI is already accessible to the app
+      if (result && result.uri) {
+        onSelectFolder(result.uri);
+      }
+    } catch (err) {
+      setLoading(false);
+      if (DocumentPicker.isCancel(err)) {
+        Logger.info('User cancelled folder picker');
+      } else {
+        Logger.error('Error picking folder:', err);
+        Alert.alert('Error', `Failed to pick folder: ${err}`);
       }
     }
-
-    // Start at a sensible root location based on platform
-    let rootPath: string;
-
-    if (Platform.OS === 'android') {
-      // Start at Internal Storage root on Android
-      rootPath = RNFS.ExternalStorageDirectoryPath; // /storage/emulated/0
-      Logger.info(`Starting navigation at: ${rootPath}`);
-    } else {
-      // Start at Documents on iOS
-      rootPath = RNFS.DocumentDirectoryPath;
-    }
-
-    await navigateToFolder(rootPath);
   };
 
   const navigateToFolder = async (folderPath: string) => {
@@ -203,6 +223,56 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
     return currentPath.replace(RNFS.DocumentDirectoryPath, 'Documents');
   };
 
+  // iOS: Show document picker button
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Select Vault Folder</Text>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Instructions */}
+        <View style={styles.iosInstructionsContainer}>
+          <Text style={styles.iosInstructionsTitle}>
+            📁 Select Your Obsidian Vault
+          </Text>
+          <Text style={styles.iosInstructionsText}>
+            Tap the button below to browse and select your vault folder from:
+          </Text>
+          <Text style={styles.iosInstructionsBullet}>• Files app</Text>
+          <Text style={styles.iosInstructionsBullet}>• iCloud Drive</Text>
+          <Text style={styles.iosInstructionsBullet}>• On My iPhone</Text>
+          <Text style={styles.iosInstructionsBullet}>
+            • Any other accessible location
+          </Text>
+          <Text style={styles.iosInstructionsNote}>
+            The app will be able to access all files and folders within your selected
+            vault.
+          </Text>
+        </View>
+
+        {/* Pick Folder Button */}
+        <View style={styles.iosPickerContainer}>
+          <TouchableOpacity
+            style={styles.iosPickButton}
+            onPress={handlePickFolderIOS}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.iosPickButtonText}>📂 Browse & Select Folder</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Android: Show folder navigator
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -407,6 +477,64 @@ const styles = StyleSheet.create({
   selectButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  iosInstructionsContainer: {
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  iosInstructionsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  iosInstructionsText: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  iosInstructionsBullet: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  iosInstructionsNote: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 16,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  iosPickerContainer: {
+    padding: 16,
+    marginTop: 'auto',
+  },
+  iosPickButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  iosPickButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '600',
   },
 });
