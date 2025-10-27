@@ -113,53 +113,49 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
 
   const handlePickFolderIOS = async () => {
     try {
-      Logger.info('Opening iOS document picker for folder selection');
+      Logger.info('=== iOS FOLDER PICKER BUTTON PRESSED ===');
+      Logger.info('DocumentPicker object:', DocumentPicker);
+      Logger.info('pickDirectory type:', typeof DocumentPicker.pickDirectory);
+      Logger.info('pickDirectory exists:', DocumentPicker.pickDirectory !== undefined);
+
       setLoading(true);
 
       // Check if pickDirectory is available (sponsor-only feature)
-      if (typeof DocumentPicker.pickDirectory === 'function') {
+      if (DocumentPicker.pickDirectory && typeof DocumentPicker.pickDirectory === 'function') {
+        Logger.info('pickDirectory is available, calling it...');
         const result = await DocumentPicker.pickDirectory();
-        Logger.info('Folder picked:', result.uri);
+        Logger.info('Folder picked successfully:', result);
 
         if (result && result.uri) {
+          Logger.info('Passing URI to parent:', result.uri);
           onSelectFolder(result.uri);
+        } else {
+          Logger.warn('Result missing URI:', result);
+          setLoading(false);
         }
       } else {
         // Fallback: pickDirectory is not available (sponsor-only)
+        Logger.warn('pickDirectory NOT available - sponsor-only feature');
         setLoading(false);
         Alert.alert(
           'Feature Not Available',
           'Folder picking requires the sponsor version of @react-native-documents/picker.\n\n' +
-          'Alternative: Use Files app to copy your vault to "On My iPhone" → LocalOSApp folder, ' +
-          'then we can access it from the app\'s Documents directory.',
-          [
-            {text: 'OK'},
-            {
-              text: 'Use App Folder',
-              onPress: async () => {
-                // Navigate to app's Documents directory
-                const docsPath = RNFS.DocumentDirectoryPath;
-                Logger.info(`Switching to app documents: ${docsPath}`);
-
-                try {
-                  setLoading(true);
-                  await navigateToFolder(docsPath);
-                } catch (err) {
-                  setLoading(false);
-                  Alert.alert('Error', `Cannot access documents folder: ${err}`);
-                }
-              },
-            },
-          ],
+          'Please use "Browse App Folder" option instead.',
+          [{text: 'OK'}],
         );
       }
     } catch (err) {
       setLoading(false);
-      if (DocumentPicker.isCancel(err)) {
+      Logger.error('=== ERROR IN handlePickFolderIOS ===');
+      Logger.error('Error type:', typeof err);
+      Logger.error('Error:', err);
+
+      if (DocumentPicker.isCancel && DocumentPicker.isCancel(err)) {
         Logger.info('User cancelled folder picker');
       } else {
-        Logger.error('Error picking folder:', err);
-        Alert.alert('Error', `Failed to pick folder: ${err}`);
+        Logger.error('Unexpected error picking folder:', err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        Alert.alert('Error', `Failed to pick folder: ${errorMsg}`);
       }
     }
   };
@@ -223,6 +219,20 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
   };
 
   const handleGoUp = () => {
+    // On iOS, don't allow going above app's Documents directory
+    if (Platform.OS === 'ios' && currentPath === RNFS.DocumentDirectoryPath) {
+      Alert.alert(
+        'App Folder Boundary',
+        'Cannot navigate outside the app folder on iOS.\n\n' +
+        'To access your vault:\n' +
+        '1. Open Files app on iPhone\n' +
+        '2. Navigate to "On My iPhone" → "LocalOSApp"\n' +
+        '3. Copy your vault folder here\n' +
+        '4. Return to this app and you\'ll see it',
+      );
+      return;
+    }
+
     if (currentPath === '/' || currentPath === RNFS.ExternalStorageDirectoryPath) {
       Alert.alert('Info', 'Already at root directory');
       return;
@@ -253,6 +263,13 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
     // Navigate to a specific breadcrumb level
     const pathParts = currentPath.split('/').filter(p => p.length > 0);
     const targetPath = '/' + pathParts.slice(0, index + 1).join('/');
+
+    // On iOS, prevent navigating outside app folder
+    if (Platform.OS === 'ios' && !targetPath.startsWith(RNFS.DocumentDirectoryPath)) {
+      Alert.alert('App Folder Boundary', 'Cannot navigate outside the app folder on iOS');
+      return;
+    }
+
     navigateToFolder(targetPath);
   };
 
@@ -284,35 +301,37 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
             📁 Select Your Obsidian Vault
           </Text>
 
-          <Text style={styles.iosSectionTitle}>Option 1: Use Document Picker (Recommended)</Text>
+          <Text style={styles.iosSectionTitle}>Step 1: Copy Vault to App Folder</Text>
           <Text style={styles.iosInstructionsText}>
-            Browse and select your vault from anywhere on your device.
+            On iPhone, iOS apps can only access their own folder. First, copy your vault:
+          </Text>
+          <Text style={styles.iosInstructionStep}>1. Open Files app on your iPhone</Text>
+          <Text style={styles.iosInstructionStep}>2. Navigate to your vault location</Text>
+          <Text style={styles.iosInstructionStep}>3. Long-press the vault folder → Copy</Text>
+          <Text style={styles.iosInstructionStep}>4. Go to "On My iPhone" → "LocalOSApp"</Text>
+          <Text style={styles.iosInstructionStep}>5. Paste your vault folder there</Text>
+
+          <View style={styles.iosDivider} />
+
+          <Text style={styles.iosSectionTitle}>Step 2: Select Vault in App</Text>
+          <Text style={styles.iosInstructionsText}>
+            Once copied, tap below to browse and select your vault:
           </Text>
 
           <TouchableOpacity
             style={styles.iosPickButton}
-            onPress={handlePickFolderIOS}
+            onPress={handleUseFolderNavigatorIOS}
             disabled={loading}>
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.iosPickButtonText}>📂 Browse Files</Text>
+              <Text style={styles.iosPickButtonText}>📁 Browse App Folder</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.iosDivider} />
-
-          <Text style={styles.iosSectionTitle}>Option 2: Use App's Documents Folder</Text>
-          <Text style={styles.iosInstructionsText}>
-            Copy your vault to "On My iPhone" → "LocalOSApp" using the Files app, then browse from the app's folder.
+          <Text style={styles.iosNote}>
+            Note: iOS does not allow apps to browse outside their folder without using the system document picker (requires paid library subscription).
           </Text>
-
-          <TouchableOpacity
-            style={styles.iosSecondaryButton}
-            onPress={handleUseFolderNavigatorIOS}
-            disabled={loading}>
-            <Text style={styles.iosSecondaryButtonText}>📁 Browse App Folder</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -547,8 +566,22 @@ const styles = StyleSheet.create({
   iosInstructionsText: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 16,
+    marginBottom: 12,
     lineHeight: 20,
+  },
+  iosInstructionStep: {
+    fontSize: 13,
+    color: '#444',
+    marginLeft: 8,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  iosNote: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 16,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   iosPickButton: {
     backgroundColor: '#007AFF',
