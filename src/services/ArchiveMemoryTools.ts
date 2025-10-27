@@ -92,7 +92,7 @@ export class ArchiveMemoryTools {
     return {
       name: 'search_archive',
       description:
-        'Search long-term archive memory for information about the user or past conversations. Use when: (1) User asks about THEMSELVES (my email, where I live, my preferences), (2) User asks about past conversations or context. Do NOT use for general knowledge questions (capital cities, definitions, etc) - use your built-in knowledge for those.',
+        'Search long-term archive memory for relevant information using semantic search. Use this to recall past conversations, facts, or events.',
       parameters: [
         {
           name: 'query',

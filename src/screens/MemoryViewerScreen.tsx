@@ -11,17 +11,17 @@ import {
 } from 'react-native';
 import MemoryService, {CoreMemoryBlocks} from '../services/MemoryService';
 import {DatabaseProxy} from '../services/DatabaseProxy';
-import {DatabaseService} from '../services/DatabaseService';
 import type {
+  CoreMemoryBlock,
   ArchiveMemory,
   Task,
+  UserFact,
 } from '../services/DatabaseProxy';
 
 export const MemoryViewerScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'core' | 'archive' | 'tasks' | 'knowledge'>('core');
+  const [activeTab, setActiveTab] = useState<'core' | 'archive' | 'tasks' | 'facts'>('core');
   const [searchQuery, setSearchQuery] = useState('');
-  const [devMode, setDevMode] = useState(true); // Dev mode enabled by default
 
   // Core memory state
   const [coreMemory, setCoreMemory] = useState<any>(null);
@@ -32,15 +32,12 @@ export const MemoryViewerScreen: React.FC = () => {
   // Tasks state
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  // Knowledge state
-  const [knowledgeEntries, setKnowledgeEntries] = useState<any[]>([]);
-  const [folders, setFolders] = useState<any[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  // User facts state
+  const [userFacts, setUserFacts] = useState<UserFact[]>([]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedFolder]);
+  }, [activeTab]);
 
   const loadData = async () => {
     try {
@@ -57,18 +54,9 @@ export const MemoryViewerScreen: React.FC = () => {
           const allTasks = await DatabaseProxy.getTasks();
           setTasks(allTasks);
           break;
-        case 'knowledge':
-          const allFolders = await DatabaseService.listFolders();
-          setFolders(allFolders);
-
-          if (selectedFolder) {
-            const entries = await DatabaseService.listKnowledge(selectedFolder, false);
-            setKnowledgeEntries(entries);
-          } else {
-            // Show all knowledge entries
-            const allEntries = await DatabaseService.listKnowledge('', true);
-            setKnowledgeEntries(allEntries);
-          }
+        case 'facts':
+          const facts = await DatabaseProxy.getAllUserFacts();
+          setUserFacts(facts);
           break;
       }
     } catch (error) {
@@ -93,13 +81,10 @@ export const MemoryViewerScreen: React.FC = () => {
       if (activeTab === 'archive') {
         const results = await DatabaseProxy.searchArchive(searchQuery, 20);
         setArchiveMemories(results);
-      } else if (activeTab === 'knowledge') {
-        const results = await DatabaseService.searchKnowledge(searchQuery, selectedFolder || undefined, 20);
-        setKnowledgeEntries(results);
       }
     } catch (error) {
       console.error('Search failed:', error);
-      Alert.alert('Search Error', 'Failed to search');
+      Alert.alert('Search Error', 'Failed to search memories');
     }
   };
 
@@ -151,10 +136,10 @@ export const MemoryViewerScreen: React.FC = () => {
     );
   };
 
-  const handleDeleteKnowledge = async (name: string) => {
+  const handleDeleteUserFact = async (id: number) => {
     Alert.alert(
-      'Delete Knowledge',
-      `Are you sure you want to delete "${name}"?`,
+      'Delete Fact',
+      'Are you sure you want to delete this fact?',
       [
         {text: 'Cancel', style: 'cancel'},
         {
@@ -162,12 +147,12 @@ export const MemoryViewerScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await DatabaseService.deleteKnowledge(name);
+              await DatabaseProxy.deleteUserFact(id);
               await loadData();
-              Alert.alert('Success', 'Knowledge entry deleted');
+              Alert.alert('Success', 'Fact deleted');
             } catch (error) {
-              console.error('Failed to delete knowledge:', error);
-              Alert.alert('Error', 'Failed to delete knowledge');
+              console.error('Failed to delete fact:', error);
+              Alert.alert('Error', 'Failed to delete fact');
             }
           },
         },
@@ -218,6 +203,7 @@ export const MemoryViewerScreen: React.FC = () => {
               return;
             }
             try {
+              // Update the memory by deleting and re-inserting with same ID
               await DatabaseProxy.updateArchiveMemory(memory.id, {
                 content: newContent.trim(),
               });
@@ -266,98 +252,38 @@ export const MemoryViewerScreen: React.FC = () => {
     );
   };
 
-  // Generic table renderer for dev mode
-  const renderDataTable = (data: any[], _title: string) => {
-    if (!data || data.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No data</Text>
-        </View>
-      );
-    }
-
-    const keys = Object.keys(data[0]);
-
-    // Calculate column widths based on key names
-    const getColumnWidth = (key: string) => {
-      switch (key) {
-        case 'id':
-          return 60;
-        case 'content':
-        case 'description':
-          return 300;
-        case 'embedding':
-          return 200;
-        case 'properties':
-        case 'metadata':
-          return 200;
-        case 'created_at':
-        case 'updated_at':
-        case 'last_confirmed':
-        case 'deadline':
-          return 100;
-        case 'category':
-        case 'status':
-        case 'importance':
-        case 'confidence':
-          return 100;
-        case 'folder_path':
-        case 'path':
-          return 200;
-        case 'name':
-        case 'title':
-          return 150;
-        case 'block_name':
-          return 150;
-        default:
-          return 120;
-      }
-    };
-
-    return (
-      <ScrollView style={styles.content} horizontal>
-        <ScrollView>
-          <View style={styles.tableContainer}>
-            {/* Table Header */}
-            <View style={styles.tableRow}>
-              {keys.map((key) => (
-                <View key={key} style={[styles.tableHeaderCell, {width: getColumnWidth(key)}]}>
-                  <Text style={styles.tableHeaderText}>{key}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Table Rows */}
-            {data.map((row, index) => (
-              <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                {keys.map((key) => (
-                  <View key={key} style={[styles.tableCell, {width: getColumnWidth(key)}]}>
-                    <Text style={styles.tableCellText} numberOfLines={1} ellipsizeMode="tail">
-                      {typeof row[key] === 'object'
-                        ? JSON.stringify(row[key])
-                        : String(row[key] ?? '')}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </ScrollView>
+  const handleEditUserFact = (fact: UserFact) => {
+    Alert.prompt(
+      'Edit User Fact',
+      'Edit fact:',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Save',
+          onPress: async (newFact?: string) => {
+            if (!newFact || newFact.trim() === '') {
+              Alert.alert('Error', 'Fact cannot be empty');
+              return;
+            }
+            try {
+              await DatabaseProxy.updateUserFact(fact.id, {
+                fact: newFact.trim(),
+              });
+              await loadData();
+              Alert.alert('Success', 'Fact updated');
+            } catch (error) {
+              console.error('Failed to update fact:', error);
+              Alert.alert('Error', 'Failed to update fact');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      fact.fact,
     );
   };
 
-  const renderCoreMemory = () => {
-    if (devMode && coreMemory) {
-      // Convert core memory blocks to array for table view
-      const coreData = Object.entries(coreMemory).map(([key, value]) => ({
-        block_name: key,
-        content: value,
-      }));
-      return renderDataTable(coreData, 'Core Memory');
-    }
-
-    return (
+  const renderCoreMemory = () => (
     <ScrollView
       style={styles.content}
       refreshControl={
@@ -394,30 +320,9 @@ export const MemoryViewerScreen: React.FC = () => {
 
       <View style={styles.bottomPadding} />
     </ScrollView>
-    );
-  };
+  );
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'fact':
-        return {backgroundColor: '#007AFF'};
-      case 'event':
-        return {backgroundColor: '#34C759'};
-      case 'preference':
-        return {backgroundColor: '#FF9500'};
-      case 'conversation':
-        return {backgroundColor: '#AF52DE'};
-      default:
-        return {backgroundColor: '#8E8E93'};
-    }
-  };
-
-  const renderArchiveMemory = () => {
-    if (devMode && archiveMemories.length > 0) {
-      return renderDataTable(archiveMemories, 'Archive Memory');
-    }
-
-    return (
+  const renderArchiveMemory = () => (
     <View style={styles.content}>
       <View style={styles.searchBar}>
         <TextInput
@@ -480,15 +385,9 @@ export const MemoryViewerScreen: React.FC = () => {
         <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
-    );
-  };
+  );
 
-  const renderTasks = () => {
-    if (devMode && tasks.length > 0) {
-      return renderDataTable(tasks, 'Tasks');
-    }
-
-    return (
+  const renderTasks = () => (
     <ScrollView
       style={styles.content}
       refreshControl={
@@ -520,8 +419,7 @@ export const MemoryViewerScreen: React.FC = () => {
 
       <View style={styles.bottomPadding} />
     </ScrollView>
-    );
-  };
+  );
 
   const renderTask = (task: Task) => (
     <View key={task.id} style={styles.taskCard}>
@@ -568,127 +466,85 @@ export const MemoryViewerScreen: React.FC = () => {
     </View>
   );
 
-  const renderKnowledge = () => {
-    if (devMode && knowledgeEntries.length > 0) {
-      return renderDataTable(knowledgeEntries, 'Knowledge');
-    }
-
-    return (
-    <View style={styles.content}>
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search knowledge..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>🔍</Text>
-        </TouchableOpacity>
+  const renderUserFacts = () => (
+    <ScrollView
+      style={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }>
+      <View style={styles.infoBox}>
+        <Text style={styles.infoText}>
+          🧠 User facts are what the AI has learned about you over time, with confidence scores.
+        </Text>
       </View>
 
-      {/* Folder selector */}
-      {folders.length > 0 && (
-        <ScrollView
-          horizontal
-          style={styles.folderSelector}
-          showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity
-            style={[styles.folderChip, !selectedFolder && styles.folderChipActive]}
-            onPress={() => setSelectedFolder(null)}>
-            <Text style={[styles.folderChipText, !selectedFolder && styles.folderChipTextActive]}>
-              📁 All
+      {userFacts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No user facts found</Text>
+        </View>
+      ) : (
+        userFacts.map(fact => (
+          <View key={fact.id} style={styles.factCard}>
+            <View style={styles.factHeader}>
+              <View style={[styles.categoryBadge, getCategoryColor(fact.category as any)]}>
+                <Text style={styles.categoryBadgeText}>{fact.category.toUpperCase()}</Text>
+              </View>
+              <View style={styles.confidenceBadge}>
+                <Text style={styles.confidenceBadgeText}>
+                  {(fact.confidence * 100).toFixed(0)}% confident
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.factContent}>{fact.fact}</Text>
+            <Text style={styles.factDate}>
+              Last confirmed: {new Date(fact.last_confirmed).toLocaleDateString()}
             </Text>
-          </TouchableOpacity>
-          {folders.map(folder => (
-            <TouchableOpacity
-              key={folder.id}
-              style={[styles.folderChip, selectedFolder === folder.path && styles.folderChipActive]}
-              onPress={() => setSelectedFolder(folder.path)}>
-              <Text style={[styles.folderChipText, selectedFolder === folder.path && styles.folderChipTextActive]}>
-                📁 {folder.path.split('/').pop()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditUserFact(fact)}>
+                <Text style={styles.editButtonText}>✏️ Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteUserFact(fact.id)}>
+                <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))
       )}
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }>
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            🗂️ Knowledge is organized in folders (Obsidian-style). Each entry can have custom properties and links.
-          </Text>
-        </View>
+      <View style={styles.bottomPadding} />
+    </ScrollView>
+  );
 
-        {knowledgeEntries.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No knowledge entries found</Text>
-          </View>
-        ) : (
-          knowledgeEntries.map(entry => {
-            const properties = entry.properties ? JSON.parse(entry.properties) : {};
-            return (
-              <View key={entry.id} style={styles.knowledgeCard}>
-                <View style={styles.knowledgeHeader}>
-                  <Text style={styles.knowledgeName}>📄 {entry.name}</Text>
-                  <Text style={styles.knowledgePath}>{entry.folder_path}</Text>
-                </View>
-                <Text style={styles.knowledgeContent}>{entry.content}</Text>
-
-                {Object.keys(properties).length > 0 && (
-                  <View style={styles.propertiesContainer}>
-                    {Object.entries(properties).map(([key, value]) => (
-                      <View key={key} style={styles.propertyChip}>
-                        <Text style={styles.propertyText}>
-                          {key}: {String(value)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                <Text style={styles.knowledgeDate}>
-                  {new Date(entry.created_at).toLocaleDateString()}
-                </Text>
-
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteKnowledge(entry.name)}>
-                    <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })
-        )}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-    </View>
-    );
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'fact':
+        return {backgroundColor: '#007AFF'};
+      case 'event':
+        return {backgroundColor: '#34C759'};
+      case 'preference':
+        return {backgroundColor: '#FF9500'};
+      case 'conversation':
+        return {backgroundColor: '#AF52DE'};
+      case 'habit':
+        return {backgroundColor: '#FF3B30'};
+      case 'personality':
+        return {backgroundColor: '#5856D6'};
+      case 'relationship':
+        return {backgroundColor: '#FF2D55'};
+      default:
+        return {backgroundColor: '#8E8E93'};
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>Memory Viewer</Text>
-            <Text style={styles.headerSubtitle}>Explore what the AI knows</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.devModeButton, devMode && styles.devModeButtonActive]}
-            onPress={() => setDevMode(!devMode)}>
-            <Text style={[styles.devModeText, devMode && styles.devModeTextActive]}>
-              {devMode ? '📊 DEV' : '📱 UI'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Memory Viewer</Text>
+        <Text style={styles.headerSubtitle}>Explore what the AI knows</Text>
       </View>
 
       <View style={styles.tabs}>
@@ -696,7 +552,7 @@ export const MemoryViewerScreen: React.FC = () => {
           style={[styles.tab, activeTab === 'core' && styles.tabActive]}
           onPress={() => setActiveTab('core')}>
           <Text style={[styles.tabText, activeTab === 'core' && styles.tabTextActive]}>
-            Core
+            Core Memory
           </Text>
         </TouchableOpacity>
 
@@ -717,10 +573,10 @@ export const MemoryViewerScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'knowledge' && styles.tabActive]}
-          onPress={() => setActiveTab('knowledge')}>
-          <Text style={[styles.tabText, activeTab === 'knowledge' && styles.tabTextActive]}>
-            Knowledge ({knowledgeEntries.length})
+          style={[styles.tab, activeTab === 'facts' && styles.tabActive]}
+          onPress={() => setActiveTab('facts')}>
+          <Text style={[styles.tabText, activeTab === 'facts' && styles.tabTextActive]}>
+            Facts ({userFacts.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -728,7 +584,7 @@ export const MemoryViewerScreen: React.FC = () => {
       {activeTab === 'core' && renderCoreMemory()}
       {activeTab === 'archive' && renderArchiveMemory()}
       {activeTab === 'tasks' && renderTasks()}
-      {activeTab === 'knowledge' && renderKnowledge()}
+      {activeTab === 'facts' && renderUserFacts()}
     </View>
   );
 };
@@ -744,11 +600,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -758,26 +609,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
-  },
-  devModeButton: {
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  devModeButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  devModeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  devModeTextActive: {
-    color: '#FFFFFF',
   },
   tabs: {
     flexDirection: 'row',
@@ -796,7 +627,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#007AFF',
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: '#666',
   },
@@ -831,31 +662,6 @@ const styles = StyleSheet.create({
   },
   searchButtonText: {
     fontSize: 18,
-  },
-  folderSelector: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  folderChip: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  folderChipActive: {
-    backgroundColor: '#007AFF',
-  },
-  folderChipText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  folderChipTextActive: {
-    color: '#FFFFFF',
   },
   infoBox: {
     backgroundColor: '#E3F2FD',
@@ -988,7 +794,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1976D2',
   },
-  knowledgeCard: {
+  factCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
@@ -997,47 +803,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  knowledgeHeader: {
+  factHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  knowledgeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  knowledgePath: {
-    fontSize: 11,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  knowledgeContent: {
+  factContent: {
     fontSize: 14,
     color: '#000',
     lineHeight: 20,
-    marginBottom: 8,
   },
-  knowledgeDate: {
+  factDate: {
     fontSize: 11,
     color: '#999',
     marginTop: 8,
   },
-  propertiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-    gap: 6,
-  },
-  propertyChip: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    paddingHorizontal: 10,
+  confidenceBadge: {
+    backgroundColor: '#D4EDDA',
+    paddingHorizontal: 8,
     paddingVertical: 4,
+    borderRadius: 4,
   },
-  propertyText: {
-    fontSize: 11,
-    color: '#2E7D32',
-    fontWeight: '500',
+  confidenceBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#155724',
   },
   sectionTitle: {
     fontSize: 16,
@@ -1107,44 +898,5 @@ const styles = StyleSheet.create({
   },
   iconButtonText: {
     fontSize: 16,
-  },
-  // Dev Mode Table Styles
-  tableContainer: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    margin: 12,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  tableRowEven: {
-    backgroundColor: '#F8F9FA',
-  },
-  tableHeaderCell: {
-    padding: 8,
-    backgroundColor: '#007AFF',
-    borderRightWidth: 1,
-    borderRightColor: '#0066CC',
-    justifyContent: 'center',
-  },
-  tableHeaderText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-  },
-  tableCell: {
-    padding: 8,
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    justifyContent: 'center',
-  },
-  tableCellText: {
-    fontSize: 10,
-    color: '#000',
-    fontFamily: 'monospace',
   },
 });

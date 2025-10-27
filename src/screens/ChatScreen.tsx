@@ -57,9 +57,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
   const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
-  const [showModelDetails, setShowModelDetails] = useState(false);
-  const [embeddingModelLoaded, setEmbeddingModelLoaded] = useState(false);
-  const [embeddingModelName, setEmbeddingModelName] = useState<string>('None');
   const [contextStats, setContextStats] = useState<{
     totalTokens: number;
     remainingTokens: number;
@@ -118,29 +115,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Update embedding model status periodically
-  useEffect(() => {
-    const checkEmbeddingStatus = () => {
-      const embeddingLoaded = LlamaService.isEmbeddingModelLoaded();
-      setEmbeddingModelLoaded(embeddingLoaded);
-
-      if (embeddingLoaded) {
-        const embeddingInfo = LlamaService.getEmbeddingModelInfo();
-        setEmbeddingModelName(embeddingInfo?.name || 'Embedding Model');
-      } else {
-        setEmbeddingModelName('None');
-      }
-    };
-
-    // Check initially
-    checkEmbeddingStatus();
-
-    // Check periodically (in case model is loaded from ModelsScreen)
-    const interval = setInterval(checkEmbeddingStatus, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const initializeAI = async () => {
     try {
       Logger.info('🔍 Initializing AI backend...');
@@ -149,15 +123,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
       setAiBackend(backend);
       setBackendInfo(info.modelName);
-
-      // Check embedding model status
-      const embeddingLoaded = LlamaService.isEmbeddingModelLoaded();
-      setEmbeddingModelLoaded(embeddingLoaded);
-      if (embeddingLoaded) {
-        // Get embedding model name from LlamaService
-        const embeddingInfo = LlamaService.getEmbeddingModelInfo();
-        setEmbeddingModelName(embeddingInfo?.name || 'Embedding Model');
-      }
 
       Logger.info('✅ AI Backend:', backend);
       Logger.info('✅ Model:', info.modelName);
@@ -616,7 +581,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleStopGeneration = async () => {
     Logger.info('🛑 User clicked stop button');
-    Logger.info(`Current state - isGenerating: ${isGenerating}, currentActionId: ${currentActionIdRef.current}`);
+    Logger.info('Current state - isGenerating:', isGenerating, 'currentActionId:', currentActionIdRef.current);
 
     // Show alert immediately - user needs to know we're stopping
     Alert.alert(
@@ -693,6 +658,45 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
+  const switchBackend = async () => {
+    const targetBackend = aiBackend === 'apple' ? 'llama' : 'apple';
+
+    Alert.alert(
+      'Switch Backend',
+      `Switch to ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}?`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Switch',
+          onPress: async () => {
+            try {
+              const success = await AIService.switchBackend(targetBackend);
+              if (success) {
+                const info = AIService.getBackendInfo();
+                setAiBackend(targetBackend);
+                setBackendInfo(info.modelName);
+                Alert.alert(
+                  'Backend Switched',
+                  `Now using ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}`,
+                );
+              } else {
+                Alert.alert(
+                  'Switch Failed',
+                  targetBackend === 'apple'
+                    ? 'Apple Intelligence not available on this device'
+                    : 'Could not switch to Llama.cpp',
+                );
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to switch backend');
+              Logger.error('Backend switch error:', error);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderItem = useCallback(
     ({item}: {item: ChatItem}) => {
       if (item.role === 'action') {
@@ -744,40 +748,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          {/* Main Model Status */}
-          <TouchableOpacity
-            style={styles.modelStatusRow}
-            onPress={() => setShowModelDetails(!showModelDetails)}
-            activeOpacity={0.7}>
-            <Text style={styles.modelStatusIcon}>{showModelDetails ? '▼' : '▶'}</Text>
-            <View style={styles.modelStatusTextContainer}>
-              <Text style={styles.modelStatusText}>
-                {AIService.isReady() ? '✅ Model Loaded' : '❌ Model Not Loaded'}
-              </Text>
-              {showModelDetails && AIService.isReady() && (
-                <Text style={styles.modelNameText}>{backendInfo}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {/* Embedding Model Status */}
-          <View style={styles.embeddingStatusRow}>
-            <Text style={styles.embeddingStatusText}>
-              {embeddingModelLoaded ? '✅ Embedding Loaded' : '⚪ Embedding Not Loaded'}
-            </Text>
-            {showModelDetails && embeddingModelLoaded && (
-              <Text style={styles.embeddingNameText}>{embeddingModelName}</Text>
+          <View style={styles.modelInfoRow}>
+            <Text style={styles.headerTitle}>{backendInfo}</Text>
+            {aiBackend === 'apple' && (
+              <View style={styles.applebadge}>
+                <Text style={styles.appleBadgeText}>⚡ Apple AI</Text>
+              </View>
             )}
           </View>
-
-          {/* Load Model Link */}
-          {!AIService.isReady() && (
-            <TouchableOpacity onPress={onModelSelect}>
-              <Text style={styles.selectModelLink}>Tap to Load Model</Text>
-            </TouchableOpacity>
+          {aiBackend === 'llama' && toolsEnabled && (
+            <View style={styles.promptModeContainer}>
+              <View style={[
+                styles.promptModeBadge,
+                promptMode === 'langchain' ? styles.promptModeLangchain : styles.promptModeLegacy
+              ]}>
+                <Text style={styles.promptModeText}>
+                  {promptMode === 'langchain' ? '🔗 Langchain' : '📝 Legacy'}
+                </Text>
+              </View>
+            </View>
           )}
-
-          {/* Context Stats */}
           {contextStats && (
             <View style={styles.contextMeterContainer}>
               <View style={styles.contextMeterBar}>
@@ -806,9 +796,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </Text>
             </View>
           )}
+          {aiBackend === 'llama' && !AIService.isReady() && (
+            <TouchableOpacity onPress={onModelSelect}>
+              <Text style={styles.selectModelLink}>Load Model</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
         <View style={styles.headerRight}>
+          <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
+            <Text style={styles.backendButtonText}>
+              {aiBackend === 'apple' ? '🔄 → Llama' : '🔄 → Apple'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
             <Text
               style={[
@@ -947,52 +946,51 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: 'wrap',
   },
-  modelStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  modelStatusIcon: {
-    fontSize: 12,
-    color: '#666',
-    width: 16,
-  },
-  modelStatusTextContainer: {
-    flex: 1,
-  },
-  modelStatusText: {
-    fontSize: 15,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000',
   },
-  modelNameText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    fontStyle: 'italic',
+  modelInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  embeddingStatusRow: {
-    marginLeft: 22,
-    marginBottom: 4,
+  applebadge: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
-  embeddingStatusText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#444',
-  },
-  embeddingNameText: {
+  appleBadgeText: {
     fontSize: 11,
-    color: '#666',
-    marginTop: 1,
-    fontStyle: 'italic',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   selectModelLink: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#007AFF',
+    marginTop: 2,
+  },
+  promptModeContainer: {
     marginTop: 4,
-    marginLeft: 22,
-    fontWeight: '500',
+  },
+  promptModeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  promptModeLangchain: {
+    backgroundColor: '#34C759',
+  },
+  promptModeLegacy: {
+    backgroundColor: '#FF9500',
+  },
+  promptModeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   contextMeterContainer: {
     marginTop: 6,
@@ -1026,6 +1024,17 @@ const styles = StyleSheet.create({
   stopButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  backendButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+  },
+  backendButtonText: {
+    fontSize: 12,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   toolsButton: {
