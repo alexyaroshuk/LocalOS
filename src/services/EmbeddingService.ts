@@ -217,4 +217,56 @@ export class EmbeddingService {
   static isModelLoaded(): boolean {
     return LlamaService.isEmbeddingModelLoaded();
   }
+
+  /**
+   * Semantic search in knowledge system
+   */
+  static async searchKnowledge(
+    query: string,
+    limit: number = 5,
+    folderPath?: string
+  ): Promise<Array<any>> {
+    try {
+      Logger.info(`[EmbeddingService] Knowledge semantic search: "${query}"`);
+
+      // Generate embedding for query
+      const queryEmbedding = await this.generateEmbedding(query);
+
+      // Search knowledge database
+      const results = await DatabaseService.searchKnowledgeByVector(queryEmbedding, limit, folderPath);
+
+      Logger.info(`[EmbeddingService] Found ${results.length} knowledge matches`);
+      return results;
+    } catch (error) {
+      Logger.error('[EmbeddingService] Knowledge search failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save knowledge entry with automatic embedding generation
+   */
+  static async saveKnowledgeWithEmbedding(
+    path: string,
+    content: string,
+    properties?: Record<string, any>
+  ): Promise<any> {
+    try {
+      Logger.info('[EmbeddingService] Generating embedding for knowledge...');
+      const embedding = await this.generateEmbedding(content);
+
+      const entry = await DatabaseService.createKnowledge(
+        path,
+        content,
+        properties,
+        embedding
+      );
+
+      Logger.info('[EmbeddingService] Knowledge saved with embedding');
+      return entry;
+    } catch (error) {
+      Logger.error('[EmbeddingService] Failed to save knowledge with embedding:', error);
+      throw error;
+    }
+  }
 }

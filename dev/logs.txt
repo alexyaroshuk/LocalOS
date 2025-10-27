@@ -1,30 +1,76 @@
-[Database] First memory embedding type: string
-DatabaseService.ts:599 [Database] First memory embedding constructor: String
-DatabaseService.ts:605 [Database] Blob is unknown type: 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
-DatabaseService.ts:611 [Database] First memory after conversion: 768D
-DatabaseService.ts:623 [Database] Memory 191 similarity: 0.3898, content: "I love programming in TypeScript..."
-DatabaseService.ts:623 [Database] Memory 192 similarity: 0.3027, content: "I enjoy coding with TS..."
-DatabaseService.ts:623 [Database] Memory 193 similarity: 0.2983, content: "My favorite color is blue..."
-DatabaseService.ts:636 [Database] Vector search found 5 results
-DatabaseService.ts:638 [Database] Top result: similarity=0.4050, content="I build mobile apps using React Native..."
-DatabaseService.ts:639 [Database] Last result: similarity=0.3207
-Logger.ts:82 [EmbeddingService] Found 5 semantic matches
-Logger.ts:82 [VectorTest] Search completed in 95ms
-Logger.ts:82 [VectorTest] Found 5 results
-
-
-[Database] Vector search: Found 10 memories with embeddings
-DatabaseService.ts:586 [Database] Query vector dimensions: 768D
-DatabaseService.ts:598 [Database] First memory embedding type: string
-DatabaseService.ts:599 [Database] First memory embedding constructor: String
-DatabaseService.ts:605 [Database] Blob is unknown type: 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
-DatabaseService.ts:611 [Database] First memory after conversion: 768D
-DatabaseService.ts:623 [Database] Memory 191 similarity: 0.4754, content: "I love programming in TypeScript..."
-DatabaseService.ts:623 [Database] Memory 192 similarity: 0.3347, content: "I enjoy coding with TS..."
-DatabaseService.ts:623 [Database] Memory 193 similarity: 0.4294, content: "My favorite color is blue..."
-DatabaseService.ts:636 [Database] Vector search found 5 results
-DatabaseService.ts:638 [Database] Top result: similarity=0.5322, content="I prefer coffee over tea..."
-DatabaseService.ts:639 [Database] Last result: similarity=0.4294
-Logger.ts:82 [EmbeddingService] Found 5 semantic matches
-Logger.ts:82 [VectorTest] Search completed in 115ms
-Logger.ts:82 [VectorTest] Found 5 results
+[2025-10-27T06:07:21.372Z] INFO  | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-27T06:07:21.372Z] INFO  | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-27T06:07:21.372Z] INFO  | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-27T06:07:21.372Z] INFO  | User: Where do I live
+[2025-10-27T06:07:21.372Z] INFO  | Tools enabled: true
+[2025-10-27T06:07:21.372Z] INFO  | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-27T06:07:21.372Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-27T06:07:21.372Z] INFO  | 👤 User prompt: | "Where do I live"
+[2025-10-27T06:07:21.372Z] INFO  | 📝 System prompt type: | "letta"
+[2025-10-27T06:07:21.373Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-27T06:07:21.373Z] DEBUG | Prompt length: | 5893
+[2025-10-27T06:07:21.373Z] DEBUG | Includes memory examples: | true
+[2025-10-27T06:07:21.373Z] DEBUG | Includes "What do you know":
+[2025-10-27T06:07:21.373Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>"
+[2025-10-27T06:07:21.373Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-27T06:07:21.373Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-27T06:07:21.373Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-27T06:07:21.373Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-27T06:07:35.569Z] DEBUG | Completion finished
+[2025-10-27T06:07:35.569Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-27T06:07:35.570Z] DEBUG | Temperature: | 0.3
+[2025-10-27T06:07:35.570Z] DEBUG | Model raw output: | "I don't have any information about your location in my archival memory. Can you please tell me where you live? I'll make sure to update your archival memory so I can recall this information for future conversations."
+[2025-10-27T06:07:35.570Z] DEBUG | Output length: | 215
+[2025-10-27T06:07:35.570Z] DEBUG | 🔍 extractToolCall input: | "I don't have any information about your location in my archival memory. Can you please tell me where you live? I'll make sure to update your archival memory so I can recall this information for future conversations."
+[2025-10-27T06:07:35.570Z] INFO  | ❌ NO TOOL CALL DETECTED
+[2025-10-27T06:07:35.570Z] INFO  | ℹ️  No tool was used (normal response)
+[2025-10-27T06:07:35.570Z] INFO  | 💬 Regular response (no tools used)
+[2025-10-27T06:07:41.340Z] INFO  | 🔧 Tools enabled: 9 tools available
+[2025-10-27T06:07:41.340Z] INFO  | 🔧 Tools enabled for testing
+[2025-10-27T06:07:41.340Z] INFO  | Tools supported? | true
+[2025-10-27T06:07:41.340Z] INFO  | 📝 Current prompt type: | "letta"
+[2025-10-27T06:07:41.341Z] INFO  | 🔢 [EmbedDebug] Embedding model loaded:
+[2025-10-27T06:07:41.342Z] INFO  | 🔢 [EmbedDebug] Embedding model name: | "none"
+[2025-10-27T06:07:41.342Z] INFO  | 🤖 [EmbedDebug] Chat model loaded: | true
+[2025-10-27T06:07:41.342Z] INFO  | 🤖 [EmbedDebug] Chat model name: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-27T06:07:42.479Z] INFO  | 📝 System prompt changed to: | "custom"
+[2025-10-27T06:07:42.479Z] INFO  | Switched to Custom (Force Tool Use) system prompt
+[2025-10-27T06:08:02.728Z] INFO  | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-27T06:08:02.728Z] INFO  | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-27T06:08:02.728Z] INFO  | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-27T06:08:02.728Z] INFO  | User: Where do I live
+[2025-10-27T06:08:02.728Z] INFO  | Tools enabled: true
+[2025-10-27T06:08:02.728Z] INFO  | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-27T06:08:02.728Z] INFO  | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search"
+[2025-10-27T06:08:02.728Z] INFO  | 👤 User prompt: | "Where do I live"
+[2025-10-27T06:08:02.728Z] INFO  | 📝 System prompt type: | "custom"
+[2025-10-27T06:08:02.728Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-27T06:08:02.728Z] DEBUG | Prompt length: | 6224
+[2025-10-27T06:08:02.728Z] DEBUG | Includes memory examples: | true
+[2025-10-27T06:08:02.728Z] DEBUG | Includes "What do you know":
+[2025-10-27T06:08:02.728Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yourself. MUST call tools.\n\n🔒 PRIVACY &"
+[2025-10-27T06:08:02.728Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-27T06:08:02.728Z] INFO  | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-27T06:08:02.729Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-27T06:08:02.729Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-27T06:08:16.169Z] DEBUG | Completion finished
+[2025-10-27T06:08:16.169Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-27T06:08:16.169Z] DEBUG | Temperature: | 0.3
+[2025-10-27T06:08:16.169Z] DEBUG | Model raw output: | "<archival_memory_insert content=\"User lives in an unknown location\" tags=[\"unknown\",\"location\"] />"
+[2025-10-27T06:08:16.169Z] DEBUG | Output length: | 98
+[2025-10-27T06:08:16.169Z] DEBUG | 🔍 extractToolCall input: | "<archival_memory_insert content=\"User lives in an unknown location\" tags=[\"unknown\",\"location\"] />"
+[2025-10-27T06:08:16.169Z] DEBUG | ✅ Found XML format tool: | "archival_memory_insert"
+[2025-10-27T06:08:16.169Z] DEBUG | Attributes string: | "content=\"User lives in an unknown location\" tags=[\"unknown\",\"location\"] "
+[2025-10-27T06:08:16.170Z] DEBUG | Parsed XML args: | {"content":"User lives in an unknown location","tags":["unknown","location"]}
+[2025-10-27T06:08:16.170Z] INFO  | ✅ TOOL CALL DETECTED: | "{\"name\":\"archival_memory_insert\",\"arguments\":{\"content\":\"User lives in an unknown location\",\"tags\":[\"unknown\",\"location\"]}}"
+[2025-10-27T06:08:16.170Z] INFO  | ✅ Valid tool call detected: | {"name":"archival_memory_insert","arguments":{"content":"User lives in an unknown location","tags":["unknown","location"]}}
+[2025-10-27T06:08:16.182Z] INFO  | 🔧 Tool execution result: | {"id":"tool-1761545296170","name":"archival_memory_insert","result":{"success":true,"message":"Memory added to archival storage","memory_id":123,"content_length":33,"tags":["unknown","location"],"importance":5}}
+[2025-10-27T06:08:16.182Z] INFO  | 🎯 Generating final response with tool results...
+[2025-10-27T06:08:16.182Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-27T06:08:16.182Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-27T06:08:19.015Z] DEBUG | Completion finished
+[2025-10-27T06:08:19.015Z] DEBUG | 📝 Raw final response: | "I've added that to your archival memory. Can you tell me more about your location? What city or region do you live in?"
+[2025-10-27T06:08:19.015Z] INFO  | ✨ Clean final response: | "I've added that to your archival memory. Can you tell me more about your location? What city or region do you live in?"
+[2025-10-27T06:08:19.015Z] INFO  | ✅ Tool was used: | "archival_memory_insert"
+[2025-10-27T06:08:19.015Z] INFO  | 🔧 Tool used: archival_memory_insert
+[2025-10-27T06:08:19.015Z] INFO  | ✨ Response generated using tool data

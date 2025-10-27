@@ -27,17 +27,15 @@ interface SearchResult {
 }
 
 // Test dataset to demonstrate semantic search
-const TEST_MEMORIES = [
-  {content: 'I love programming in TypeScript', category: 'preference', importance: 8},
-  {content: 'I enjoy coding with TS', category: 'preference', importance: 8},
-  {content: 'My favorite color is blue', category: 'preference', importance: 6},
-  {content: 'I work on React Native applications', category: 'fact', importance: 9},
-  {content: 'I build mobile apps using React Native', category: 'fact', importance: 9},
-  {content: 'I prefer coffee over tea', category: 'preference', importance: 5},
-  {content: 'I wake up early in the morning', category: 'preference', importance: 7},
-  {content: 'Python is my second favorite language', category: 'preference', importance: 7},
-  {content: 'I live in San Francisco', category: 'fact', importance: 8},
-  {content: 'I like listening to jazz music', category: 'preference', importance: 6},
+// Using new knowledge system with folder structure
+const TEST_KNOWLEDGE = [
+  {path: 'archive/tech/languages/TypeScript', content: 'Love programming in TypeScript. It has great type safety and tooling.', properties: {rating: 10, type: 'programming'}},
+  {path: 'archive/tech/frameworks/React Native', content: 'Build mobile apps using React Native. Cross-platform development is efficient.', properties: {rating: 9, category: 'mobile'}},
+  {path: 'archive/preferences/drinks/Coffee', content: 'Prefer coffee over tea. Usually drink it black in the morning.', properties: {preference: 'strong'}},
+  {path: 'archive/preferences/colors/Blue', content: 'Favorite color is blue. Calming and professional.', properties: {preference: 'primary'}},
+  {path: 'archive/tech/languages/Python', content: 'Second favorite programming language. Great for scripting and data science.', properties: {rating: 8, type: 'programming'}},
+  {path: 'archive/preferences/music/Jazz', content: 'Like listening to jazz music. Miles Davis and John Coltrane are favorites.', properties: {genre: 'instrumental'}},
+  {path: 'archive/habits/morning/Early Riser', content: 'Wake up early in the morning, usually around 6 AM. More productive in morning.', properties: {time: '6am'}},
 ];
 
 export const VectorSearchTestScreen: React.FC = () => {
@@ -78,17 +76,22 @@ export const VectorSearchTestScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      Logger.info('[VectorTest] Loading test memories with embeddings...');
+      Logger.info('[VectorTest] Loading test knowledge with embeddings...');
 
-      for (const memory of TEST_MEMORIES) {
-        await EmbeddingService.saveMemoryWithEmbedding(
-          memory.content,
-          memory.category as any,
-          memory.importance
+      for (const entry of TEST_KNOWLEDGE) {
+        // Generate embedding
+        const embedding = await EmbeddingService.generateEmbedding(entry.content);
+
+        // Create knowledge entry with embedding
+        await DatabaseService.createKnowledge(
+          entry.path,
+          entry.content,
+          entry.properties,
+          embedding
         );
       }
 
-      Alert.alert('Success', `Loaded ${TEST_MEMORIES.length} test memories with embeddings`);
+      Alert.alert('Success', `Loaded ${TEST_KNOWLEDGE.length} test knowledge entries with embeddings`);
       await loadStats();
     } catch (error) {
       Logger.error('Failed to load test data:', error);
@@ -117,11 +120,52 @@ export const VectorSearchTestScreen: React.FC = () => {
       let results: any[] = [];
 
       if (searchType === 'vector') {
-        results = await EmbeddingService.semanticSearch(query, 5, 0.0);
+        // Search both archive memories and knowledge
+        const archiveResults = await EmbeddingService.semanticSearch(query, 3, 0.0);
+        const knowledgeResults = await EmbeddingService.searchKnowledge(query, 3);
+
+        // Normalize knowledge results to match archive format
+        const normalizedKnowledge = knowledgeResults.map((k: any) => ({
+          id: k.id,
+          content: k.content,
+          category: k.folder_path || 'knowledge',
+          similarity: k.similarity,
+          source: 'vector' as const,
+        }));
+
+        results = [...archiveResults, ...normalizedKnowledge]
+          .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+          .slice(0, 5);
       } else if (searchType === 'keyword') {
-        results = await DatabaseService.searchArchive(query, 5);
+        // Keyword search in both
+        const archiveResults = await DatabaseService.searchArchive(query, 3);
+        const knowledgeResults = await DatabaseService.searchKnowledge(query, undefined, 3);
+
+        // Normalize knowledge results
+        const normalizedKnowledge = knowledgeResults.map((k: any) => ({
+          id: k.id,
+          content: k.content,
+          category: k.folder_path || 'knowledge',
+        }));
+
+        results = [...archiveResults, ...normalizedKnowledge].slice(0, 5);
       } else {
-        results = await EmbeddingService.hybridSearch(query, 5);
+        // Hybrid search - combine archive and knowledge
+        const archiveResults = await EmbeddingService.hybridSearch(query, 3);
+        const knowledgeResults = await EmbeddingService.searchKnowledge(query, 3);
+
+        // Normalize knowledge results
+        const normalizedKnowledge = knowledgeResults.map((k: any) => ({
+          id: k.id,
+          content: k.content,
+          category: k.folder_path || 'knowledge',
+          similarity: k.similarity,
+          source: 'hybrid' as const,
+        }));
+
+        results = [...archiveResults, ...normalizedKnowledge]
+          .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+          .slice(0, 5);
       }
 
       const endTime = Date.now();
@@ -130,6 +174,9 @@ export const VectorSearchTestScreen: React.FC = () => {
 
       Logger.info(`[VectorTest] Search completed in ${endTime - startTime}ms`);
       Logger.info(`[VectorTest] Found ${results.length} results`);
+      if (results.length > 0) {
+        Logger.info(`[VectorTest] Top result: "${results[0].content}" (${((results[0].similarity || 0) * 100).toFixed(1)}% match)`);
+      }
     } catch (error) {
       Logger.error('Search failed:', error);
       Alert.alert('Error', `Search failed: ${error}`);
@@ -643,13 +690,5 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontStyle: 'italic',
     marginTop: 4,
-  },
-  dualModelText: {
-    fontSize: 14,
-    color: '#00FF00',
-    fontWeight: 'bold',
-    marginTop: 8,
-    marginBottom: 8,
-    textAlign: 'center',
   },
 });
