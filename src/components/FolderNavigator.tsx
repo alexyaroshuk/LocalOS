@@ -45,10 +45,10 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
   }, []);
 
   const initializeNavigator = async () => {
-    // On iOS, we use document picker instead of folder navigation
+    // iOS: Start with document picker, but can fallback to folder navigation
     if (Platform.OS === 'ios') {
       setLoading(false);
-      return;
+      return; // iOS uses the picker button in UI
     }
 
     // Android: Request storage permissions
@@ -97,18 +97,61 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
     await navigateToFolder(rootPath);
   };
 
+  const handleUseFolderNavigatorIOS = async () => {
+    // Switch to folder navigator mode on iOS
+    try {
+      setLoading(true);
+      const docsPath = RNFS.DocumentDirectoryPath;
+      Logger.info(`Navigating to iOS Documents: ${docsPath}`);
+      await navigateToFolder(docsPath);
+    } catch (err) {
+      setLoading(false);
+      Logger.error('Failed to navigate to Documents:', err);
+      Alert.alert('Error', `Cannot access documents folder: ${err}`);
+    }
+  };
+
   const handlePickFolderIOS = async () => {
     try {
       Logger.info('Opening iOS document picker for folder selection');
       setLoading(true);
 
-      const result = await DocumentPicker.pickDirectory();
-      Logger.info('Folder picked:', result.uri);
+      // Check if pickDirectory is available (sponsor-only feature)
+      if (typeof DocumentPicker.pickDirectory === 'function') {
+        const result = await DocumentPicker.pickDirectory();
+        Logger.info('Folder picked:', result.uri);
 
-      // DocumentPicker returns a URI, we need to use this directly
-      // The URI is already accessible to the app
-      if (result && result.uri) {
-        onSelectFolder(result.uri);
+        if (result && result.uri) {
+          onSelectFolder(result.uri);
+        }
+      } else {
+        // Fallback: pickDirectory is not available (sponsor-only)
+        setLoading(false);
+        Alert.alert(
+          'Feature Not Available',
+          'Folder picking requires the sponsor version of @react-native-documents/picker.\n\n' +
+          'Alternative: Use Files app to copy your vault to "On My iPhone" → LocalOSApp folder, ' +
+          'then we can access it from the app\'s Documents directory.',
+          [
+            {text: 'OK'},
+            {
+              text: 'Use App Folder',
+              onPress: async () => {
+                // Navigate to app's Documents directory
+                const docsPath = RNFS.DocumentDirectoryPath;
+                Logger.info(`Switching to app documents: ${docsPath}`);
+
+                try {
+                  setLoading(true);
+                  await navigateToFolder(docsPath);
+                } catch (err) {
+                  setLoading(false);
+                  Alert.alert('Error', `Cannot access documents folder: ${err}`);
+                }
+              },
+            },
+          ],
+        );
       }
     } catch (err) {
       setLoading(false);
@@ -223,8 +266,8 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
     return currentPath.replace(RNFS.DocumentDirectoryPath, 'Documents');
   };
 
-  // iOS: Show document picker button
-  if (Platform.OS === 'ios') {
+  // iOS: Show document picker button if no current path
+  if (Platform.OS === 'ios' && !currentPath) {
     return (
       <View style={styles.container}>
         {/* Header */}
@@ -240,23 +283,12 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
           <Text style={styles.iosInstructionsTitle}>
             📁 Select Your Obsidian Vault
           </Text>
-          <Text style={styles.iosInstructionsText}>
-            Tap the button below to browse and select your vault folder from:
-          </Text>
-          <Text style={styles.iosInstructionsBullet}>• Files app</Text>
-          <Text style={styles.iosInstructionsBullet}>• iCloud Drive</Text>
-          <Text style={styles.iosInstructionsBullet}>• On My iPhone</Text>
-          <Text style={styles.iosInstructionsBullet}>
-            • Any other accessible location
-          </Text>
-          <Text style={styles.iosInstructionsNote}>
-            The app will be able to access all files and folders within your selected
-            vault.
-          </Text>
-        </View>
 
-        {/* Pick Folder Button */}
-        <View style={styles.iosPickerContainer}>
+          <Text style={styles.iosSectionTitle}>Option 1: Use Document Picker (Recommended)</Text>
+          <Text style={styles.iosInstructionsText}>
+            Browse and select your vault from anywhere on your device.
+          </Text>
+
           <TouchableOpacity
             style={styles.iosPickButton}
             onPress={handlePickFolderIOS}
@@ -264,8 +296,22 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.iosPickButtonText}>📂 Browse & Select Folder</Text>
+              <Text style={styles.iosPickButtonText}>📂 Browse Files</Text>
             )}
+          </TouchableOpacity>
+
+          <View style={styles.iosDivider} />
+
+          <Text style={styles.iosSectionTitle}>Option 2: Use App's Documents Folder</Text>
+          <Text style={styles.iosInstructionsText}>
+            Copy your vault to "On My iPhone" → "LocalOSApp" using the Files app, then browse from the app's folder.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.iosSecondaryButton}
+            onPress={handleUseFolderNavigatorIOS}
+            disabled={loading}>
+            <Text style={styles.iosSecondaryButtonText}>📁 Browse App Folder</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -480,61 +526,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   iosInstructionsContainer: {
+    flex: 1,
     padding: 24,
-    backgroundColor: '#FFFFFF',
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#F8F9FA',
   },
   iosInstructionsTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#000',
-    marginBottom: 16,
+    marginBottom: 24,
     textAlign: 'center',
   },
-  iosInstructionsText: {
-    fontSize: 15,
-    color: '#333',
-    marginBottom: 12,
-    lineHeight: 22,
+  iosSectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  iosInstructionsBullet: {
+  iosInstructionsText: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 8,
-    marginBottom: 6,
+    marginBottom: 16,
     lineHeight: 20,
-  },
-  iosInstructionsNote: {
-    fontSize: 13,
-    color: '#999',
-    marginTop: 16,
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
-  iosPickerContainer: {
-    padding: 16,
-    marginTop: 'auto',
   },
   iosPickButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 8,
   },
   iosPickButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
+  },
+  iosSecondaryButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  iosSecondaryButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  iosDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 24,
   },
 });
