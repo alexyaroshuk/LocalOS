@@ -686,7 +686,7 @@ export class ToolService {
     return {
       name: 'suggest_journal_entry',
       description:
-        'REQUIRED when user shares daily updates, activities, or experiences. Creates a structured journal entry proposal with markdown formatting. Use for: books read, work done, meals, social events, exercise, learning, or any daily activities. The user will review and edit before saving.',
+        'REQUIRED when user shares daily updates, activities, or experiences. Creates a structured journal entry proposal with markdown formatting. Use for: books read, work done, meals, social events, exercise, learning, or any daily activities. CRITICAL: You MUST provide complete, well-formatted markdown content in the content parameter. DO NOT call this tool with empty or placeholder content. The user will review and edit before saving.',
       parameters: [
         {
           name: 'date',
@@ -697,7 +697,7 @@ export class ToolService {
         {
           name: 'content',
           type: 'string',
-          description: 'The structured markdown content for the journal entry',
+          description: 'REQUIRED: The complete, well-formatted markdown content for the journal entry. Must include proper headings (## or **) and bullet points. DO NOT use placeholder text - provide the actual journal entry content.',
           required: true,
         },
         {
@@ -719,6 +719,21 @@ export class ToolService {
           const date = args.date as string;
           const content = args.content as string;
           const folder = (args.folder as string) || 'Personal/Journal';
+
+          // Validate required parameters
+          if (!date) {
+            return {
+              success: false,
+              error: 'Missing required parameter: date (YYYY-MM-DD format)',
+            };
+          }
+
+          if (!content || content.trim().length === 0) {
+            return {
+              success: false,
+              error: 'Missing required parameter: content (must be a complete markdown journal entry)',
+            };
+          }
 
           // Extract year from date for folder organization
           const year = date.substring(0, 4);
