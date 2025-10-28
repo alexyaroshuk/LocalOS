@@ -185,6 +185,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           .filter(msg => msg.role !== 'action')
           .slice(-MAX_CONTEXT_MESSAGES) as Message[];
 
+        // Use same callback as main chat flow
         const result = await AIService.chatCompletionWithTools(
           contextMessages,
           [],
@@ -192,7 +193,111 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           token => {
             setStreamingText(prev => prev + token);
           },
+          // Tool usage callback (same as main chat)
+          (stage, tool, toolArgs, toolResult) => {
+            const now = Date.now();
+
+            if (stage === 'tool_call') {
+              // Complete thinking action if exists
+              if (currentActionIdRef.current) {
+                setMessages(prev =>
+                  prev.map(msg => {
+                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                      const actionMsg = msg as ActionMessage;
+                      const duration = now - actionMsg.startTime;
+                      return {
+                        ...actionMsg,
+                        content: `Thought for ${(duration / 1000).toFixed(1)}s`,
+                        endTime: now,
+                        duration,
+                        isComplete: true,
+                      };
+                    }
+                    return msg;
+                  }),
+                );
+              }
+
+              // Create new tool call action
+              const toolCallId = generateId();
+              currentActionIdRef.current = toolCallId;
+              const toolCallAction: ActionMessage = {
+                id: toolCallId,
+                role: 'action',
+                actionType: 'tool_call',
+                content: `Using ${tool}...`,
+                timestamp: Date.now(),
+                startTime: now,
+                toolName: tool,
+                toolArgs: toolArgs,
+                isComplete: false,
+              };
+              setMessages(prev => [...prev, toolCallAction]);
+              setToolUsageState({stage: 'using_tool', toolName: tool});
+              setStreamingText('');
+            } else if (stage === 'tool_result') {
+              // Complete tool call action
+              if (currentActionIdRef.current) {
+                setMessages(prev =>
+                  prev.map(msg => {
+                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                      const actionMsg = msg as ActionMessage;
+                      const duration = now - actionMsg.startTime;
+                      return {
+                        ...actionMsg,
+                        content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
+                        endTime: now,
+                        duration,
+                        toolResult: toolResult,
+                        isComplete: true,
+                      };
+                    }
+                    return msg;
+                  }),
+                );
+              }
+
+              setToolUsageState({stage: 'processing'});
+              currentActionIdRef.current = null;
+            } else if (stage === 'generating') {
+              // Create generating action
+              const generatingId = generateId();
+              currentActionIdRef.current = generatingId;
+              const generatingAction: ActionMessage = {
+                id: generatingId,
+                role: 'action',
+                actionType: 'generating',
+                content: 'Generating response...',
+                timestamp: Date.now(),
+                startTime: now,
+                isComplete: false,
+              };
+              setMessages(prev => [...prev, generatingAction]);
+              setToolUsageState({stage: 'generating'});
+            }
+          },
         );
+
+        // Complete generating action
+        if (currentActionIdRef.current) {
+          setMessages(prev =>
+            prev.map(msg => {
+              if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                const actionMsg = msg as ActionMessage;
+                const duration = Date.now() - actionMsg.startTime;
+                return {
+                  ...actionMsg,
+                  content: `Generated response in ${(duration / 1000).toFixed(1)}s`,
+                  endTime: Date.now(),
+                  duration,
+                  isComplete: true,
+                };
+              }
+              return msg;
+            }),
+          );
+          currentActionIdRef.current = null;
+        }
 
         const assistantMessage: Message = {
           id: generateId(),
@@ -203,6 +308,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         setMessages(prev => [...prev, assistantMessage]);
         setStreamingText('');
+        setToolUsageState({stage: 'idle'});
       } catch (error) {
         Logger.error('Error handling tool selection:', error);
       } finally {
@@ -506,9 +612,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
-              // DEBUG: Log every tool result
-              Logger.info('🔧 Tool result callback fired:', {tool, hasResult: !!toolResult});
-
               // Complete tool call action
               if (currentActionIdRef.current) {
                 setMessages(prev =>
@@ -516,7 +619,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                     if (msg.id === currentActionIdRef.current && msg.role === 'action') {
                       const actionMsg = msg as ActionMessage;
                       const duration = now - actionMsg.startTime;
-                      const updatedMsg = {
+                      return {
                         ...actionMsg,
                         content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
                         endTime: now,
@@ -524,19 +627,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         toolResult: toolResult,
                         isComplete: true,
                       };
-
-                      // DEBUG: Log journal tool result structure
-                      if (tool === 'suggest_journal_entry') {
-                        Logger.info('📋 STORING suggest_journal_entry result:', toolResult);
-                      }
-
-                      return updatedMsg;
                     }
                     return msg;
                   }),
                 );
-              } else {
-                Logger.warn('⚠️ Tool result received but no currentActionIdRef!');
               }
 
               // Note: Journal proposals now show as a button in the chat
@@ -912,7 +1006,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         // Check if this is a suggest_journal_entry action with a proposal
         // NOTE: ToolService wraps results in .result property!
+        // Only show proposal button when action is complete (like copy button pattern)
         const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
+                           actionMsg.isComplete &&
+                           !actionMsg.error &&
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
 
@@ -922,6 +1019,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           if (!(window as any)[logKey]) {
             (window as any)[logKey] = true;
             Logger.info('🔍 PROPOSAL CHECK for', actionMsg.id);
+            Logger.info('isComplete:', actionMsg.isComplete);
             Logger.info('toolResult:', actionMsg.toolResult);
             Logger.info('hasProposal:', hasProposal);
           }
