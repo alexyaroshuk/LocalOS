@@ -7,16 +7,20 @@ interface ChatMessageProps {
   message: Message;
   onCopy?: () => void;
   onEdit?: (messageId: string, content: string) => void;
-  onConfirmationResponse?: (messageId: string, response: 'yes' | 'no') => void;
-  showConfirmationButtons?: boolean; // Controlled by parent
+  toolConfirmation?: {
+    type: 'choice' | 'single';
+    tools?: string[];
+    tool?: string;
+  };
+  onToolSelection?: (messageId: string, toolName: string) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onCopy,
   onEdit,
-  onConfirmationResponse,
-  showConfirmationButtons = false,
+  toolConfirmation,
+  onToolSelection,
 }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
@@ -94,19 +98,35 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </View>
           )}
 
-          {/* Yes/No confirmation buttons */}
-          {!isUser && showConfirmationButtons && onConfirmationResponse && (
+          {/* Tool-specific confirmation buttons */}
+          {!isUser && toolConfirmation && onToolSelection && (
             <View style={styles.confirmationButtons}>
-              <TouchableOpacity
-                style={[styles.confirmButton, styles.yesButton]}
-                onPress={() => onConfirmationResponse(message.id, 'yes')}>
-                <Text style={styles.confirmButtonText}>✓ Yes</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmButton, styles.noButton]}
-                onPress={() => onConfirmationResponse(message.id, 'no')}>
-                <Text style={styles.confirmButtonText}>✗ No</Text>
-              </TouchableOpacity>
+              {toolConfirmation.type === 'choice' && toolConfirmation.tools && (
+                // Multiple tool choice buttons
+                toolConfirmation.tools.map((tool, index) => (
+                  <TouchableOpacity
+                    key={tool}
+                    style={[
+                      styles.confirmButton,
+                      index === 0 ? styles.primaryButton : styles.secondaryButton
+                    ]}
+                    onPress={() => onToolSelection(message.id, tool)}>
+                    <Text style={styles.confirmButtonText}>
+                      {tool.replace(/_/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+              {toolConfirmation.type === 'single' && toolConfirmation.tool && (
+                // Single "Use tool" button
+                <TouchableOpacity
+                  style={[styles.confirmButton, styles.singleToolButton]}
+                  onPress={() => onToolSelection(message.id, toolConfirmation.tool!)}>
+                  <Text style={styles.confirmButtonText}>
+                    Use {toolConfirmation.tool.replace(/_/g, ' ')}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -258,13 +278,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
   },
-  yesButton: {
+  primaryButton: {
+    backgroundColor: '#007AFF',
+    borderColor: '#0066DD',
+  },
+  secondaryButton: {
+    backgroundColor: '#5856D6',
+    borderColor: '#4745B3',
+  },
+  singleToolButton: {
     backgroundColor: '#34C759',
     borderColor: '#2FB84B',
-  },
-  noButton: {
-    backgroundColor: '#FF3B30',
-    borderColor: '#E6342A',
   },
   confirmButtonText: {
     fontSize: 15,
