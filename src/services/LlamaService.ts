@@ -2,6 +2,7 @@
  * Service for managing llama.cpp model inference
  */
 import {initLlama, LlamaContext} from 'llama.rn';
+import RNFS from 'react-native-fs';
 import {LlamaConfig, Message, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId} from '../utils/helpers';
@@ -43,6 +44,43 @@ export class LlamaService {
       await this.releaseModel();
 
       Logger.info('Loading model from:', modelPath);
+
+      // CRITICAL: Verify model file exists before attempting to load
+      // This prevents native crashes in llama_model_has_encoder
+      try {
+        const fileExists = await RNFS.exists(modelPath);
+        if (!fileExists) {
+          const error = new Error(`Model file does not exist at path: ${modelPath}`);
+          Logger.error('❌ Model file not found:', modelPath);
+          throw error;
+        }
+
+        // Verify it's a file (not a directory)
+        const stat = await RNFS.stat(modelPath);
+        if (!stat.isFile()) {
+          const error = new Error(`Path exists but is not a file: ${modelPath}`);
+          Logger.error('❌ Path is not a file:', modelPath);
+          throw error;
+        }
+
+        // Verify file is not empty
+        if (stat.size === 0) {
+          const error = new Error(`Model file is empty (0 bytes): ${modelPath}`);
+          Logger.error('❌ Model file is empty:', modelPath);
+          throw error;
+        }
+
+        Logger.info('✅ Model file validated:', {
+          path: modelPath,
+          size: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
+          exists: true,
+        });
+      } catch (fsError) {
+        Logger.error('❌ File validation failed:', fsError);
+        throw new Error(
+          `Cannot load model - file validation failed: ${fsError instanceof Error ? fsError.message : String(fsError)}`
+        );
+      }
 
       // Detect and configure model-specific settings FIRST
       this.modelConfig = getModelConfig(modelName);
@@ -99,6 +137,43 @@ export class LlamaService {
       await this.releaseEmbeddingModel();
 
       Logger.info('[EmbedModel] Loading embedding model from:', modelPath);
+
+      // CRITICAL: Verify model file exists before attempting to load
+      // This prevents native crashes in llama_model_has_encoder
+      try {
+        const fileExists = await RNFS.exists(modelPath);
+        if (!fileExists) {
+          const error = new Error(`Embedding model file does not exist at path: ${modelPath}`);
+          Logger.error('[EmbedModel] ❌ Model file not found:', modelPath);
+          throw error;
+        }
+
+        // Verify it's a file (not a directory)
+        const stat = await RNFS.stat(modelPath);
+        if (!stat.isFile()) {
+          const error = new Error(`Path exists but is not a file: ${modelPath}`);
+          Logger.error('[EmbedModel] ❌ Path is not a file:', modelPath);
+          throw error;
+        }
+
+        // Verify file is not empty
+        if (stat.size === 0) {
+          const error = new Error(`Embedding model file is empty (0 bytes): ${modelPath}`);
+          Logger.error('[EmbedModel] ❌ Model file is empty:', modelPath);
+          throw error;
+        }
+
+        Logger.info('[EmbedModel] ✅ Model file validated:', {
+          path: modelPath,
+          size: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
+          exists: true,
+        });
+      } catch (fsError) {
+        Logger.error('[EmbedModel] ❌ File validation failed:', fsError);
+        throw new Error(
+          `Cannot load embedding model - file validation failed: ${fsError instanceof Error ? fsError.message : String(fsError)}`
+        );
+      }
 
       // Initialize a SEPARATE llama context for embeddings
       this.embeddingContext = await initLlama({
