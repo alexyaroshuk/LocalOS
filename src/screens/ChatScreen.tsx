@@ -198,27 +198,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             const now = Date.now();
 
             if (stage === 'tool_call') {
-              // Complete thinking action if exists
-              if (currentActionIdRef.current) {
-                setMessages(prev =>
-                  prev.map(msg => {
-                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
-                      const actionMsg = msg as ActionMessage;
-                      const duration = now - actionMsg.startTime;
-                      return {
-                        ...actionMsg,
-                        content: `Thought for ${(duration / 1000).toFixed(1)}s`,
-                        endTime: now,
-                        duration,
-                        isComplete: true,
-                      };
-                    }
-                    return msg;
-                  }),
-                );
-              }
-
-              // Create new tool call action
+              // Complete thinking action if exists, then add new tool call action in ONE update
+              const previousActionId = currentActionIdRef.current; // Capture old ID before overwriting
               const toolCallId = generateId();
               currentActionIdRef.current = toolCallId;
               const toolCallAction: ActionMessage = {
@@ -232,7 +213,27 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 toolArgs: toolArgs,
                 isComplete: false,
               };
-              setMessages(prev => [...prev, toolCallAction]);
+
+              setMessages(prev => {
+                // First, complete any previous thinking action
+                const updated = prev.map(msg => {
+                  if (previousActionId && msg.id === previousActionId && msg.role === 'action') {
+                    const actionMsg = msg as ActionMessage;
+                    const duration = now - actionMsg.startTime;
+                    return {
+                      ...actionMsg,
+                      content: `Thought for ${(duration / 1000).toFixed(1)}s`,
+                      endTime: now,
+                      duration,
+                      isComplete: true,
+                    };
+                  }
+                  return msg;
+                });
+                // Then add the new tool call action
+                return [...updated, toolCallAction];
+              });
+
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
@@ -245,11 +246,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 });
               }
 
-              // Complete tool call action
+              // Complete tool call action with result
               if (currentActionIdRef.current) {
+                const targetActionId = currentActionIdRef.current;
                 setMessages(prev =>
                   prev.map(msg => {
-                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                    if (msg.id === targetActionId && msg.role === 'action') {
                       const actionMsg = msg as ActionMessage;
                       const duration = now - actionMsg.startTime;
                       const updated = {
@@ -267,6 +269,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                           id: updated.id,
                           hasToolResult: !!updated.toolResult,
                           isComplete: updated.isComplete,
+                          resultData: updated.toolResult?.result,
                         });
                       }
 
@@ -594,27 +597,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             const now = Date.now();
 
             if (stage === 'tool_call') {
-              // Complete thinking action
-              if (currentActionIdRef.current) {
-                setMessages(prev =>
-                  prev.map(msg => {
-                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
-                      const actionMsg = msg as ActionMessage;
-                      const duration = now - actionMsg.startTime;
-                      return {
-                        ...actionMsg,
-                        content: `Thought for ${(duration / 1000).toFixed(1)}s`,
-                        endTime: now,
-                        duration,
-                        isComplete: true,
-                      };
-                    }
-                    return msg;
-                  }),
-                );
-              }
-
-              // Create new tool call action
+              // Complete thinking action if exists, then add new tool call action in ONE update
+              const previousActionId = currentActionIdRef.current; // Capture old ID before overwriting
               const toolCallId = generateId();
               currentActionIdRef.current = toolCallId;
               const toolCallAction: ActionMessage = {
@@ -628,18 +612,39 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 toolArgs: toolArgs,
                 isComplete: false,
               };
-              setMessages(prev => [...prev, toolCallAction]);
+
+              setMessages(prev => {
+                // First, complete any previous thinking action
+                const updated = prev.map(msg => {
+                  if (previousActionId && msg.id === previousActionId && msg.role === 'action') {
+                    const actionMsg = msg as ActionMessage;
+                    const duration = now - actionMsg.startTime;
+                    return {
+                      ...actionMsg,
+                      content: `Thought for ${(duration / 1000).toFixed(1)}s`,
+                      endTime: now,
+                      duration,
+                      isComplete: true,
+                    };
+                  }
+                  return msg;
+                });
+                // Then add the new tool call action
+                return [...updated, toolCallAction];
+              });
+
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
-              // Complete tool call action
+              // Complete tool call action with result
               if (currentActionIdRef.current) {
+                const targetActionId = currentActionIdRef.current;
                 setMessages(prev =>
                   prev.map(msg => {
-                    if (msg.id === currentActionIdRef.current && msg.role === 'action') {
+                    if (msg.id === targetActionId && msg.role === 'action') {
                       const actionMsg = msg as ActionMessage;
                       const duration = now - actionMsg.startTime;
-                      return {
+                      const updated = {
                         ...actionMsg,
                         content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
                         endTime: now,
@@ -647,6 +652,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         toolResult: toolResult,
                         isComplete: true,
                       };
+
+                      // DEBUG: Log what we're storing for journal tool
+                      if (tool === 'suggest_journal_entry') {
+                        Logger.info('📋 handleSend - Storing journal ActionMessage:', {
+                          id: updated.id,
+                          hasToolResult: !!updated.toolResult,
+                          isComplete: updated.isComplete,
+                          resultData: updated.toolResult?.result,
+                        });
+                      }
+
+                      return updated;
                     }
                     return msg;
                   }),
