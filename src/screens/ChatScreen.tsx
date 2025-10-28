@@ -1013,18 +1013,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
 
-        // DEBUG: Log once when action is complete
-        if (actionMsg.toolName === 'suggest_journal_entry' && actionMsg.isComplete && !actionMsg.error) {
-          const logKey = `proposal-check-${actionMsg.id}`;
-          if (!(window as any)[logKey]) {
-            (window as any)[logKey] = true;
-            Logger.info('🔍 PROPOSAL CHECK for', actionMsg.id);
-            Logger.info('isComplete:', actionMsg.isComplete);
-            Logger.info('toolResult:', actionMsg.toolResult);
-            Logger.info('hasProposal:', hasProposal);
-          }
-        }
-
         return (
           <View>
             <ActionCard action={action} />
@@ -1052,18 +1040,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                   </Text>
                 </TouchableOpacity>
               </View>
-            ) : (
-              actionMsg.toolName === 'suggest_journal_entry' && (
-                <View style={{padding: 16, backgroundColor: '#FFE6E6'}}>
-                  <Text style={{color: '#CC0000', fontWeight: 'bold'}}>
-                    ⚠️ DEBUG: suggest_journal_entry detected but hasProposal is FALSE
-                  </Text>
-                  <Text style={{color: '#666', fontSize: 12, marginTop: 4}}>
-                    Check console for detailed structure
-                  </Text>
-                </View>
-              )
-            )}
+            ) : null}
           </View>
         );
       } else {
