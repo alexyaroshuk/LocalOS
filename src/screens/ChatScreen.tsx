@@ -236,6 +236,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
+              // DEBUG: Log tool result for journal
+              if (tool === 'suggest_journal_entry') {
+                Logger.info('📋 handleToolSelection - tool_result stage:', {
+                  tool,
+                  hasResult: !!toolResult,
+                  currentActionId: currentActionIdRef.current,
+                });
+              }
+
               // Complete tool call action
               if (currentActionIdRef.current) {
                 setMessages(prev =>
@@ -243,7 +252,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                     if (msg.id === currentActionIdRef.current && msg.role === 'action') {
                       const actionMsg = msg as ActionMessage;
                       const duration = now - actionMsg.startTime;
-                      return {
+                      const updated = {
                         ...actionMsg,
                         content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
                         endTime: now,
@@ -251,6 +260,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         toolResult: toolResult,
                         isComplete: true,
                       };
+
+                      // DEBUG: Log what we're storing
+                      if (tool === 'suggest_journal_entry') {
+                        Logger.info('📋 Storing journal ActionMessage:', {
+                          id: updated.id,
+                          hasToolResult: !!updated.toolResult,
+                          isComplete: updated.isComplete,
+                        });
+                      }
+
+                      return updated;
                     }
                     return msg;
                   }),
@@ -1012,6 +1032,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            !actionMsg.error &&
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
+
+        // DEBUG LOG ONCE PER ACTION
+        if (actionMsg.toolName === 'suggest_journal_entry' && actionMsg.isComplete) {
+          Logger.info('🔍 Journal action render:', {
+            id: actionMsg.id,
+            isComplete: actionMsg.isComplete,
+            hasToolResult: !!actionMsg.toolResult,
+            hasProposal,
+          });
+        }
 
         return (
           <View>
