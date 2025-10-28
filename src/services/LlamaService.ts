@@ -1260,10 +1260,19 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           onToolUsage('generating');
         }
 
+        // Build config for final response generation
+        // If no temperature specified, use model-appropriate default (slightly higher than tool detection)
+        const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+        const finalResponseConfig = {
+          ...config,
+          temperature: config.temperature ?? Math.min(modelConfig.toolDetectionTemp * 1.5, 0.7), // Use 1.5x tool detection temp, capped at 0.7
+        };
+
         Logger.info('🎯 Generating final response with tool results...');
+        Logger.debug('Final response temperature:', finalResponseConfig.temperature);
         const finalResponse = await this.chatCompletion(
           [...messagesWithTools, toolResultMessage],
-          config,
+          finalResponseConfig,
           onToken, // THIS ENABLES STREAMING for the final response
         );
 
