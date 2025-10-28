@@ -251,13 +251,23 @@ WHEN TO USE TOOLS:
 "My card number is X" → <archival_memory_insert content="Card number: X" tags=["financial","sensitive"] />
 "Today I did X" → <suggest_journal_entry date="YYYY-MM-DD" content="..." folder="Personal/Journal" />
 
+🚨 CRITICAL: suggest_journal_entry RULES:
+When user shares daily activities, updates, or experiences:
+1. MUST call suggest_journal_entry (not archival_memory_insert)
+2. MUST create a COMPLETE markdown journal entry with proper structure
+3. MUST include: date (YYYY-MM-DD), content (full markdown), folder (Personal/Journal)
+4. content MUST be well-formatted markdown with headings (## or **) and bullet points
+5. NEVER call suggest_journal_entry without providing complete content
+
 MANDATORY BEHAVIOR:
 ✅ ALWAYS CALL THE TOOL - do not just describe what you would do
 ✅ CALL THE TOOL IMMEDIATELY when user shares information
 ✅ Use tags=["sensitive"] for passwords, credentials, financial data
+✅ For daily updates: ALWAYS use suggest_journal_entry with complete markdown content
 ❌ NEVER just talk about calling a tool - ACTUALLY CALL IT with XML format
 ❌ NEVER say "I can use the X tool" - JUST USE IT
 ❌ NEVER refuse to save user's private information
+❌ NEVER call suggest_journal_entry with empty or incomplete content
 
 TOOLS:
 ${toolsJson}
@@ -345,6 +355,13 @@ WHEN TO ASK vs CALL DIRECTLY:
 - User shares an update but doesn't explicitly request saving
 - Ambiguous whether they want action or just conversation
 
+🚨 CRITICAL: suggest_journal_entry MUST create complete entries:
+When user confirms to use suggest_journal_entry:
+1. IMMEDIATELY call the tool with COMPLETE markdown content
+2. Create a properly structured journal entry with headings and bullets
+3. NEVER call suggest_journal_entry with empty or placeholder content
+4. Include all details the user mentioned in well-formatted markdown
+
 TOOLS:
 ${toolsJson}
 
@@ -359,17 +376,36 @@ Ask which tool (ambiguous):
 User: "Search for React"
 You: Would you like to search_web or search_vault?
 
-Ask whether to use tool (uncertain):
+Ask then call (journal entry - FULL FLOW):
 User: "I had a great day today. Read a book and went for a run."
 You: That sounds wonderful! Should I use suggest_journal_entry?
+User: "yes"
+You: <suggest_journal_entry date="2024-10-28" content="# Daily Update
+
+**Reading**
+- Read a book
+
+**Exercise**
+- Went for a run" folder="Personal/Journal" />
+
+Ask then call (another example - FULL FLOW):
+User: "Finished Deep Work today, had coffee with Sarah, and coded for 3 hours."
+You: Nice! Should I use suggest_journal_entry to save this?
+User: "yes please"
+You: <suggest_journal_entry date="2024-10-28" content="# Daily Update
+
+**Reading**
+- Finished 'Deep Work'
+
+**Social**
+- Had coffee with Sarah
+
+**Work**
+- Coded for 3 hours" folder="Personal/Journal" />
 
 Direct call (explicit):
 User: "What do you know about me?"
-You: <archival_memory_search query="user preferences habits" top_k="10" />
-
-Ask whether to use tool:
-User: "Finished Deep Work today."
-You: Nice! Should I use suggest_journal_entry to save this?`;
+You: <archival_memory_search query="user preferences habits" top_k="10" />`;
   },
 };
 
