@@ -55,7 +55,8 @@
       "Bash(npx tsc --noEmit --skipLibCheck src/services/DatabaseService.ts src/services/EmbeddingService.ts src/services/LlamaService.ts src/screens/VectorSearchTestScreen.tsx)",
       "Bash(npx react-native start --reset-cache)",
       "WebSearch",
-      "WebFetch(domain:react-native-documents.github.io)"
+      "WebFetch(domain:react-native-documents.github.io)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
