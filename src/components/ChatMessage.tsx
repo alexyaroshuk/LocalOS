@@ -3,6 +3,14 @@ import {View, Text, StyleSheet, TouchableOpacity, Clipboard, Modal} from 'react-
 import {Message} from '../types';
 import {formatTimestamp} from '../utils/helpers';
 
+interface JournalProposal {
+  title: string;
+  folder: string;
+  relativePath: string;
+  content: string;
+  date: string;
+}
+
 interface ChatMessageProps {
   message: Message;
   onCopy?: () => void;
@@ -13,6 +21,8 @@ interface ChatMessageProps {
     tool?: string;
   };
   onToolSelection?: (messageId: string, toolName: string) => void;
+  journalProposal?: JournalProposal;
+  onProposalReview?: (proposal: JournalProposal) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -21,6 +31,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onEdit,
   toolConfirmation,
   onToolSelection,
+  journalProposal,
+  onProposalReview,
 }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
@@ -127,6 +139,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   </Text>
                 </TouchableOpacity>
               )}
+            </View>
+          )}
+
+          {/* Journal proposal button (hide during streaming) */}
+          {!isUser && message.id !== 'streaming' && journalProposal && onProposalReview && (
+            <View style={styles.journalProposalCard}>
+              <View style={styles.journalProposalHeader}>
+                <Text style={styles.journalProposalIcon}>📝</Text>
+                <View style={styles.journalProposalInfo}>
+                  <Text style={styles.journalProposalTitle}>
+                    {journalProposal.title}
+                  </Text>
+                  <Text style={styles.journalProposalSubtitle}>
+                    {journalProposal.folder}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.journalProposalButton}
+                onPress={() => onProposalReview(journalProposal)}>
+                <Text style={styles.journalProposalButtonText}>
+                  📄 Review & Edit Note
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -291,6 +327,48 @@ const styles = StyleSheet.create({
     borderColor: '#2FB84B',
   },
   confirmButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  journalProposalCard: {
+    marginTop: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#DEE2E6',
+  },
+  journalProposalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  journalProposalIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  journalProposalInfo: {
+    flex: 1,
+  },
+  journalProposalTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#212529',
+    marginBottom: 2,
+  },
+  journalProposalSubtitle: {
+    fontSize: 13,
+    color: '#6C757D',
+  },
+  journalProposalButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  journalProposalButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
