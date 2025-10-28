@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,11 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Alert,
   Modal,
-  Pressable,
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
-import {ToolUsageIndicator} from '../components/ToolUsageIndicator';
 import {ActionCard} from '../components/ActionCard';
 import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
@@ -50,7 +47,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   );
   const [streamingText, setStreamingText] = useState('');
   const [toolsEnabled, setToolsEnabled] = useState(true); // Enable tools by default
-  const [toolUsageState, setToolUsageState] = useState<{
+  const [_toolUsageState, setToolUsageState] = useState<{
     stage: 'thinking' | 'using_tool' | 'processing' | null;
     toolName?: string;
   }>({stage: null});
@@ -75,6 +72,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   } | null>(null);
   const [showNoteProposal, setShowNoteProposal] = useState(false);
 
+  // Track which messages are confirmation questions (show Yes/No buttons)
+  const [confirmationQuestions, setConfirmationQuestions] = useState<Set<string>>(new Set());
+
   // Track current action being worked on
   const currentActionIdRef = useRef<string | null>(null);
   // Track if generation was stopped by user
@@ -82,24 +82,126 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const flatListRef = useRef<FlatList>(null);
 
-  const showToastMessage = (message: string) => {
+  const showToastMessage = useCallback((message: string) => {
     setToastMessage(message);
     setShowToast(true);
-  };
+  }, []);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     showToastMessage('Copied to clipboard');
-  };
+  }, [showToastMessage]);
 
-  const handleEdit = (messageId: string, content: string) => {
+  const handleEdit = useCallback((messageId: string, content: string) => {
     setEditingMessage({id: messageId, content});
     setInputText(content);
-  };
+  }, []);
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditingMessage(null);
     setInputText('');
-  };
+  }, []);
+
+  // Detect if assistant message is asking for confirmation
+  const isConfirmationQuestion = useCallback((content: string): boolean => {
+    const lowerContent = content.toLowerCase().trim();
+
+    // Must end with a question mark
+    if (!lowerContent.endsWith('?')) {
+      return false;
+    }
+
+    // Check for confirmation keywords
+    const confirmationKeywords = [
+      'would you like',
+      'should i',
+      'want me to',
+      'shall i',
+      'do you want',
+      'can i help you',
+      'would that be helpful',
+      'is that okay',
+      'is that ok',
+    ];
+
+    return confirmationKeywords.some(keyword => lowerContent.includes(keyword));
+  }, []);
+
+  // Handle yes/no response to confirmation question
+  const handleConfirmationResponse = useCallback(async (messageId: string, response: 'yes' | 'no') => {
+    Logger.info(`User responded "${response}" to confirmation question ${messageId}`);
+
+    // Remove the confirmation buttons
+    setConfirmationQuestions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(messageId);
+      return newSet;
+    });
+
+    if (response === 'yes') {
+      // User confirmed - send "yes" as next message
+      const yesMessage: Message = {
+        id: generateId(),
+        role: 'user',
+        content: 'Yes',
+        timestamp: Date.now(),
+      };
+
+      setMessages(prev => [...prev, yesMessage]);
+      setIsGenerating(true);
+      setStreamingText('');
+
+      // Trigger AI response with updated context
+      // This is async so we need to handle it properly
+      (async () => {
+        try {
+          const contextMessages = [...messages, yesMessage]
+            .filter(msg => msg.role !== 'action')
+            .slice(-MAX_CONTEXT_MESSAGES) as Message[];
+
+          const result = await AIService.chatCompletionWithTools(
+            contextMessages,
+            [],
+            {},
+            token => {
+              setStreamingText(prev => prev + token);
+            },
+          );
+
+          const assistantMessage: Message = {
+            id: generateId(),
+            role: 'assistant',
+            content: result.response,
+            timestamp: Date.now(),
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+          setStreamingText('');
+        } catch (error) {
+          Logger.error('Error handling yes response:', error);
+        } finally {
+          setIsGenerating(false);
+        }
+      })();
+    } else {
+      // User declined
+      const noMessage: Message = {
+        id: generateId(),
+        role: 'user',
+        content: 'No',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, noMessage]);
+
+      // Just acknowledge, don't trigger tool
+      const ackMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: 'Okay, no problem!',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, ackMessage]);
+    }
+  }, [messages]);
 
   // Initialize AI backend and load session on mount
   useEffect(() => {
@@ -504,6 +606,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         timestamp: Date.now(),
       };
 
+      // Check if this is a confirmation question
+      if (isConfirmationQuestion(fullResponse)) {
+        Logger.info('🤔 Detected confirmation question, showing Yes/No buttons');
+        setConfirmationQuestions(prev => new Set(prev).add(assistantMessage.id));
+      }
+
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
       currentActionIdRef.current = null;
@@ -762,16 +870,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </View>
         );
       } else {
+        const msg = item as Message;
         return (
           <ChatMessage
-            message={item as Message}
+            message={msg}
             onCopy={handleCopy}
             onEdit={handleEdit}
+            showConfirmationButtons={confirmationQuestions.has(msg.id)}
+            onConfirmationResponse={handleConfirmationResponse}
           />
         );
       }
     },
-    [handleCopy, handleEdit],
+    [handleCopy, handleEdit, confirmationQuestions, handleConfirmationResponse],
   );
 
   const renderStreamingMessage = () => {

@@ -7,12 +7,16 @@ interface ChatMessageProps {
   message: Message;
   onCopy?: () => void;
   onEdit?: (messageId: string, content: string) => void;
+  onConfirmationResponse?: (messageId: string, response: 'yes' | 'no') => void;
+  showConfirmationButtons?: boolean; // Controlled by parent
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onCopy,
   onEdit,
+  onConfirmationResponse,
+  showConfirmationButtons = false,
 }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
@@ -86,6 +90,22 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 style={styles.actionButton}
                 onPress={handleCopy}>
                 <Text style={styles.actionButtonIcon}>📋</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Yes/No confirmation buttons */}
+          {!isUser && showConfirmationButtons && onConfirmationResponse && (
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.yesButton]}
+                onPress={() => onConfirmationResponse(message.id, 'yes')}>
+                <Text style={styles.confirmButtonText}>✓ Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.noButton]}
+                onPress={() => onConfirmationResponse(message.id, 'no')}>
+                <Text style={styles.confirmButtonText}>✗ No</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -223,5 +243,32 @@ const styles = StyleSheet.create({
   contextMenuDivider: {
     height: 1,
     backgroundColor: '#E0E0E0',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 8,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  yesButton: {
+    backgroundColor: '#34C759',
+    borderColor: '#2FB84B',
+  },
+  noButton: {
+    backgroundColor: '#FF3B30',
+    borderColor: '#E6342A',
+  },
+  confirmButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -686,7 +686,7 @@ export class ToolService {
     return {
       name: 'suggest_journal_entry',
       description:
-        'When the user shares about their day, activities, thoughts, or experiences, use this tool to propose a structured journal entry. Analyzes the content and creates a well-formatted markdown note with sections for books, work, meals, events, etc.',
+        'REQUIRED when user shares daily updates, activities, or experiences. Creates a structured journal entry proposal with markdown formatting. Use for: books read, work done, meals, social events, exercise, learning, or any daily activities. The user will review and edit before saving.',
       parameters: [
         {
           name: 'date',

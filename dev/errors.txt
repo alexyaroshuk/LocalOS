@@ -1,11 +1,161 @@
-src/screens/MemoryViewerScreen.tsx:177:29 - error TS2551: Property 'updateCoreMemory' does not exist on type 'MemoryService'. Did you mean 'updateCoreMemoryBlock'?
-
-177               MemoryService.updateCoreMemory(blockName, newContent.trim());
-                                ~~~~~~~~~~~~~~~~
-
-  src/services/MemoryService.ts:93:9
-    93   async updateCoreMemoryBlock(
-               ~~~~~~~~~~~~~~~~~~~~~
-    'updateCoreMemoryBlock' is declared here.
-
-[8:40:46 PM] Found 1 error. Watching for file changes.
+[{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'useMemo' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 1,
+	"startColumn": 58,
+	"endLineNumber": 1,
+	"endColumn": 65,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'ActivityIndicator' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 11,
+	"startColumn": 3,
+	"endLineNumber": 11,
+	"endColumn": 20,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'Pressable' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 14,
+	"startColumn": 3,
+	"endLineNumber": 14,
+	"endColumn": 12,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'ToolUsageIndicator' is defined but never used.",
+	"source": "eslint",
+	"startLineNumber": 18,
+	"startColumn": 9,
+	"endLineNumber": 18,
+	"endColumn": 27,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "@typescript-eslint/no-unused-vars",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-unused-vars",
+			"scheme": "https",
+			"authority": "typescript-eslint.io"
+		}
+	},
+	"severity": 8,
+	"message": "'toolUsageState' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u.",
+	"source": "eslint",
+	"startLineNumber": 53,
+	"startColumn": 10,
+	"endLineNumber": 53,
+	"endColumn": 24,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "react-hooks/exhaustive-deps",
+		"target": {
+			"$mid": 1,
+			"path": "/facebook/react/issues/14920",
+			"scheme": "https",
+			"authority": "github.com"
+		}
+	},
+	"severity": 8,
+	"message": "The 'handleCopy' function makes the dependencies of useCallback Hook (at line 888) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'handleCopy' in its own useCallback() Hook.",
+	"source": "eslint",
+	"startLineNumber": 93,
+	"startColumn": 9,
+	"endLineNumber": 95,
+	"endColumn": 4,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "react-hooks/exhaustive-deps",
+		"target": {
+			"$mid": 1,
+			"path": "/facebook/react/issues/14920",
+			"scheme": "https",
+			"authority": "github.com"
+		}
+	},
+	"severity": 8,
+	"message": "The 'handleEdit' function makes the dependencies of useCallback Hook (at line 888) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'handleEdit' in its own useCallback() Hook.",
+	"source": "eslint",
+	"startLineNumber": 97,
+	"startColumn": 9,
+	"endLineNumber": 100,
+	"endColumn": 4,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/dev/projects/localOS/src/screens/ChatScreen.tsx",
+	"owner": "eslint2",
+	"code": {
+		"value": "react-hooks/exhaustive-deps",
+		"target": {
+			"$mid": 1,
+			"path": "/facebook/react/issues/14920",
+			"scheme": "https",
+			"authority": "github.com"
+		}
+	},
+	"severity": 8,
+	"message": "The 'handleConfirmationResponse' function makes the dependencies of useCallback Hook (at line 888) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'handleConfirmationResponse' in its own useCallback() Hook.",
+	"source": "eslint",
+	"startLineNumber": 133,
+	"startColumn": 9,
+	"endLineNumber": 207,
+	"endColumn": 4,
+	"origin": "extHost1"
+}]
