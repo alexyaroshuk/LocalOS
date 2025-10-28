@@ -653,9 +653,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 );
               }
 
-              // Note: Journal proposals now show as a button in the chat
-              // User clicks the button to review/edit the proposal
-
               setToolUsageState({stage: 'processing'});
               currentActionIdRef.current = null;
             } else if (stage === 'generating') {
@@ -1008,7 +1005,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const renderItem = useCallback(
-    ({item}: {item: ChatItem}) => {
+    ({item, index}: {item: ChatItem; index: number}) => {
       if (item.role === 'action') {
         const actionMsg = item as ActionMessage;
         // Convert ActionMessage to AgentAction format for ActionCard
@@ -1024,58 +1021,37 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           error: actionMsg.error,
         };
 
-        // Check if this is a suggest_journal_entry action with a proposal
-        // NOTE: ToolService wraps results in .result property!
-        // Only show proposal button when action is complete (like copy button pattern)
-        const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
-                           actionMsg.isComplete &&
-                           !actionMsg.error &&
-                           actionMsg.toolResult?.result?.success &&
-                           actionMsg.toolResult?.result?.proposal;
-
-        // DEBUG LOG ONCE PER ACTION
-        if (actionMsg.toolName === 'suggest_journal_entry' && actionMsg.isComplete) {
-          Logger.info('🔍 Journal action render:', {
-            id: actionMsg.id,
-            isComplete: actionMsg.isComplete,
-            hasToolResult: !!actionMsg.toolResult,
-            hasProposal,
-          });
-        }
-
-        return (
-          <View>
-            <ActionCard action={action} />
-            {hasProposal ? (
-              <View style={styles.journalProposalCard}>
-                <View style={styles.journalProposalHeader}>
-                  <Text style={styles.journalProposalIcon}>📝</Text>
-                  <View style={styles.journalProposalInfo}>
-                    <Text style={styles.journalProposalTitle}>
-                      {actionMsg.toolResult.result.proposal.title}
-                    </Text>
-                    <Text style={styles.journalProposalSubtitle}>
-                      {actionMsg.toolResult.result.proposal.folder}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.journalProposalButton}
-                  onPress={() => {
-                    setProposedNote(actionMsg.toolResult.result.proposal);
-                    setShowNoteProposal(true);
-                  }}>
-                  <Text style={styles.journalProposalButtonText}>
-                    📄 Review & Edit Note
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </View>
-        );
+        return <ActionCard action={action} />;
       } else {
         const msg = item as Message;
         const toolConfirmation = confirmationQuestions.get(msg.id);
+
+        // Check if this assistant message follows a suggest_journal_entry tool call
+        // Scan backwards to find the most recent completed suggest_journal_entry action
+        let journalProposal = undefined;
+        if (msg.role === 'assistant' && msg.id !== 'streaming') {
+          for (let i = index - 1; i >= 0; i--) {
+            const prevItem = messages[i];
+            if (prevItem.role === 'action') {
+              const actionMsg = prevItem as ActionMessage;
+              if (
+                actionMsg.toolName === 'suggest_journal_entry' &&
+                actionMsg.isComplete &&
+                !actionMsg.error &&
+                actionMsg.toolResult?.result?.success &&
+                actionMsg.toolResult?.result?.proposal
+              ) {
+                journalProposal = actionMsg.toolResult.result.proposal;
+                break;
+              }
+            }
+            // Stop scanning if we hit another assistant message or user message
+            if (prevItem.role === 'assistant' || prevItem.role === 'user') {
+              break;
+            }
+          }
+        }
+
         return (
           <ChatMessage
             message={msg}
@@ -1083,11 +1059,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             onEdit={handleEdit}
             toolConfirmation={toolConfirmation}
             onToolSelection={handleToolSelection}
+            journalProposal={journalProposal}
+            onProposalReview={(proposal) => {
+              setProposedNote(proposal);
+              setShowNoteProposal(true);
+            }}
           />
         );
       }
     },
-    [handleCopy, handleEdit, confirmationQuestions, handleToolSelection],
+    [messages, handleCopy, handleEdit, confirmationQuestions, handleToolSelection],
   );
 
   const renderStreamingMessage = () => {
@@ -1584,49 +1565,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#856404',
     fontWeight: '600',
-  },
-  journalProposalCard: {
-    backgroundColor: '#F0F9FF',
-    borderWidth: 2,
-    borderColor: '#0EA5E9',
-    borderRadius: 12,
-    marginHorizontal: 12,
-    marginTop: 8,
-    marginBottom: 4,
-    padding: 12,
-  },
-  journalProposalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  journalProposalIcon: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  journalProposalInfo: {
-    flex: 1,
-  },
-  journalProposalTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#0369A1',
-    marginBottom: 2,
-  },
-  journalProposalSubtitle: {
-    fontSize: 13,
-    color: '#0C4A6E',
-  },
-  journalProposalButton: {
-    backgroundColor: '#0EA5E9',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  journalProposalButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });
