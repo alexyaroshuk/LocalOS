@@ -506,6 +506,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
+              // DEBUG: Log every tool result
+              Logger.info('🔧 Tool result callback fired:', {tool, hasResult: !!toolResult});
+
               // Complete tool call action
               if (currentActionIdRef.current) {
                 setMessages(prev =>
@@ -522,9 +525,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         isComplete: true,
                       };
 
-                      // DEBUG: Log once when storing journal proposal
+                      // DEBUG: Log journal tool result structure
                       if (tool === 'suggest_journal_entry') {
-                        Logger.info('📋 Stored journal action with toolResult:', updatedMsg.toolResult);
+                        Logger.info('📋 STORING suggest_journal_entry result:', toolResult);
                       }
 
                       return updatedMsg;
@@ -532,6 +535,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                     return msg;
                   }),
                 );
+              } else {
+                Logger.warn('⚠️ Tool result received but no currentActionIdRef!');
               }
 
               // Note: Journal proposals now show as a button in the chat
@@ -910,6 +915,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
+
+        // DEBUG: Log once when action is complete
+        if (actionMsg.toolName === 'suggest_journal_entry' && actionMsg.isComplete && !actionMsg.error) {
+          const logKey = `proposal-check-${actionMsg.id}`;
+          if (!(window as any)[logKey]) {
+            (window as any)[logKey] = true;
+            Logger.info('🔍 PROPOSAL CHECK for', actionMsg.id);
+            Logger.info('toolResult:', actionMsg.toolResult);
+            Logger.info('hasProposal:', hasProposal);
+          }
+        }
 
         return (
           <View>

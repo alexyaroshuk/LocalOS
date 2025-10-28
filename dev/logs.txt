@@ -1,38 +1,265 @@
- CHAT MESSAGE (from Chat Screen)
-[2025-10-28T10:33:56.813Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T10:33:56.813Z] INFO | User: Had coffee with Sarah. Discussed the startup idea.
-[2025-10-28T10:33:56.813Z] INFO | Tools enabled: true
-[2025-10-28T10:33:56.813Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-[2025-10-28T10:33:56.814Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
-[2025-10-28T10:33:56.814Z] INFO | 👤 User prompt: | "Had coffee with Sarah. Discussed the startup idea."
-[2025-10-28T10:33:56.814Z] INFO | 📝 System prompt type: | "custom"
-[2025-10-28T10:33:56.814Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-28T10:33:56.814Z] DEBUG | Prompt length: | 10982
-[2025-10-28T10:33:56.814Z] DEBUG | Includes memory examples: | true
-[2025-10-28T10:33:56.815Z] DEBUG | Includes "What do you know":
-[2025-10-28T10:33:56.815Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\nUser is inquiring about vault folders\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yo"
-[2025-10-28T10:33:56.815Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
-[2025-10-28T10:33:56.815Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-28T10:33:56.815Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T10:33:56.815Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T10:34:01.086Z] DEBUG | Completion finished
-[2025-10-28T10:34:01.086Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-28T10:34:01.086Z] DEBUG | Temperature: | 0.3
-[2025-10-28T10:34:01.087Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points\" folder=\"Personal/Journal\" />"
-[2025-10-28T10:34:01.087Z] DEBUG | Output length: | 189
-[2025-10-28T10:34:01.087Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points\" folder=\"Personal/Journal\" />"
-[2025-10-28T10:34:01.087Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
-[2025-10-28T10:34:01.087Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points\" folder=\"Personal/Journal\""
-[2025-10-28T10:34:01.087Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points","folder":"Personal/Journal"}
-[2025-10-28T10:34:01.087Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Social**\\n- Had coffee with Sarah\\n- Discussed startup idea - need to follow up on key points\",\"folder\":\"Personal/Journal\"}}"
-[2025-10-28T10:34:01.087Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points","folder":"Personal/Journal"}}
-[2025-10-28T10:34:01.088Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761647641087","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
-[2025-10-28T10:34:01.089Z] INFO | 🎯 Generating final response with tool results...
-[2025-10-28T10:34:01.089Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T10:34:01.089Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T10:34:12.910Z] DEBUG | Completion finished
-[2025-10-28T10:34:12.911Z] DEBUG | 📝 Raw final response: | "I've created a journal entry for today's activities. Here's what I have so far:\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points\n\nIs this what you wanted to capture? Would you like to add anything else to the entry?"
-[2025-10-28T10:34:12.911Z] INFO | ✨ Clean final response: | "I've created a journal entry for today's activities. Here's what I have so far:\n\n**Social**\n- Had coffee with Sarah\n- Discussed startup idea - need to follow up on key points\n\nIs this what you wanted to capture? Would you like to add anything else to the entry?"
-[2025-10-28T10:34:12.911Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
-[2025-10-28T10:34:12.911Z] INFO | 🔧 Tool used: suggest_journal_entry
-[2025-10-28T10:34:12.911Z] INFO | ✨ Response generated using tool data
+[2025-10-28T11:47:12.816Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:47:12.816Z] INFO | Previous message count: 3
+[2025-10-28T11:47:12.816Z] INFO | ✅ New chat session created
+[2025-10-28T11:47:14.968Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:47:14.968Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T11:47:14.968Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:47:14.968Z] INFO | User: Today I read "Deep Work" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View.
+[2025-10-28T11:47:14.968Z] INFO | Tools enabled: true
+[2025-10-28T11:47:14.968Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T11:47:14.968Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:47:14.968Z] INFO | 👤 User prompt: | "Today I read \"Deep Work\" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View."
+[2025-10-28T11:47:14.968Z] INFO | 📝 System prompt type: | "letta"
+[2025-10-28T11:47:14.969Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:47:14.969Z] DEBUG | Prompt length: | 9003
+[2025-10-28T11:47:14.969Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:47:14.969Z] DEBUG | Includes "What do you know":
+[2025-10-28T11:47:14.969Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\n<base_instructions>\nYou are LocalOS Assistant, a helpful AI with advanced memory and task management capabilities.\n\n<memory>"
+[2025-10-28T11:47:14.969Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:47:14.969Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:47:14.969Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:47:14.969Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:47:25.092Z] DEBUG | Completion finished
+[2025-10-28T11:47:25.092Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:47:25.092Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:47:25.092Z] DEBUG | Model raw output: | "**archival_memory_insert**\nContent: \"Recently read 'Deep Work' by Cal Newport and had an interview at Google in Mountain View.\"\nTags: [\"book\", \"reading\", \"work\", \"interview\", \"Google\"]\n\n**archival_memory_search**\nQuery: \"what do you know about me\"\nSearch Type: \"vector\"\nTags: [\"user_info\"]\nTop K: 5\n\n**conversation_search**\nQuery: \"what was discussed previously\"\nLimit: 5\n\nPlease let me know how you'd like to proceed. Would you like to discuss the book, the interview, or something else?"
+[2025-10-28T11:47:25.092Z] DEBUG | Output length: | 488
+[2025-10-28T11:47:25.092Z] DEBUG | 🔍 extractToolCall input: | "**archival_memory_insert**\nContent: \"Recently read 'Deep Work' by Cal Newport and had an interview at Google in Mountain View.\"\nTags: [\"book\", \"reading\", \"work\", \"interview\", \"Google\"]\n\n**archival_memory_search**\nQuery: \"what do you know about me\"\nSearch Type: \"vector\"\nTags: [\"user_info\"]\nTop K: 5\n\n"
+[2025-10-28T11:47:25.092Z] INFO | ❌ NO TOOL CALL DETECTED
+[2025-10-28T11:47:25.092Z] INFO | ℹ️ No tool was used (normal response)
+[2025-10-28T11:47:25.092Z] INFO | 💬 Regular response (no tools used)
+[2025-10-28T11:47:29.775Z] INFO | 🔧 Tools enabled: 16 tools available
+[2025-10-28T11:47:29.775Z] INFO | 🔧 Tools enabled for testing
+[2025-10-28T11:47:29.775Z] INFO | Tools supported? | true
+[2025-10-28T11:47:29.775Z] INFO | 📝 Current prompt type: | "letta"
+[2025-10-28T11:47:29.775Z] INFO | 🔢 [EmbedDebug] Embedding model loaded:
+[2025-10-28T11:47:29.775Z] INFO | 🔢 [EmbedDebug] Embedding model name: | "none"
+[2025-10-28T11:47:29.775Z] INFO | 🤖 [EmbedDebug] Chat model loaded: | true
+[2025-10-28T11:47:29.775Z] INFO | 🤖 [EmbedDebug] Chat model name: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:47:30.472Z] INFO | 📝 System prompt changed to: | "custom"
+[2025-10-28T11:47:30.472Z] INFO | Switched to Custom (Force Tool Use) system prompt
+[2025-10-28T11:47:34.581Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:47:34.581Z] INFO | Previous message count: 3
+[2025-10-28T11:47:34.581Z] INFO | ✅ New chat session created
+[2025-10-28T11:47:36.009Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:47:36.009Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T11:47:36.009Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:47:36.009Z] INFO | User: Today I read "Deep Work" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View.
+[2025-10-28T11:47:36.009Z] INFO | Tools enabled: true
+[2025-10-28T11:47:36.009Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T11:47:36.010Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:47:36.010Z] INFO | 👤 User prompt: | "Today I read \"Deep Work\" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View."
+[2025-10-28T11:47:36.010Z] INFO | 📝 System prompt type: | "custom"
+[2025-10-28T11:47:36.015Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:47:36.015Z] DEBUG | Prompt length: | 10944
+[2025-10-28T11:47:36.015Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:47:36.015Z] DEBUG | Includes "What do you know":
+[2025-10-28T11:47:36.015Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yourself. MUST call tools.\n\n🔒 PRIVACY &"
+[2025-10-28T11:47:36.015Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:47:36.015Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:47:36.015Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:47:36.016Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:48:05.382Z] DEBUG | Completion finished
+[2025-10-28T11:48:05.382Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:48:05.382Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:48:05.382Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps\" folder=\"Personal/Journal\" />"
+[2025-10-28T11:48:05.382Z] DEBUG | Output length: | 259
+[2025-10-28T11:48:05.382Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps\" folder=\"Personal/Journal\" />"
+[2025-10-28T11:48:05.382Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T11:48:05.382Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps\" folder=\"Personal/Journal\""
+[2025-10-28T11:48:05.382Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps","folder":"Personal/Journal"}
+[2025-10-28T11:48:05.382Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Books**\\n- Read 'Deep Work' by Cal Newport\\n\\n**Career**\\n- Had an interview at Google in Mountain View\\n- Note: Follow up on the interview process and any next steps\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T11:48:05.382Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps","folder":"Personal/Journal"}}
+[2025-10-28T11:48:05.383Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761652085382","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Follow up on the interview process and any next steps","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T11:48:05.383Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T11:48:05.383Z] DEBUG | Final response temperature: | 0.44999999999999996
+[2025-10-28T11:48:05.383Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:48:05.383Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.44999999999999996,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:48:13.823Z] DEBUG | Completion finished
+[2025-10-28T11:48:13.823Z] DEBUG | 📝 Raw final response: | "Sounds like you had a productive day! You found \"Deep Work\" by Cal Newport insightful, and you also had an interview at Google in Mountain View. What did you think of the interview? Was it a good experience?"
+[2025-10-28T11:48:13.823Z] INFO | ✨ Clean final response: | "Sounds like you had a productive day! You found \"Deep Work\" by Cal Newport insightful, and you also had an interview at Google in Mountain View. What did you think of the interview? Was it a good experience?"
+[2025-10-28T11:48:13.823Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
+[2025-10-28T11:48:13.824Z] INFO | 🔧 Tool used: suggest_journal_entry
+[2025-10-28T11:48:13.824Z] INFO | ✨ Response generated using tool data
+[2025-10-28T11:48:40.181Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:48:40.181Z] INFO | Previous message count: 5
+[2025-10-28T11:48:40.181Z] INFO | ✅ New chat session created
+[2025-10-28T11:48:40.725Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:48:40.725Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T11:48:40.725Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:48:40.725Z] INFO | User: Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model.
+[2025-10-28T11:48:40.725Z] INFO | Tools enabled: true
+[2025-10-28T11:48:40.725Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T11:48:40.726Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:48:40.726Z] INFO | 👤 User prompt: | "Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model."
+[2025-10-28T11:48:40.726Z] INFO | 📝 System prompt type: | "custom"
+[2025-10-28T11:48:40.726Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:48:40.726Z] DEBUG | Prompt length: | 10944
+[2025-10-28T11:48:40.726Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:48:40.726Z] DEBUG | Includes "What do you know":
+[2025-10-28T11:48:40.726Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yourself. MUST call tools.\n\n🔒 PRIVACY &"
+[2025-10-28T11:48:40.726Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:48:40.726Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:48:40.726Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:48:40.726Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:48:52.295Z] DEBUG | Completion finished
+[2025-10-28T11:48:52.295Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:48:52.295Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:48:52.295Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model\" folder=\"Personal/Journal\" />"
+[2025-10-28T11:48:52.295Z] DEBUG | Output length: | 327
+[2025-10-28T11:48:52.295Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model\" f"
+[2025-10-28T11:48:52.295Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T11:48:52.295Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model\" folder=\"Personal/Journal\""
+[2025-10-28T11:48:52.295Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model","folder":"Personal/Journal"}
+[2025-10-28T11:48:52.295Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Career**\\n- Interviewed at Google: went well\\n- Interviewed at Meta: okay\\n- Interviewed at Acme: very exciting - need to follow up on next steps\\n\\n**Learning**\\n- Read about LLMs and their applications\\n- Tried the new Llama 3.2 model\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T11:48:52.295Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model","folder":"Personal/Journal"}}
+[2025-10-28T11:48:52.296Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761652132295","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Career**\n- Interviewed at Google: went well\n- Interviewed at Meta: okay\n- Interviewed at Acme: very exciting - need to follow up on next steps\n\n**Learning**\n- Read about LLMs and their applications\n- Tried the new Llama 3.2 model","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T11:48:52.296Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T11:48:52.296Z] DEBUG | Final response temperature: | 0.44999999999999996
+[2025-10-28T11:48:52.296Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:48:52.296Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.44999999999999996,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:49:10.396Z] DEBUG | Completion finished
+[2025-10-28T11:49:10.396Z] DEBUG | 📝 Raw final response: | "It sounds like you had a busy day with some exciting opportunities ahead. The Google interview went well, which is great to hear. Meta's interview was okay, so there's room for improvement. And Acme, the startup, really caught your attention - it's always exciting to explore new possibilities. You also took the time to learn about LLMs and even got hands-on experience with Llama 3.2. What are your thoughts on Llama 3.2? Was it more impressive than previous versions?"
+[2025-10-28T11:49:10.396Z] INFO | ✨ Clean final response: | "It sounds like you had a busy day with some exciting opportunities ahead. The Google interview went well, which is great to hear. Meta's interview was okay, so there's room for improvement. And Acme, the startup, really caught your attention - it's always exciting to explore new possibilities. You also took the time to learn about LLMs and even got hands-on experience with Llama 3.2. What are your thoughts on Llama 3.2? Was it more impressive than previous versions?"
+[2025-10-28T11:49:10.396Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
+[2025-10-28T11:49:10.397Z] INFO | 🔧 Tool used: suggest_journal_entry
+[2025-10-28T11:49:10.397Z] INFO | ✨ Response generated using tool data
+[2025-10-28T11:49:13.304Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:49:13.304Z] INFO | Previous message count: 5
+[2025-10-28T11:49:13.304Z] INFO | ✅ New chat session created
+[2025-10-28T11:49:13.835Z] INFO | 🔧 Tools enabled: 16 tools available
+[2025-10-28T11:49:13.835Z] INFO | 🔧 Tools enabled for testing
+[2025-10-28T11:49:13.835Z] INFO | Tools supported? | true
+[2025-10-28T11:49:13.835Z] INFO | 📝 Current prompt type: | "custom"
+[2025-10-28T11:49:13.835Z] INFO | 🔢 [EmbedDebug] Embedding model loaded:
+[2025-10-28T11:49:13.835Z] INFO | 🔢 [EmbedDebug] Embedding model name: | "none"
+[2025-10-28T11:49:13.835Z] INFO | 🤖 [EmbedDebug] Chat model loaded: | true
+[2025-10-28T11:49:13.835Z] INFO | 🤖 [EmbedDebug] Chat model name: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:49:14.665Z] INFO | 📝 System prompt changed to: | "custom2"
+[2025-10-28T11:49:14.665Z] INFO | Switched to Custom2 (Ask First) system prompt
+[2025-10-28T11:49:19.878Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:49:19.878Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T11:49:19.878Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:49:19.878Z] INFO | User: Today I read "Deep Work" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View.
+[2025-10-28T11:49:19.878Z] INFO | Tools enabled: true
+[2025-10-28T11:49:19.879Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T11:49:19.879Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:49:19.885Z] INFO | 👤 User prompt: | "Today I read \"Deep Work\" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View."
+[2025-10-28T11:49:19.885Z] INFO | 📝 System prompt type: | "custom2"
+[2025-10-28T11:49:19.889Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:49:19.889Z] DEBUG | Prompt length: | 10985
+[2025-10-28T11:49:19.889Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:49:19.889Z] DEBUG | Includes "What do you know": | true
+[2025-10-28T11:49:19.889Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI WITH CONFIRMATION MODE.\n\nCRITICAL: You CAN call tools, but if you're uncertain whether the user wants a "
+[2025-10-28T11:49:19.889Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:49:19.889Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:49:19.889Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:49:19.889Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:49:53.182Z] DEBUG | Completion finished
+[2025-10-28T11:49:53.182Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:49:53.182Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:49:53.182Z] DEBUG | Model raw output: | "That sounds like a productive day! I'd like to save this information for future reference. Should I use suggest_journal_entry to create a structured journal entry for you?"
+[2025-10-28T11:49:53.182Z] DEBUG | Output length: | 171
+[2025-10-28T11:49:53.182Z] DEBUG | 🔍 extractToolCall input: | "That sounds like a productive day! I'd like to save this information for future reference. Should I use suggest_journal_entry to create a structured journal entry for you?"
+[2025-10-28T11:49:53.182Z] INFO | ❌ NO TOOL CALL DETECTED
+[2025-10-28T11:49:53.182Z] INFO | ℹ️ No tool was used (normal response)
+[2025-10-28T11:49:53.182Z] INFO | 🤔 Detected tool confirmation question: | {"type":"single","tool":"suggest_journal_entry"}
+[2025-10-28T11:49:53.182Z] INFO | 💬 Regular response (no tools used)
+[2025-10-28T11:50:00.432Z] INFO | User selected tool "suggest_journal_entry" from confirmation 1761652193182-gezl2qhug
+[2025-10-28T11:50:00.432Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:50:00.432Z] INFO | 👤 User prompt: | "suggest_journal_entry"
+[2025-10-28T11:50:00.432Z] INFO | 📝 System prompt type: | "custom2"
+[2025-10-28T11:50:00.433Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:50:00.433Z] DEBUG | Prompt length: | 10985
+[2025-10-28T11:50:00.433Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:50:00.433Z] DEBUG | Includes "What do you know": | true
+[2025-10-28T11:50:00.433Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI WITH CONFIRMATION MODE.\n\nCRITICAL: You CAN call tools, but if you're uncertain whether the user wants a "
+[2025-10-28T11:50:00.433Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:50:00.433Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:50:00.433Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:50:00.433Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:50:10.658Z] DEBUG | Completion finished
+[2025-10-28T11:50:10.658Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:50:10.659Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:50:10.659Z] DEBUG | Model raw output: | "Here's a suggested journal entry for you:\n\n<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\" folder=\"Personal/Journal\" />\n\nWould you like to review and edit this entry before saving it to your vault?"
+[2025-10-28T11:50:10.659Z] DEBUG | Output length: | 320
+[2025-10-28T11:50:10.659Z] DEBUG | 🔍 extractToolCall input: | "Here's a suggested journal entry for you:\n\n<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\" folder=\"Personal/Journal\" />\n\nWould you like to review and edit this entry before savi"
+[2025-10-28T11:50:10.659Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T11:50:10.659Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\" folder=\"Personal/Journal\""
+[2025-10-28T11:50:10.659Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View","folder":"Personal/Journal"}
+[2025-10-28T11:50:10.659Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Reading**\\n- Read 'Deep Work' by Cal Newport\\n\\n**Career**\\n- Had an interview at Google in Mountain View\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T11:50:10.659Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View","folder":"Personal/Journal"}}
+[2025-10-28T11:50:10.660Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761652210659","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T11:50:10.660Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T11:50:10.660Z] DEBUG | Final response temperature: | 0.44999999999999996
+[2025-10-28T11:50:10.660Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:50:10.660Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.44999999999999996,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:50:31.634Z] DEBUG | Completion finished
+[2025-10-28T11:50:31.634Z] DEBUG | 📝 Raw final response: | "Here's a draft journal entry for you. I've included the book you read and your interview at Google in Mountain View. Take a look and let me know if you'd like to save it as is or make any changes.\n\n**Daily Update**\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n\nFeel free to add any other details you'd like to remember from your day."
+[2025-10-28T11:50:31.634Z] INFO | ✨ Clean final response: | "Here's a draft journal entry for you. I've included the book you read and your interview at Google in Mountain View. Take a look and let me know if you'd like to save it as is or make any changes.\n\n**Daily Update**\n\n**Reading**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n\nFeel free to add any other details you'd like to remember from your day."
+[2025-10-28T11:50:36.178Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:50:36.178Z] INFO | Previous message count: 5
+[2025-10-28T11:50:36.178Z] INFO | ✅ New chat session created
+[2025-10-28T11:51:45.788Z] INFO | 🗑️ CHAT CLEARED - User cleared all messages in chat
+[2025-10-28T11:51:45.788Z] INFO | Previous message count: 0
+[2025-10-28T11:51:45.788Z] INFO | ✅ New chat session created
+[2025-10-28T11:51:49.116Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:51:49.116Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T11:51:49.116Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T11:51:49.116Z] INFO | User: Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model.
+[2025-10-28T11:51:49.116Z] INFO | Tools enabled: true
+[2025-10-28T11:51:49.116Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T11:51:49.116Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:51:49.116Z] INFO | 👤 User prompt: | "Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model."
+[2025-10-28T11:51:49.116Z] INFO | 📝 System prompt type: | "custom2"
+[2025-10-28T11:51:49.117Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:51:49.117Z] DEBUG | Prompt length: | 10985
+[2025-10-28T11:51:49.117Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:51:49.117Z] DEBUG | Includes "What do you know": | true
+[2025-10-28T11:51:49.117Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI WITH CONFIRMATION MODE.\n\nCRITICAL: You CAN call tools, but if you're uncertain whether the user wants a "
+[2025-10-28T11:51:49.117Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:51:49.117Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:51:49.117Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:51:49.117Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:51:52.581Z] DEBUG | Completion finished
+[2025-10-28T11:51:52.581Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:51:52.581Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:51:52.581Z] DEBUG | Model raw output: | "That's a lot of exciting news! Should I use suggest_journal_entry to save this?"
+[2025-10-28T11:51:52.581Z] DEBUG | Output length: | 79
+[2025-10-28T11:51:52.581Z] DEBUG | 🔍 extractToolCall input: | "That's a lot of exciting news! Should I use suggest_journal_entry to save this?"
+[2025-10-28T11:51:52.581Z] INFO | ❌ NO TOOL CALL DETECTED
+[2025-10-28T11:51:52.581Z] INFO | ℹ️ No tool was used (normal response)
+[2025-10-28T11:51:52.581Z] INFO | 🤔 Detected tool confirmation question: | {"type":"single","tool":"suggest_journal_entry"}
+[2025-10-28T11:51:52.581Z] INFO | 💬 Regular response (no tools used)
+[2025-10-28T11:51:54.454Z] INFO | User selected tool "suggest_journal_entry" from confirmation 1761652312581-q87hjw4sl
+[2025-10-28T11:51:54.455Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T11:51:54.455Z] INFO | 👤 User prompt: | "suggest_journal_entry"
+[2025-10-28T11:51:54.455Z] INFO | 📝 System prompt type: | "custom2"
+[2025-10-28T11:51:54.455Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T11:51:54.455Z] DEBUG | Prompt length: | 10985
+[2025-10-28T11:51:54.455Z] DEBUG | Includes memory examples: | true
+[2025-10-28T11:51:54.455Z] DEBUG | Includes "What do you know": | true
+[2025-10-28T11:51:54.455Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI WITH CONFIRMATION MODE.\n\nCRITICAL: You CAN call tools, but if you're uncertain whether the user wants a "
+[2025-10-28T11:51:54.455Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T11:51:54.455Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T11:51:54.455Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:51:54.455Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:52:06.044Z] DEBUG | Completion finished
+[2025-10-28T11:52:06.044Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T11:52:06.044Z] DEBUG | Temperature: | 0.3
+[2025-10-28T11:52:06.045Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model\" folder=\"Personal/Journal\" />"
+[2025-10-28T11:52:06.045Z] DEBUG | Output length: | 277
+[2025-10-28T11:52:06.045Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model\" folder=\"Personal/Journal\" />"
+[2025-10-28T11:52:06.045Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T11:52:06.045Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model\" folder=\"Personal/Journal\""
+[2025-10-28T11:52:06.045Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model","folder":"Personal/Journal"}
+[2025-10-28T11:52:06.045Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Interviews**\\n- Interviewed at Google (went well)\\n- Interviewed at Meta (okay)\\n- Interviewed at Acme (very exciting)\\n\\n**Learning**\\n- Read about LLMs\\n- Tried the new Llama 3.2 model\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T11:52:06.045Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model","folder":"Personal/Journal"}}
+[2025-10-28T11:52:06.045Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761652326045","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Interviews**\n- Interviewed at Google (went well)\n- Interviewed at Meta (okay)\n- Interviewed at Acme (very exciting)\n\n**Learning**\n- Read about LLMs\n- Tried the new Llama 3.2 model","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T11:52:06.046Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T11:52:06.046Z] DEBUG | Final response temperature: | 0.44999999999999996
+[2025-10-28T11:52:06.046Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T11:52:06.046Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.44999999999999996,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T11:52:22.523Z] DEBUG | Completion finished
+[2025-10-28T11:52:22.523Z] DEBUG | 📝 Raw final response: | "That's a lot to process! It sounds like you had a busy day with three interviews. I'm glad to hear that the Google interview went well, and the Acme one was particularly exciting. The Meta interview was a bit of a mixed bag, but that's not uncommon. What were some of the highlights from the LLMs article you read? And how did you find the new Llama 3.2 model?"
+[2025-10-28T11:52:22.523Z] INFO | ✨ Clean final response: | "That's a lot to process! It sounds like you had a busy day with three interviews. I'm glad to hear that the Google interview went well, and the Acme one was particularly exciting. The Meta interview was a bit of a mixed bag, but that's not uncommon. What were some of the highlights from the LLMs article you read? And how did you find the new Llama 3.2 model?"
