@@ -1,103 +1,228 @@
-Generating final response with tool results...
-[2025-10-28T05:15:35.481Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T05:15:35.481Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T05:15:43.351Z] DEBUG | Completion finished
-[2025-10-28T05:15:43.351Z] DEBUG | 📝 Raw final response: | "The Projects folder contains three files: LocalOS.md, Feature Ideas.md, and Projects.md. LocalOS.md is a file in the root of the Projects folder, and Feature Ideas.md is located inside the LocalOS folder within Work/Projects. Projects.md is located in the Work/Jobs/Current-TechCorp folder."
-[2025-10-28T05:15:43.351Z] INFO | ✨ Clean final response: | "The Projects folder contains three files: LocalOS.md, Feature Ideas.md, and Projects.md. LocalOS.md is a file in the root of the Projects folder, and Feature Ideas.md is located inside the LocalOS folder within Work/Projects. Projects.md is located in the Work/Jobs/Current-TechCorp folder."
-[2025-10-28T05:15:43.352Z] INFO | ✅ Tool was used: | "list_vault_files"
-[2025-10-28T05:15:43.352Z] INFO | 🔧 Tool used: list_vault_files
-[2025-10-28T05:15:43.352Z] INFO | ✨ Response generated using tool data
-[2025-10-28T05:15:47.227Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:15:47.227Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
-[2025-10-28T05:15:47.227Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:15:47.228Z] INFO | User: Find all notes with "AI" in them
-[2025-10-28T05:15:47.228Z] INFO | Tools enabled: true
-[2025-10-28T05:15:47.228Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-[2025-10-28T05:15:47.228Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
-[2025-10-28T05:15:47.228Z] INFO | 👤 User prompt: | "Find all notes with \"AI\" in them"
-[2025-10-28T05:15:47.229Z] INFO | 📝 System prompt type: | "custom"
-[2025-10-28T05:15:47.229Z] INFO | 🔧 TRIGGER DETECTED - Forcing search_web call, bypassing model
-[2025-10-28T05:15:47.229Z] INFO | 📝 Extracted query: "all notes with "AI" in them"
-[2025-10-28T05:15:52.488Z] INFO | 🔧 Tool execution result: | {"id":"1761628547229-6vvcrxtwi","name":"search_web","result":{"success":true,"query":"all notes with \"AI\" in them","results":["The Best AI Tools for Taking Notes in 2025 - PCMag","AI Study Notes Generator | Create Smart Notes Instantly","The 8 Best AI Note-Taking Apps in 2025 - lindy.ai","14 Best AI Note-Taking Apps for All Use Cases | Free &amp; Paid - Riverside","‎Notee: AI Note Taker on the App Store"],"source":"DuckDuckGo","count":5}}
-[2025-10-28T05:15:52.489Z] INFO | ✅ Tool was used: | "search_web"
-[2025-10-28T05:15:52.489Z] INFO | 🔧 Tool used: search_web
-[2025-10-28T05:15:52.489Z] INFO | ✨ Response generated using tool data
-[2025-10-28T05:15:58.137Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:15:58.137Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
-[2025-10-28T05:15:58.137Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:15:58.137Z] INFO | User: Today I read "Deep Work" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View.
-[2025-10-28T05:15:58.137Z] INFO | Tools enabled: true
-[2025-10-28T05:15:58.138Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-[2025-10-28T05:15:58.138Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
-[2025-10-28T05:15:58.138Z] INFO | 👤 User prompt: | "Today I read \"Deep Work\" by Cal Newport and found it insightful. I also had an interview at Google in Mountain View."
-[2025-10-28T05:15:58.138Z] INFO | 📝 System prompt type: | "custom"
-[2025-10-28T05:15:58.139Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-28T05:15:58.139Z] DEBUG | Prompt length: | 10039
-[2025-10-28T05:15:58.139Z] DEBUG | Includes memory examples: | true
-[2025-10-28T05:15:58.140Z] DEBUG | Includes "What do you know":
-[2025-10-28T05:15:58.145Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\nUser is inquiring about vault folders\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yo"
-[2025-10-28T05:15:58.145Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
-[2025-10-28T05:15:58.145Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-28T05:15:58.146Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T05:15:58.146Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T05:16:05.357Z] DEBUG | Completion finished
-[2025-10-28T05:16:05.357Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-28T05:16:05.357Z] DEBUG | Temperature: | 0.3
-[2025-10-28T05:16:05.357Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview\" folder=\"Personal/Journal\" />"
-[2025-10-28T05:16:05.357Z] DEBUG | Output length: | 277
-[2025-10-28T05:16:05.357Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview\" folder=\"Personal/Journal\" />"
-[2025-10-28T05:16:05.358Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
-[2025-10-28T05:16:05.358Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview\" folder=\"Personal/Journal\""
-[2025-10-28T05:16:05.358Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview","folder":"Personal/Journal"}
-[2025-10-28T05:16:05.358Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Books**\\n- Read 'Deep Work' by Cal Newport\\n\\n**Career**\\n- Had an interview at Google in Mountain View\\n- Note: Add a note about what you learned or how you prepared for the interview\",\"folder\":\"Personal/Journal\"}}"
-[2025-10-28T05:16:05.358Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview","folder":"Personal/Journal"}}
-[2025-10-28T05:16:05.360Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761628565359","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Add a note about what you learned or how you prepared for the interview","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
-[2025-10-28T05:16:05.360Z] INFO | 🎯 Generating final response with tool results...
-[2025-10-28T05:16:05.360Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T05:16:05.360Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T05:16:14.119Z] DEBUG | Completion finished
-[2025-10-28T05:16:14.120Z] DEBUG | 📝 Raw final response: | "That's great to hear that you found \"Deep Work\" insightful. I'm glad you had the opportunity to interview at Google in Mountain View. How did the interview go? What were some of the key takeaways or lessons you learned from the book?"
-[2025-10-28T05:16:14.120Z] INFO | ✨ Clean final response: | "That's great to hear that you found \"Deep Work\" insightful. I'm glad you had the opportunity to interview at Google in Mountain View. How did the interview go? What were some of the key takeaways or lessons you learned from the book?"
-[2025-10-28T05:16:14.120Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
-[2025-10-28T05:16:14.120Z] INFO | 🔧 Tool used: suggest_journal_entry
-[2025-10-28T05:16:14.121Z] INFO | ✨ Response generated using tool data
-[2025-10-28T05:16:24.329Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:16:24.329Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
-[2025-10-28T05:16:24.329Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2025-10-28T05:16:24.329Z] INFO | User: Let’s make journal entry
-[2025-10-28T05:16:24.329Z] INFO | Tools enabled: true
-[2025-10-28T05:16:24.330Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
-[2025-10-28T05:16:24.330Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
-[2025-10-28T05:16:24.330Z] INFO | 👤 User prompt: | "Let’s make journal entry"
-[2025-10-28T05:16:24.330Z] INFO | 📝 System prompt type: | "custom"
-[2025-10-28T05:16:24.331Z] DEBUG | === SYSTEM PROMPT DEBUG ===
-[2025-10-28T05:16:24.331Z] DEBUG | Prompt length: | 10039
-[2025-10-28T05:16:24.331Z] DEBUG | Includes memory examples: | true
-[2025-10-28T05:16:24.332Z] DEBUG | Includes "What do you know":
-[2025-10-28T05:16:24.332Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\nUser is inquiring about vault folders\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yo"
-[2025-10-28T05:16:24.332Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
-[2025-10-28T05:16:24.332Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
-[2025-10-28T05:16:24.332Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T05:16:24.332Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T05:16:30.609Z] DEBUG | Completion finished
-[2025-10-28T05:16:30.609Z] DEBUG | === TOOL DETECTION DEBUG ===
-[2025-10-28T05:16:30.609Z] DEBUG | Temperature: | 0.3
-[2025-10-28T05:16:30.609Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome\" folder=\"Personal/Journal\" />"
-[2025-10-28T05:16:30.609Z] DEBUG | Output length: | 238
-[2025-10-28T05:16:30.610Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome\" folder=\"Personal/Journal\" />"
-[2025-10-28T05:16:30.610Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
-[2025-10-28T05:16:30.610Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome\" folder=\"Personal/Journal\""
-[2025-10-28T05:16:30.610Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome","folder":"Personal/Journal"}
-[2025-10-28T05:16:30.610Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Books**\\n- Read 'Deep Work' by Cal Newport\\n\\n**Career**\\n- Had an interview at Google in Mountain View\\n- Note: Waiting for follow-up on outcome\",\"folder\":\"Personal/Journal\"}}"
-[2025-10-28T05:16:30.611Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome","folder":"Personal/Journal"}}
-[2025-10-28T05:16:30.612Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761628590611","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
-[2025-10-28T05:16:30.612Z] INFO | 🎯 Generating final response with tool results...
-[2025-10-28T05:16:30.612Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
-[2025-10-28T05:16:30.613Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
-[2025-10-28T05:16:42.138Z] DEBUG | Completion finished
-[2025-10-28T05:16:42.138Z] DEBUG | 📝 Raw final response: | "Here's the journal entry proposal:\n\n# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome\n\nWould you like to save this as is or make any changes?"
-[2025-10-28T05:16:42.138Z] INFO | ✨ Clean final response: | "Here's the journal entry proposal:\n\n# Daily Update\n\n**Books**\n- Read 'Deep Work' by Cal Newport\n\n**Career**\n- Had an interview at Google in Mountain View\n- Note: Waiting for follow-up on outcome\n\nWould you like to save this as is or make any changes?"
-[2025-10-28T05:16:42.139Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
-[2025-10-28T05:16:42.139Z] INFO | 🤔 Detected confirmation question, showing Yes/No buttons
-[2025-10-28T05:16:42.139Z] INFO | 🔧 Tool used: suggest_journal_entry
-[2025-10-28T05:16:42.139Z] INFO | ✨ Response generated using tool data
+[Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.011Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.011Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.011Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.090Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.090Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.090Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.090Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.090Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.170Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.170Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.170Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.170Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.170Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.257Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.257Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.257Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.258Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.258Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.339Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.339Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.339Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.339Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.339Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.421Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.422Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.422Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.422Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.422Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.503Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.503Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.503Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.504Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.504Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.588Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.588Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.588Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.588Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.588Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.669Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.669Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.669Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.669Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.669Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.752Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.752Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.753Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.753Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.753Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.834Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.834Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.834Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.834Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.834Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.916Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.916Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.916Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.916Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.916Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:35.996Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:35.996Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:35.996Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:35.996Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:35.996Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.077Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.077Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.077Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.077Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.077Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.164Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.164Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.164Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.164Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.164Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.248Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.248Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.248Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.248Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.248Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.331Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.331Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.331Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.331Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.331Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.413Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.413Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.413Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.413Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.413Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.491Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.491Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.491Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.491Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.491Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.576Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.576Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.576Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.576Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.576Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.664Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.664Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.664Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.664Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.664Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.748Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.748Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.748Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.748Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.748Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.830Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.830Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.830Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.830Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.831Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.914Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.914Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.914Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.914Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.914Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:36.997Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:36.997Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:36.997Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:36.997Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:36.997Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.082Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.082Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.082Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.082Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.082Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.164Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.164Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.164Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.164Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.164Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.247Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.247Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.247Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.247Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.247Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.332Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.332Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.332Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.332Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.332Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.415Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.415Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.415Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.415Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.415Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.498Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.498Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.498Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.498Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.498Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.578Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.578Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.578Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.579Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.579Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.671Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.671Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.671Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.671Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.671Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.752Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.752Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.752Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.752Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.752Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.836Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.836Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.836Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.836Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.836Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:37.921Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:37.921Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:37.921Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:37.921Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:37.921Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:38.005Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:38.005Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:38.006Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:38.006Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:38.006Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:38.083Z] DEBUG | Completion finished
+[2025-10-28T06:01:38.083Z] DEBUG | 📝 Raw final response: | "Sorry to hear that the interview at CityTech didn't go well. It can be really tough to deal with rejection. Practicing algorithms is a great idea - it's always good to review and improve your skills. What specifically do you feel you need to focus on or work on in terms of algorithms?"
+[2025-10-28T06:01:38.083Z] INFO | ✨ Clean final response: | "Sorry to hear that the interview at CityTech didn't go well. It can be really tough to deal with rejection. Practicing algorithms is a great idea - it's always good to review and improve your skills. What specifically do you feel you need to focus on or work on in terms of algorithms?"
+[2025-10-28T06:01:38.084Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
+[2025-10-28T06:01:38.084Z] INFO | 🔧 Tool used: suggest_journal_entry
+[2025-10-28T06:01:38.084Z] INFO | ✨ Response generated using tool data
+[2025-10-28T06:01:38.092Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:38.092Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:38.092Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:38.092Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:38.092Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:38.115Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:38.115Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:38.115Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:38.115Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:38.115Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:42.924Z] INFO | 📝 [Journal Button Debug] Tool name: | "suggest_journal_entry"
+[2025-10-28T06:01:42.924Z] INFO | 📝 [Journal Button Debug] Has toolResult:
+[2025-10-28T06:01:42.924Z] INFO | 📝 [Journal Button Debug] Success:
+[2025-10-28T06:01:42.924Z] INFO | 📝 [Journal Button Debug] Has proposal:
+[2025-10-28T06:01:42.924Z] INFO | 📝 [Journal Button Debug] hasProposal:
+[2025-10-28T06:01:53.121Z] INFO | ✅ Model file validated: | {"path":"/var/mobile/Containers/Data/Application/7BF1EAB7-B407-4AAE-AE5E-A07E5BEC2EC9/Documents/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf","size":"4692.78 MB","exists":true}
+[2025-10-28T06:01:53.121Z] INFO | 📋 Model type detected: | "llama-3.1-8b-instruct"
+[2025-10-28T06:01:53.121Z] INFO | 🔧 Tool format: | "transformers-native"
+[2025-10-28T06:01:53.122Z] INFO | 📝 Needs examples:
+[2025-10-28T06:01:53.122Z] INFO | 📏 Context size: | 8192
+[2025-10-28T06:01:53.122Z] INFO | 🚀 Initializing model with context size: | 8192
+[2025-10-28T06:01:53.846Z] INFO | ✅ Model loaded successfully: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T06:01:53.846Z] INFO | Using Llama 3.1 8B (Official Tool Support) configuration
+[2025-10-28T06:01:53.846Z] INFO | Context window: 8192 tokens
+[2025-10-28T06:01:53.871Z] INFO | 🔍 Initializing AI backend...
+[2025-10-28T06:01:53.871Z] LOG | ==================================================
+[2025-10-28T06:01:53.871Z] LOG | 🔍 AI BACKEND DETECTION
+[2025-10-28T06:01:53.871Z] LOG | ==================================================
+[2025-10-28T06:01:53.871Z] INFO | Platform: | "ios"
+[2025-10-28T06:01:53.871Z] INFO | Platform Version: | "26.0"
+[2025-10-28T06:01:53.871Z] LOG | --------------------------------------------------
+[2025-10-28T06:01:53.871Z] LOG | Detection Process
+[2025-10-28T06:01:53.871Z] LOG | --------------------------------------------------
+[2025-10-28T06:01:53.871Z] INFO | ✅ Using Llama.cpp as default backend
+[2025-10-28T06:01:53.872Z] INFO | Load a GGUF model from Models screen to start chatting
+[2025-10-28T06:01:53.872Z] INFO | You can switch to Apple Intelligence from the Chat screen if available
+[2025-10-28T06:01:53.872Z] LOG | ==================================================
+[2025-10-28T06:01:53.885Z] INFO | ✅ AI Backend: | "llama

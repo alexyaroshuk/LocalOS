@@ -843,16 +843,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         };
 
         // Check if this is a suggest_journal_entry action with a proposal
+        // NOTE: ToolService wraps results in .result property!
         const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
-                           actionMsg.toolResult?.success &&
-                           actionMsg.toolResult?.proposal;
+                           actionMsg.toolResult?.result?.success &&
+                           actionMsg.toolResult?.result?.proposal;
 
         // Debug logging
         if (actionMsg.toolName === 'suggest_journal_entry') {
           Logger.info('📝 [Journal Button Debug] Tool name:', actionMsg.toolName);
           Logger.info('📝 [Journal Button Debug] Has toolResult:', !!actionMsg.toolResult);
-          Logger.info('📝 [Journal Button Debug] Success:', actionMsg.toolResult?.success);
-          Logger.info('📝 [Journal Button Debug] Has proposal:', !!actionMsg.toolResult?.proposal);
+          Logger.info('📝 [Journal Button Debug] toolResult.result:', actionMsg.toolResult?.result);
+          Logger.info('📝 [Journal Button Debug] Success:', actionMsg.toolResult?.result?.success);
+          Logger.info('📝 [Journal Button Debug] Has proposal:', !!actionMsg.toolResult?.result?.proposal);
           Logger.info('📝 [Journal Button Debug] hasProposal:', hasProposal);
         }
 
@@ -865,17 +867,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                   <Text style={styles.journalProposalIcon}>📝</Text>
                   <View style={styles.journalProposalInfo}>
                     <Text style={styles.journalProposalTitle}>
-                      {actionMsg.toolResult.proposal.title}
+                      {actionMsg.toolResult.result.proposal.title}
                     </Text>
                     <Text style={styles.journalProposalSubtitle}>
-                      {actionMsg.toolResult.proposal.folder}
+                      {actionMsg.toolResult.result.proposal.folder}
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   style={styles.journalProposalButton}
                   onPress={() => {
-                    setProposedNote(actionMsg.toolResult.proposal);
+                    setProposedNote(actionMsg.toolResult.result.proposal);
                     setShowNoteProposal(true);
                   }}>
                   <Text style={styles.journalProposalButtonText}>
@@ -954,12 +956,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         () => {}, // No streaming needed
         async (stage, tool, toolArgs, toolResult) => {
           if (stage === 'tool_result' && tool === 'save_vault_file') {
-            if (toolResult?.success) {
+            // NOTE: ToolService wraps results in .result property!
+            if (toolResult?.result?.success) {
               showToastMessage(`Note saved to ${proposedNote.folder}/${proposedNote.title}`);
               setShowNoteProposal(false);
               setProposedNote(null);
             } else {
-              Alert.alert('Error', toolResult?.error || 'Failed to save note');
+              Alert.alert('Error', toolResult?.error || toolResult?.result?.error || 'Failed to save note');
             }
           }
         },
