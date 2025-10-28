@@ -506,22 +506,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
-              // DEBUG: Log tool results for suggest_journal_entry
-              if (tool === 'suggest_journal_entry') {
-                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                Logger.debug('[CALLBACK] TOOL_RESULT - suggest_journal_entry');
-                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                Logger.debug('toolResult received:', toolResult);
-                Logger.debug('toolResult.result exists:', !!toolResult?.result);
-                Logger.debug('toolResult.result.success:', toolResult?.result?.success);
-                Logger.debug('toolResult.result.proposal exists:', !!toolResult?.result?.proposal);
-                if (toolResult?.result?.proposal) {
-                  Logger.debug('toolResult.result.proposal:', toolResult.result.proposal);
-                }
-                Logger.debug('currentActionIdRef:', currentActionIdRef.current);
-                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-              }
-
               // Complete tool call action
               if (currentActionIdRef.current) {
                 setMessages(prev =>
@@ -529,7 +513,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                     if (msg.id === currentActionIdRef.current && msg.role === 'action') {
                       const actionMsg = msg as ActionMessage;
                       const duration = now - actionMsg.startTime;
-                      return {
+                      const updatedMsg = {
                         ...actionMsg,
                         content: `Used ${tool} for ${(duration / 1000).toFixed(1)}s`,
                         endTime: now,
@@ -537,6 +521,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                         toolResult: toolResult,
                         isComplete: true,
                       };
+
+                      // DEBUG: Log once when storing journal proposal
+                      if (tool === 'suggest_journal_entry') {
+                        Logger.info('📋 Stored journal action with toolResult:', updatedMsg.toolResult);
+                      }
+
+                      return updatedMsg;
                     }
                     return msg;
                   }),
@@ -919,27 +910,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         const hasProposal = actionMsg.toolName === 'suggest_journal_entry' &&
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
-
-        // DEBUG: Comprehensive logging for suggest_journal_entry
-        if (actionMsg.toolName === 'suggest_journal_entry') {
-          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          Logger.debug('[RENDER] SUGGEST_JOURNAL_ENTRY ACTION');
-          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          Logger.debug('Action ID:', actionMsg.id);
-          Logger.debug('isComplete:', actionMsg.isComplete);
-          Logger.debug('toolResult exists:', !!actionMsg.toolResult);
-          Logger.debug('toolResult:', actionMsg.toolResult);
-          Logger.debug('hasProposal:', hasProposal);
-          Logger.debug('Breakdown:');
-          Logger.debug('  - toolResult exists:', !!actionMsg.toolResult);
-          Logger.debug('  - toolResult.result exists:', !!actionMsg.toolResult?.result);
-          Logger.debug('  - toolResult.result.success:', actionMsg.toolResult?.result?.success);
-          Logger.debug('  - toolResult.result.proposal exists:', !!actionMsg.toolResult?.result?.proposal);
-          if (actionMsg.toolResult?.result?.proposal) {
-            Logger.debug('  - Proposal:', actionMsg.toolResult.result.proposal);
-          }
-          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        }
 
         return (
           <View>
