@@ -26,7 +26,7 @@ interface NoteProposalModalProps {
   visible: boolean;
   proposal: NoteProposal | null;
   onClose: () => void;
-  onSave: (content: string) => void;
+  onSave: (content: string, title: string) => void;
   onRefine: () => void;
 }
 
@@ -39,10 +39,12 @@ export const NoteProposalModal: React.FC<NoteProposalModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('preview');
   const [editedContent, setEditedContent] = useState('');
+  const [editedTitle, setEditedTitle] = useState('');
 
   React.useEffect(() => {
     if (proposal) {
       setEditedContent(proposal.content);
+      setEditedTitle(proposal.title);
       setActiveTab('preview');
     }
   }, [proposal]);
@@ -52,7 +54,7 @@ export const NoteProposalModal: React.FC<NoteProposalModalProps> = ({
   }
 
   const handleSave = () => {
-    onSave(editedContent);
+    onSave(editedContent, editedTitle);
     onClose();
   };
 
@@ -111,15 +113,30 @@ export const NoteProposalModal: React.FC<NoteProposalModalProps> = ({
                 <Markdown style={markdownStyles}>{editedContent}</Markdown>
               </ScrollView>
             ) : (
-              <TextInput
-                style={styles.editor}
-                value={editedContent}
-                onChangeText={setEditedContent}
-                multiline
-                placeholder="Edit your note here..."
-                placeholderTextColor="#999"
-                textAlignVertical="top"
-              />
+              <View style={styles.editContainer}>
+                {/* Title Input */}
+                <View style={styles.titleInputContainer}>
+                  <Text style={styles.titleLabel}>File Name:</Text>
+                  <TextInput
+                    style={styles.titleInput}
+                    value={editedTitle}
+                    onChangeText={setEditedTitle}
+                    placeholder="note-title.md"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+
+                {/* Content Editor */}
+                <TextInput
+                  style={styles.editor}
+                  value={editedContent}
+                  onChangeText={setEditedContent}
+                  multiline
+                  placeholder="Edit your note here..."
+                  placeholderTextColor="#999"
+                  textAlignVertical="top"
+                />
+              </View>
             )}
           </View>
 
@@ -219,6 +236,36 @@ const styles = StyleSheet.create({
   previewScroll: {
     flex: 1,
     padding: 16,
+  },
+  editContainer: {
+    flex: 1,
+  },
+  titleInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
+  },
+  titleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginRight: 8,
+  },
+  titleInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1a1a1a',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   editor: {
     flex: 1,

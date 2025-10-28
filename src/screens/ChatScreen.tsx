@@ -22,6 +22,7 @@ import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage} from '../types
 import {AIService} from '../services/AIService';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
+import {VaultService} from '../services/VaultService';
 import {generateId} from '../utils/helpers';
 import {
   MAX_MESSAGE_LENGTH,
@@ -685,6 +686,61 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     ]);
   };
 
+  // TEST: Mock suggest_journal_entry tool call for debugging
+  const handleTestNoteProposal = () => {
+    console.log('[TEST] Creating mock suggest_journal_entry action...');
+
+    const mockToolResult = {
+      id: 'tool-test-' + Date.now(),
+      name: 'suggest_journal_entry',
+      result: {
+        success: true,
+        proposal: {
+          title: '2024-10-28.md',
+          folder: 'Personal/Journal/2024',
+          relativePath: 'Personal/Journal/2024/2024-10-28.md',
+          content: '# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of \'Sapiens\'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project',
+          date: '2024-10-28',
+        },
+        message: 'Journal entry proposal created. Review and save when ready.',
+      },
+    };
+
+    const mockActionMessage: ActionMessage = {
+      id: 'action-test-' + Date.now(),
+      role: 'action',
+      actionType: 'tool_call',
+      content: 'Used suggest_journal_entry for 0.5s',
+      timestamp: Date.now(),
+      startTime: Date.now() - 500,
+      endTime: Date.now(),
+      duration: 500,
+      toolName: 'suggest_journal_entry',
+      toolArgs: {
+        date: '2024-10-28',
+        content: '# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of \'Sapiens\'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project',
+        folder: 'Personal/Journal',
+      },
+      toolResult: mockToolResult,
+      isComplete: true,
+    };
+
+    console.log('[TEST] Mock action message created:', mockActionMessage);
+    setMessages(prev => [...prev, mockActionMessage]);
+
+    // Also add a mock assistant response
+    const mockAssistantMessage: Message = {
+      id: 'msg-test-' + Date.now(),
+      role: 'assistant',
+      content: 'I\'ve created a journal entry proposal for you. Click the button above to review and edit it!',
+      timestamp: Date.now(),
+    };
+
+    setTimeout(() => {
+      setMessages(prev => [...prev, mockAssistantMessage]);
+    }, 100);
+  };
+
   const toggleTools = () => {
     const newToolsState = !toolsEnabled;
     setToolsEnabled(newToolsState);
@@ -848,6 +904,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
 
+        // DEBUG: Log proposal check for testing
+        if (actionMsg.toolName === 'suggest_journal_entry') {
+          console.log('[DEBUG] suggest_journal_entry detected - hasProposal:', hasProposal);
+          if (!hasProposal) {
+            console.log('[DEBUG] Missing data:', {
+              toolResult: actionMsg.toolResult,
+              hasResult: !!actionMsg.toolResult?.result,
+              hasSuccess: !!actionMsg.toolResult?.result?.success,
+              hasProposalData: !!actionMsg.toolResult?.result?.proposal,
+            });
+          }
+        }
+
         return (
           <View>
             <ActionCard action={action} />
@@ -918,59 +987,31 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     showToastMessage('Continue chatting to refine the note');
   };
 
-  const handleSaveNote = async (content: string) => {
+  const handleSaveNote = async (content: string, title: string) => {
     if (!proposedNote) {return;}
 
     try {
-      // Send a message to trigger save_vault_file tool
-      const saveMessage = `Save this note to ${proposedNote.relativePath}:\n\n${content}`;
+      Logger.info('💾 Saving note directly to vault...');
+      Logger.info(`Path: ${proposedNote.folder}/${title}`);
 
-      // Add user message
-      const userMessage: Message = {
-        id: generateId(),
-        role: 'user',
-        content: saveMessage,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, userMessage]);
+      // Construct the relative path with the (possibly edited) title
+      const relativePath = `${proposedNote.folder}/${title}`;
 
-      // Trigger AI to save the file
-      setIsGenerating(true);
-      const contextMessages = [...messages, userMessage]
-        .filter(msg => msg.role !== 'action') as Message[];
+      // Save directly using VaultService
+      const savedFile = await VaultService.writeFile(relativePath, content);
 
-      const result = await AIService.chatCompletionWithTools(
-        contextMessages,
-        [],
-        {},
-        () => {}, // No streaming needed
-        async (stage, tool, toolArgs, toolResult) => {
-          if (stage === 'tool_result' && tool === 'save_vault_file') {
-            // NOTE: ToolService wraps results in .result property!
-            if (toolResult?.result?.success) {
-              showToastMessage(`Note saved to ${proposedNote.folder}/${proposedNote.title}`);
-              setShowNoteProposal(false);
-              setProposedNote(null);
-            } else {
-              Alert.alert('Error', toolResult?.error || toolResult?.result?.error || 'Failed to save note');
-            }
-          }
-        },
-      );
+      Logger.info('✅ Note saved successfully:', savedFile.relativePath);
 
-      // Add assistant response
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: result.response,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsGenerating(false);
+      // Show success toast
+      showToastMessage(`✓ Note saved to ${proposedNote.folder}/${title}`);
+
+      // Close modal and clear state
+      setShowNoteProposal(false);
+      setProposedNote(null);
     } catch (error) {
       Logger.error('Failed to save note:', error);
-      Alert.alert('Error', 'Failed to save note to vault');
-      setIsGenerating(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save note to vault';
+      showToastMessage(`✗ Error: ${errorMessage}`);
     }
   };
 
@@ -1058,6 +1099,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             <Text style={styles.clearButton}>Clear</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Test Button Row */}
+      <View style={styles.testButtonRow}>
+        <TouchableOpacity onPress={handleTestNoteProposal} style={styles.testButtonContainer}>
+          <Text style={styles.testButtonText}>🧪 Test Note Proposal</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -1303,6 +1351,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FF3B30',
     fontWeight: '500',
+  },
+  testButtonRow: {
+    backgroundColor: '#FFF9E6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFD700',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  testButtonContainer: {
+    backgroundColor: '#FF9500',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   messageList: {
     flex: 1,

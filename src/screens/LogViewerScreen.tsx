@@ -36,6 +36,14 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
   useEffect(() => {
     // Subscribe to log updates
     const unsubscribe = Logger.subscribe(setLogs);
+
+    // Scroll to bottom on initial mount
+    setTimeout(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({animated: false});
+      }
+    }, 200);
+
     return unsubscribe;
   }, []);
 

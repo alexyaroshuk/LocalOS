@@ -1,0 +1,75 @@
+ User: Busy day! Read "Sapiens" chapters 3-5, had lunch meeting with the team about Q4 goals, worked out at the gym for an hour, and learned about vector databases for the LocalOS project.
+[2025-10-28T07:28:53.534Z] INFO | Tools enabled: true
+[2025-10-28T07:28:53.534Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T07:28:53.535Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T07:28:53.535Z] INFO | 👤 User prompt: | "Busy day! Read \"Sapiens\" chapters 3-5, had lunch meeting with the team about Q4 goals, worked out at the gym for an hour, and learned about vector databases for the LocalOS project."
+[2025-10-28T07:28:53.535Z] INFO | 📝 System prompt type: | "custom"
+[2025-10-28T07:28:53.535Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T07:28:53.535Z] DEBUG | Prompt length: | 10039
+[2025-10-28T07:28:53.535Z] DEBUG | Includes memory examples: | true
+[2025-10-28T07:28:53.535Z] DEBUG | Includes "What do you know":
+[2025-10-28T07:28:53.535Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\nUser is inquiring about vault folders\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yo"
+[2025-10-28T07:28:53.535Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T07:28:53.535Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T07:28:53.535Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T07:28:53.535Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T07:29:07.605Z] DEBUG | Completion finished
+[2025-10-28T07:29:07.605Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T07:29:07.605Z] DEBUG | Temperature: | 0.3
+[2025-10-28T07:29:07.605Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-29\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project\" folder=\"Personal/Journal\" />"
+[2025-10-28T07:29:07.605Z] DEBUG | Output length: | 309
+[2025-10-28T07:29:07.605Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-29\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project\" folder=\"Personal/Jo"
+[2025-10-28T07:29:07.605Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T07:29:07.605Z] DEBUG | Attributes string: | " date=\"2024-10-29\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project\" folder=\"Personal/Journal\""
+[2025-10-28T07:29:07.605Z] DEBUG | Parsed XML args: | {"date":"2024-10-29","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project","folder":"Personal/Journal"}
+[2025-10-28T07:29:07.605Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-29\",\"content\":\"# Daily Update\\n\\n**Reading**\\n- Finished chapters 3-5 of 'Sapiens'\\n\\n**Work**\\n- Had lunch meeting with team about Q4 goals\\n\\n**Fitness**\\n- Worked out at the gym for 1 hour\\n\\n**Learning**\\n- Explored vector databases for LocalOS project\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T07:29:07.605Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-29","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project","folder":"Personal/Journal"}}
+[2025-10-28T07:29:07.606Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761636547605","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-29.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-29.md","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Fitness**\n- Worked out at the gym for 1 hour\n\n**Learning**\n- Explored vector databases for LocalOS project","date":"2024-10-29"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T07:29:07.606Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T07:29:07.606Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T07:29:07.606Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T07:29:23.578Z] DEBUG | Completion finished
+[2025-10-28T07:29:23.578Z] DEBUG | 📝 Raw final response: | "Sounds like you've been making great progress on your reading and learning goals. It's great that you had a productive lunch meeting with your team about Q4 goals. Getting a workout in at the gym is also a great way to stay energized and focused. I've created a journal entry for you to review and save. Would you like to add anything else to it before saving?"
+[2025-10-28T07:29:23.578Z] INFO | ✨ Clean final response: | "Sounds like you've been making great progress on your reading and learning goals. It's great that you had a productive lunch meeting with your team about Q4 goals. Getting a workout in at the gym is also a great way to stay energized and focused. I've created a journal entry for you to review and save. Would you like to add anything else to it before saving?"
+[2025-10-28T07:29:23.578Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
+[2025-10-28T07:29:23.578Z] INFO | 🔧 Tool used: suggest_journal_entry
+[2025-10-28T07:29:23.578Z] INFO | ✨ Response generated using tool data
+[2025-10-28T07:29:31.793Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T07:29:31.793Z] INFO | 💬 CHAT MESSAGE (from Chat Screen)
+[2025-10-28T07:29:31.793Z] INFO | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2025-10-28T07:29:31.793Z] INFO | User: Where is it????
+[2025-10-28T07:29:31.793Z] INFO | Tools enabled: true
+[2025-10-28T07:29:31.793Z] INFO | 📝 Skipping ChatScreen system prompt - LlamaService will add tool-enabled prompt
+[2025-10-28T07:29:31.793Z] INFO | ✅ Tools are enabled. Available tools: | "get_current_datetime, search_web, core_memory_append, core_memory_replace, core_memory_clear, archival_memory_insert, archival_memory_search, archival_memory_delete, conversation_search, list_vault_structure, list_vault_files, read_vault_file, search_vault, suggest_journal_entry, save_vault_file, update_vault_file"
+[2025-10-28T07:29:31.793Z] INFO | 👤 User prompt: | "Where is it????"
+[2025-10-28T07:29:31.793Z] INFO | 📝 System prompt type: | "custom"
+[2025-10-28T07:29:31.794Z] DEBUG | === SYSTEM PROMPT DEBUG ===
+[2025-10-28T07:29:31.794Z] DEBUG | Prompt length: | 10039
+[2025-10-28T07:29:31.794Z] DEBUG | Includes memory examples: | true
+[2025-10-28T07:29:31.794Z] DEBUG | Includes "What do you know":
+[2025-10-28T07:29:31.794Z] DEBUG | First 500 chars: | "# CORE MEMORY\n\n## User Profile\nNew user - learning about preferences and personality.\nUser is inquiring about vault folders\n\n## Conversation Style\nProfessional and helpful tone.\n\n## Current Focus\nGetting to know the user and setting up initial tasks.\n\n## Relationship Context\nNo context yet.\n\n---\nYou can update these memory blocks using the update_core_memory tool when you learn new information about the user.\n\nFUNCTION-CALLING AI. YOU MUST USE TOOLS.\n\nCRITICAL: You CANNOT save/search memories yo"
+[2025-10-28T07:29:31.794Z] DEBUG | 🎯 Tool detection config: | {"modelType":"llama-3.1-8b-instruct","temperature":0.3,"maxTokens":512,"overridesUsed":{"temp":false,"maxTokens":false}}
+[2025-10-28T07:29:31.794Z] INFO | 🔍 Starting tool detection phase (not streaming to UI)...
+[2025-10-28T07:29:31.794Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T07:29:31.794Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.3,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T07:29:44.401Z] DEBUG | Completion finished
+[2025-10-28T07:29:44.401Z] DEBUG | === TOOL DETECTION DEBUG ===
+[2025-10-28T07:29:44.401Z] DEBUG | Temperature: | 0.3
+[2025-10-28T07:29:44.401Z] DEBUG | Model raw output: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project\" folder=\"Personal/Journal\" />"
+[2025-10-28T07:29:44.401Z] DEBUG | Output length: | 315
+[2025-10-28T07:29:44.401Z] DEBUG | 🔍 extractToolCall input: | "<suggest_journal_entry date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project\" folder=\"Perso"
+[2025-10-28T07:29:44.401Z] DEBUG | ✅ Found XML format tool: | "suggest_journal_entry"
+[2025-10-28T07:29:44.401Z] DEBUG | Attributes string: | " date=\"2024-10-28\" content=\"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project\" folder=\"Personal/Journal\""
+[2025-10-28T07:29:44.401Z] DEBUG | Parsed XML args: | {"date":"2024-10-28","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project","folder":"Personal/Journal"}
+[2025-10-28T07:29:44.401Z] INFO | ✅ TOOL CALL DETECTED: | "{\"name\":\"suggest_journal_entry\",\"arguments\":{\"date\":\"2024-10-28\",\"content\":\"# Daily Update\\n\\n**Reading**\\n- Finished chapters 3-5 of 'Sapiens'\\n\\n**Work**\\n- Had lunch meeting with team about Q4 goals\\n\\n**Exercise**\\n- Worked out at the gym for an hour\\n\\n**Learning**\\n- Explored vector databases for the LocalOS project\",\"folder\":\"Personal/Journal\"}}"
+[2025-10-28T07:29:44.401Z] INFO | ✅ Valid tool call detected: | {"name":"suggest_journal_entry","arguments":{"date":"2024-10-28","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project","folder":"Personal/Journal"}}
+[2025-10-28T07:29:44.402Z] INFO | 🔧 Tool execution result: | {"id":"tool-1761636584402","name":"suggest_journal_entry","result":{"success":true,"proposal":{"title":"2024-10-28.md","folder":"Personal/Journal/2024","relativePath":"Personal/Journal/2024/2024-10-28.md","content":"# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of 'Sapiens'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project","date":"2024-10-28"},"message":"Journal entry proposal created. Review and save when ready."}}
+[2025-10-28T07:29:44.402Z] INFO | 🎯 Generating final response with tool results...
+[2025-10-28T07:29:44.402Z] DEBUG | Generated prompt template for: | "Meta-Llama-3.1-8B-Instruct-Q4_K_M"
+[2025-10-28T07:29:44.402Z] DEBUG | Starting completion with config: | {"contextSize":2048,"temperature":0.7,"topP":0.9,"topK":40,"maxTokens":512,"stopSequences":[],"repeatPenalty":1.1,"nGpuLayers":99}
+[2025-10-28T07:29:58.978Z] DEBUG | Completion finished
+[2025-10-28T07:29:58.978Z] DEBUG | 📝 Raw final response: | "Here's your proposed journal entry for today. It looks like you had a productive day, finishing your reading goal, a meeting with your team, a workout, and some learning on vector databases. Take a look and let me know if you'd like to make any changes or save it as is."
+[2025-10-28T07:29:58.978Z] INFO | ✨ Clean final response: | "Here's your proposed journal entry for today. It looks like you had a productive day, finishing your reading goal, a meeting with your team, a workout, and some learning on vector databases. Take a look and let me know if you'd like to make any changes or save it as is."
+[2025-10-28T07:29:58.978Z] INFO | ✅ Tool was used: | "suggest_journal_entry"
+[2025-10-28T07:29:58.978Z] INFO | 🔧 Tool used: suggest_journal_entry
+[2025-10-28T07:29:58.978Z] INFO | ✨ Response generated using tool data
