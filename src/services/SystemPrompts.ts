@@ -391,5 +391,5 @@ export function getDefaultPromptType(modelType: string): SystemPromptType {
     return 'minimal';
   }
   // Use Letta for 1B (custom fine-tuned)
-  return 'letta';
+  return 'custom';
 }

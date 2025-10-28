@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   Share,
@@ -31,7 +31,7 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
     'all',
   );
   const [autoScroll, setAutoScroll] = useState(true);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const flatListRef = React.useRef<FlatList>(null);
 
   useEffect(() => {
     // Subscribe to log updates
@@ -39,19 +39,19 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    // Auto-scroll to bottom when new logs arrive
-    if (autoScroll && scrollViewRef.current) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({animated: true});
-      }, 100);
-    }
-  }, [logs, autoScroll]);
-
   const filteredLogs = logs.filter(log => {
     if (filter === 'all') return true;
     return log.level === filter;
   });
+
+  useEffect(() => {
+    // Auto-scroll to bottom when new logs arrive
+    if (autoScroll && flatListRef.current && filteredLogs.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({animated: true});
+      }, 100);
+    }
+  }, [logs, autoScroll, filter, filteredLogs.length]);
 
   const handleClear = () => {
     Alert.alert('Clear Logs', 'Are you sure you want to clear all logs?', [
@@ -176,18 +176,34 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
       </View>
 
       {/* Logs List */}
-      <ScrollView
-        ref={scrollViewRef}
+      <FlatList
+        ref={flatListRef}
         style={styles.logsContainer}
         contentContainerStyle={styles.logsContent}
-        onScrollBeginDrag={() => setAutoScroll(false)}
-        onScrollEndDrag={event => {
-          const {contentOffset, contentSize, layoutMeasurement} = event.nativeEvent;
-          const isAtBottom =
-            contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
-          setAutoScroll(isAtBottom);
-        }}>
-        {filteredLogs.length === 0 ? (
+        data={filteredLogs}
+        keyExtractor={(item, index) => `${item.timestamp}-${index}`}
+        renderItem={({item: log}) => {
+          const date = new Date(log.timestamp);
+          const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;
+          return (
+            <View style={[styles.logEntry, getLogStyle(log.level)]}>
+              <View style={styles.logHeader}>
+                <Text style={styles.logIcon}>{getLogIcon(log.level)}</Text>
+                <Text style={styles.logTime}>{time}</Text>
+                <Text style={styles.logLevel}>{log.level.toUpperCase()}</Text>
+              </View>
+              <Text style={styles.logMessage}>{log.message}</Text>
+              {log.data !== undefined && (
+                <Text style={styles.logData}>
+                  {typeof log.data === 'object'
+                    ? JSON.stringify(log.data, null, 2)
+                    : String(log.data)}
+                </Text>
+              )}
+            </View>
+          );
+        }}
+        ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No logs yet</Text>
             <Text style={styles.emptySubtext}>
@@ -199,37 +215,27 @@ export const LogViewerScreen = ({onClose}: LogViewerScreenProps) => {
               <Text style={styles.testButtonText}>Run Test Logs</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          filteredLogs.map((log, index) => {
-            const time = new Date(log.timestamp).toLocaleTimeString();
-            return (
-              <View key={index} style={[styles.logEntry, getLogStyle(log.level)]}>
-                <View style={styles.logHeader}>
-                  <Text style={styles.logIcon}>{getLogIcon(log.level)}</Text>
-                  <Text style={styles.logTime}>{time}</Text>
-                  <Text style={styles.logLevel}>{log.level.toUpperCase()}</Text>
-                </View>
-                <Text style={styles.logMessage}>{log.message}</Text>
-                {log.data !== undefined && (
-                  <Text style={styles.logData}>
-                    {typeof log.data === 'object'
-                      ? JSON.stringify(log.data, null, 2)
-                      : String(log.data)}
-                  </Text>
-                )}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+        }
+        onScrollBeginDrag={() => setAutoScroll(false)}
+        onScrollEndDrag={event => {
+          const {contentOffset, contentSize, layoutMeasurement} = event.nativeEvent;
+          const isAtBottom =
+            contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
+          setAutoScroll(isAtBottom);
+        }}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={10}
+        removeClippedSubviews={true}
+      />
 
       {/* Auto-scroll indicator */}
-      {!autoScroll && (
+      {!autoScroll && filteredLogs.length > 0 && (
         <TouchableOpacity
           style={styles.scrollToBottomButton}
           onPress={() => {
             setAutoScroll(true);
-            scrollViewRef.current?.scrollToEnd({animated: true});
+            flatListRef.current?.scrollToEnd({animated: true});
           }}>
           <Text style={styles.scrollToBottomText}>↓ Scroll to bottom</Text>
         </TouchableOpacity>
@@ -334,7 +340,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logsContent: {
-    padding: 12,
+    padding: 8,
   },
   emptyState: {
     flex: 1,
@@ -364,9 +370,9 @@ const styles = StyleSheet.create({
   },
   logEntry: {
     backgroundColor: '#2D2D2D',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 6,
     borderLeftWidth: 3,
   },
   normalLog: {
@@ -389,36 +395,37 @@ const styles = StyleSheet.create({
   logHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
+    marginBottom: 4,
+    gap: 6,
   },
   logIcon: {
-    fontSize: 14,
+    fontSize: 12,
   },
   logTime: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   logLevel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#666',
     fontWeight: '600',
   },
   logMessage: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#E0E0E0',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    marginBottom: 4,
+    lineHeight: 16,
   },
   logData: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     backgroundColor: '#1E1E1E',
-    padding: 8,
+    padding: 6,
     borderRadius: 4,
     marginTop: 4,
+    lineHeight: 14,
   },
   scrollToBottomButton: {
     position: 'absolute',
