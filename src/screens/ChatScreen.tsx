@@ -72,8 +72,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   } | null>(null);
   const [showNoteProposal, setShowNoteProposal] = useState(false);
 
-  // Track which messages are confirmation questions (show Yes/No buttons)
-  const [confirmationQuestions, setConfirmationQuestions] = useState<Set<string>>(new Set());
+  // Track which messages are confirmation questions and what tools they offer
+  const [confirmationQuestions, setConfirmationQuestions] = useState<Map<string, {
+    type: 'choice' | 'single';
+    tools?: string[];
+    tool?: string;
+  }>>(new Map());
 
   // Track current action being worked on
   const currentActionIdRef = useRef<string | null>(null);
@@ -101,106 +105,109 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     setInputText('');
   }, []);
 
-  // Detect if assistant message is asking for confirmation
-  const isConfirmationQuestion = useCallback((content: string): boolean => {
+  // Parse tool names from confirmation question
+  // Returns: { type: 'choice', tools: ['search_web', 'search_vault'] } or
+  //          { type: 'single', tool: 'suggest_journal_entry' } or null
+  const parseToolConfirmation = useCallback((content: string): {
+    type: 'choice' | 'single';
+    tools?: string[];
+    tool?: string;
+  } | null => {
     const lowerContent = content.toLowerCase().trim();
 
     // Must end with a question mark
     if (!lowerContent.endsWith('?')) {
-      return false;
+      return null;
     }
 
-    // Check for confirmation keywords
-    const confirmationKeywords = [
-      'would you like',
-      'should i',
-      'want me to',
-      'shall i',
-      'do you want',
-      'can i help you',
-      'would that be helpful',
-      'is that okay',
-      'is that ok',
+    // Check for "tool1 or tool2" pattern
+    const choicePattern = /(\w+)\s+or\s+(\w+)/;
+    const choiceMatch = lowerContent.match(choicePattern);
+    if (choiceMatch) {
+      const tool1 = choiceMatch[1];
+      const tool2 = choiceMatch[2];
+      // Verify these look like tool names (have underscores or multiple words)
+      if (tool1.includes('_') || tool2.includes('_')) {
+        return { type: 'choice', tools: [tool1, tool2] };
+      }
+    }
+
+    // Check for "use tool_name" or "should I tool_name" pattern
+    const singleToolPatterns = [
+      /use\s+(\w+\b)/,
+      /should\s+i\s+(\w+\b)/,
+      /would.*like.*(\w+_\w+)/,
     ];
 
-    return confirmationKeywords.some(keyword => lowerContent.includes(keyword));
+    for (const pattern of singleToolPatterns) {
+      const match = lowerContent.match(pattern);
+      if (match) {
+        const tool = match[1];
+        // Verify it looks like a tool name (has underscore)
+        if (tool.includes('_')) {
+          return { type: 'single', tool };
+        }
+      }
+    }
+
+    return null;
   }, []);
 
-  // Handle yes/no response to confirmation question
-  const handleConfirmationResponse = useCallback(async (messageId: string, response: 'yes' | 'no') => {
-    Logger.info(`User responded "${response}" to confirmation question ${messageId}`);
+  // Handle tool selection from confirmation buttons
+  const handleToolSelection = useCallback(async (messageId: string, toolName: string) => {
+    Logger.info(`User selected tool "${toolName}" from confirmation ${messageId}`);
 
     // Remove the confirmation buttons
     setConfirmationQuestions(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(messageId);
-      return newSet;
+      const newMap = new Map(prev);
+      newMap.delete(messageId);
+      return newMap;
     });
 
-    if (response === 'yes') {
-      // User confirmed - send "yes" as next message
-      const yesMessage: Message = {
-        id: generateId(),
-        role: 'user',
-        content: 'Yes',
-        timestamp: Date.now(),
-      };
+    // User selected a tool - send tool name as next message
+    const toolMessage: Message = {
+      id: generateId(),
+      role: 'user',
+      content: toolName, // Send the tool name (e.g., "search_web")
+      timestamp: Date.now(),
+    };
 
-      setMessages(prev => [...prev, yesMessage]);
-      setIsGenerating(true);
-      setStreamingText('');
+    setMessages(prev => [...prev, toolMessage]);
+    setIsGenerating(true);
+    setStreamingText('');
 
-      // Trigger AI response with updated context
-      // This is async so we need to handle it properly
-      (async () => {
-        try {
-          const contextMessages = [...messages, yesMessage]
-            .filter(msg => msg.role !== 'action')
-            .slice(-MAX_CONTEXT_MESSAGES) as Message[];
+    // Trigger AI response with updated context
+    // The AI should now call the selected tool
+    (async () => {
+      try {
+        const contextMessages = [...messages, toolMessage]
+          .filter(msg => msg.role !== 'action')
+          .slice(-MAX_CONTEXT_MESSAGES) as Message[];
 
-          const result = await AIService.chatCompletionWithTools(
-            contextMessages,
-            [],
-            {},
-            token => {
-              setStreamingText(prev => prev + token);
-            },
-          );
+        const result = await AIService.chatCompletionWithTools(
+          contextMessages,
+          [],
+          {},
+          token => {
+            setStreamingText(prev => prev + token);
+          },
+        );
 
-          const assistantMessage: Message = {
-            id: generateId(),
-            role: 'assistant',
-            content: result.response,
-            timestamp: Date.now(),
-          };
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          content: result.response,
+          timestamp: Date.now(),
+        };
 
-          setMessages(prev => [...prev, assistantMessage]);
-          setStreamingText('');
-        } catch (error) {
-          Logger.error('Error handling yes response:', error);
-        } finally {
-          setIsGenerating(false);
-        }
-      })();
-    } else {
-      // User declined
-      const noMessage: Message = {
-        id: generateId(),
-        role: 'user',
-        content: 'No',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, noMessage]);
-
-      // Just acknowledge, don't trigger tool
-      const ackMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: 'Okay, no problem!',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, ackMessage]);
-    }
+        setMessages(prev => [...prev, assistantMessage]);
+        setStreamingText('');
+      } catch (error) {
+        Logger.error('Error handling tool selection:', error);
+      } finally {
+        setIsGenerating(false);
+      }
+    })();
   }, [messages]);
 
   // Initialize AI backend and load session on mount
@@ -606,10 +613,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         timestamp: Date.now(),
       };
 
-      // Check if this is a confirmation question
-      if (isConfirmationQuestion(fullResponse)) {
-        Logger.info('🤔 Detected confirmation question, showing Yes/No buttons');
-        setConfirmationQuestions(prev => new Set(prev).add(assistantMessage.id));
+      // Check if this is a tool confirmation question
+      const toolConfirmation = parseToolConfirmation(fullResponse);
+      if (toolConfirmation) {
+        Logger.info('🤔 Detected tool confirmation question:', toolConfirmation);
+        setConfirmationQuestions(prev => new Map(prev).set(assistantMessage.id, toolConfirmation));
       }
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -839,6 +847,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            actionMsg.toolResult?.success &&
                            actionMsg.toolResult?.proposal;
 
+        // Debug logging
+        if (actionMsg.toolName === 'suggest_journal_entry') {
+          Logger.info('📝 [Journal Button Debug] Tool name:', actionMsg.toolName);
+          Logger.info('📝 [Journal Button Debug] Has toolResult:', !!actionMsg.toolResult);
+          Logger.info('📝 [Journal Button Debug] Success:', actionMsg.toolResult?.success);
+          Logger.info('📝 [Journal Button Debug] Has proposal:', !!actionMsg.toolResult?.proposal);
+          Logger.info('📝 [Journal Button Debug] hasProposal:', hasProposal);
+        }
+
         return (
           <View>
             <ActionCard action={action} />
@@ -871,18 +888,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         );
       } else {
         const msg = item as Message;
+        const toolConfirmation = confirmationQuestions.get(msg.id);
         return (
           <ChatMessage
             message={msg}
             onCopy={handleCopy}
             onEdit={handleEdit}
-            showConfirmationButtons={confirmationQuestions.has(msg.id)}
-            onConfirmationResponse={handleConfirmationResponse}
+            toolConfirmation={toolConfirmation}
+            onToolSelection={handleToolSelection}
           />
         );
       }
     },
-    [handleCopy, handleEdit, confirmationQuestions, handleConfirmationResponse],
+    [handleCopy, handleEdit, confirmationQuestions, handleToolSelection],
   );
 
   const renderStreamingMessage = () => {
