@@ -848,16 +848,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
 
-        // Debug logging
-        if (actionMsg.toolName === 'suggest_journal_entry') {
-          Logger.info('📝 [Journal Button Debug] Tool name:', actionMsg.toolName);
-          Logger.info('📝 [Journal Button Debug] Has toolResult:', !!actionMsg.toolResult);
-          Logger.info('📝 [Journal Button Debug] toolResult.result:', actionMsg.toolResult?.result);
-          Logger.info('📝 [Journal Button Debug] Success:', actionMsg.toolResult?.result?.success);
-          Logger.info('📝 [Journal Button Debug] Has proposal:', !!actionMsg.toolResult?.result?.proposal);
-          Logger.info('📝 [Journal Button Debug] hasProposal:', hasProposal);
-        }
-
         return (
           <View>
             <ActionCard action={action} />

@@ -87,8 +87,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </Text>
           </View>
 
-          {/* Action buttons for assistant messages */}
-          {!isUser && (
+          {/* Action buttons for assistant messages (hide during streaming) */}
+          {!isUser && message.id !== 'streaming' && (
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.actionButton}
