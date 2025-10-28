@@ -506,6 +506,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
+              // DEBUG: Log tool results for suggest_journal_entry
+              if (tool === 'suggest_journal_entry') {
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('[DEBUG] TOOL_RESULT CALLBACK - suggest_journal_entry');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('[DEBUG] toolResult received:', JSON.stringify(toolResult, null, 2));
+                console.log('[DEBUG] currentActionIdRef:', currentActionIdRef.current);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              }
+
               // Complete tool call action
               if (currentActionIdRef.current) {
                 setMessages(prev =>
@@ -904,23 +914,31 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                            actionMsg.toolResult?.result?.success &&
                            actionMsg.toolResult?.result?.proposal;
 
-        // DEBUG: Log proposal check for testing
+        // DEBUG: Comprehensive logging for suggest_journal_entry
         if (actionMsg.toolName === 'suggest_journal_entry') {
-          console.log('[DEBUG] suggest_journal_entry detected - hasProposal:', hasProposal);
-          if (!hasProposal) {
-            console.log('[DEBUG] Missing data:', {
-              toolResult: actionMsg.toolResult,
-              hasResult: !!actionMsg.toolResult?.result,
-              hasSuccess: !!actionMsg.toolResult?.result?.success,
-              hasProposalData: !!actionMsg.toolResult?.result?.proposal,
-            });
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[DEBUG] SUGGEST_JOURNAL_ENTRY ACTION DETECTED');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[DEBUG] Action ID:', actionMsg.id);
+          console.log('[DEBUG] isComplete:', actionMsg.isComplete);
+          console.log('[DEBUG] toolResult exists:', !!actionMsg.toolResult);
+          console.log('[DEBUG] toolResult:', JSON.stringify(actionMsg.toolResult, null, 2));
+          console.log('[DEBUG] hasProposal:', hasProposal);
+          console.log('[DEBUG] Breakdown:');
+          console.log('  - toolResult exists:', !!actionMsg.toolResult);
+          console.log('  - toolResult.result exists:', !!actionMsg.toolResult?.result);
+          console.log('  - toolResult.result.success:', actionMsg.toolResult?.result?.success);
+          console.log('  - toolResult.result.proposal exists:', !!actionMsg.toolResult?.result?.proposal);
+          if (actionMsg.toolResult?.result?.proposal) {
+            console.log('  - Proposal:', JSON.stringify(actionMsg.toolResult.result.proposal, null, 2));
           }
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
 
         return (
           <View>
             <ActionCard action={action} />
-            {hasProposal && (
+            {hasProposal ? (
               <View style={styles.journalProposalCard}>
                 <View style={styles.journalProposalHeader}>
                   <Text style={styles.journalProposalIcon}>📝</Text>
@@ -944,6 +962,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                   </Text>
                 </TouchableOpacity>
               </View>
+            ) : (
+              actionMsg.toolName === 'suggest_journal_entry' && (
+                <View style={{padding: 16, backgroundColor: '#FFE6E6'}}>
+                  <Text style={{color: '#CC0000', fontWeight: 'bold'}}>
+                    ⚠️ DEBUG: suggest_journal_entry detected but hasProposal is FALSE
+                  </Text>
+                  <Text style={{color: '#666', fontSize: 12, marginTop: 4}}>
+                    Check console for detailed structure
+                  </Text>
+                </View>
+              )
             )}
           </View>
         );

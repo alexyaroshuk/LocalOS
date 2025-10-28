@@ -227,9 +227,7 @@ export class VaultService {
     errors: string[],
   ): Promise<void> {
     try {
-      Logger.debug(`Scanning directory: ${dirPath}`);
       const items = await RNFS.readDir(dirPath);
-      Logger.debug(`Found ${items.length} items in ${dirPath}`);
 
       // Count files and folders in this directory
       let fileCount = 0;
@@ -237,18 +235,13 @@ export class VaultService {
 
       for (const item of items) {
         try {
-          // Log raw item details for debugging
-          Logger.debug(`Item: ${item.name}, isDirectory: ${item.isDirectory()}, isFile: ${item.isFile()}, size: ${item.size}`);
-
           if (item.isDirectory()) {
             // Skip hidden folders (start with .)
             if (item.name.startsWith('.')) {
-              Logger.debug(`Skipping hidden folder: ${item.name}`);
               continue;
             }
 
             folderCount++;
-            Logger.debug(`Found subfolder: ${item.name}`);
 
             // Calculate relative path properly
             const relativePath = item.path.replace(vaultRoot, '').replace(/^\//, '');
@@ -263,7 +256,6 @@ export class VaultService {
             });
 
             // Recursively scan subfolder
-            Logger.debug(`Recursively scanning: ${item.path}`);
             await this.scanDirectoryRecursive(
               item.path,
               vaultRoot,
@@ -278,8 +270,6 @@ export class VaultService {
             if (item.name.endsWith('.md')) {
               const basename = item.name.replace(/\.md$/i, '');
               const relativePath = item.path.replace(vaultRoot, '').replace(/^\//, '');
-
-              Logger.debug(`Found markdown file: ${item.name} at ${relativePath}`);
 
               files.push({
                 path: item.path,
