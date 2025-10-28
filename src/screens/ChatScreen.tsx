@@ -508,12 +508,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             } else if (stage === 'tool_result') {
               // DEBUG: Log tool results for suggest_journal_entry
               if (tool === 'suggest_journal_entry') {
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('[DEBUG] TOOL_RESULT CALLBACK - suggest_journal_entry');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('[DEBUG] toolResult received:', JSON.stringify(toolResult, null, 2));
-                console.log('[DEBUG] currentActionIdRef:', currentActionIdRef.current);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                Logger.debug('[CALLBACK] TOOL_RESULT - suggest_journal_entry');
+                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                Logger.debug('toolResult received:', toolResult);
+                Logger.debug('toolResult.result exists:', !!toolResult?.result);
+                Logger.debug('toolResult.result.success:', toolResult?.result?.success);
+                Logger.debug('toolResult.result.proposal exists:', !!toolResult?.result?.proposal);
+                if (toolResult?.result?.proposal) {
+                  Logger.debug('toolResult.result.proposal:', toolResult.result.proposal);
+                }
+                Logger.debug('currentActionIdRef:', currentActionIdRef.current);
+                Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
               }
 
               // Complete tool call action
@@ -916,23 +922,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         // DEBUG: Comprehensive logging for suggest_journal_entry
         if (actionMsg.toolName === 'suggest_journal_entry') {
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('[DEBUG] SUGGEST_JOURNAL_ENTRY ACTION DETECTED');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('[DEBUG] Action ID:', actionMsg.id);
-          console.log('[DEBUG] isComplete:', actionMsg.isComplete);
-          console.log('[DEBUG] toolResult exists:', !!actionMsg.toolResult);
-          console.log('[DEBUG] toolResult:', JSON.stringify(actionMsg.toolResult, null, 2));
-          console.log('[DEBUG] hasProposal:', hasProposal);
-          console.log('[DEBUG] Breakdown:');
-          console.log('  - toolResult exists:', !!actionMsg.toolResult);
-          console.log('  - toolResult.result exists:', !!actionMsg.toolResult?.result);
-          console.log('  - toolResult.result.success:', actionMsg.toolResult?.result?.success);
-          console.log('  - toolResult.result.proposal exists:', !!actionMsg.toolResult?.result?.proposal);
+          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          Logger.debug('[RENDER] SUGGEST_JOURNAL_ENTRY ACTION');
+          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          Logger.debug('Action ID:', actionMsg.id);
+          Logger.debug('isComplete:', actionMsg.isComplete);
+          Logger.debug('toolResult exists:', !!actionMsg.toolResult);
+          Logger.debug('toolResult:', actionMsg.toolResult);
+          Logger.debug('hasProposal:', hasProposal);
+          Logger.debug('Breakdown:');
+          Logger.debug('  - toolResult exists:', !!actionMsg.toolResult);
+          Logger.debug('  - toolResult.result exists:', !!actionMsg.toolResult?.result);
+          Logger.debug('  - toolResult.result.success:', actionMsg.toolResult?.result?.success);
+          Logger.debug('  - toolResult.result.proposal exists:', !!actionMsg.toolResult?.result?.proposal);
           if (actionMsg.toolResult?.result?.proposal) {
-            console.log('  - Proposal:', JSON.stringify(actionMsg.toolResult.result.proposal, null, 2));
+            Logger.debug('  - Proposal:', actionMsg.toolResult.result.proposal);
           }
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          Logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
 
         return (
