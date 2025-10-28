@@ -224,7 +224,8 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       Logger.info(`Model Size: ${formatBytes(model.size)}`);
       Logger.info(`Quantization: ${model.quantization}`);
 
-      await LlamaService.loadModel(model.localPath, model.name);
+      // TypeScript safety: model.localPath is guaranteed to be defined here due to check above
+      await LlamaService.loadModel(model.localPath!, model.name);
 
       await StorageService.saveCurrentModel(model);
       await StorageService.addRecentModel(model);
@@ -288,6 +289,12 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   };
 
   const loadEmbeddingModelConfirmed = async (model: ModelInfo) => {
+    // Additional safety check
+    if (!model.downloaded || !model.localPath) {
+      Alert.alert('Error', 'Model not downloaded or path is invalid');
+      return;
+    }
+
     try {
       setLoadingModel(model.id);
 
@@ -300,7 +307,8 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       Logger.info(`Model Size: ${formatBytes(model.size)}`);
       Logger.info(`Quantization: ${model.quantization}`);
 
-      await LlamaService.loadEmbeddingModel(model.localPath, model.name);
+      // TypeScript safety: model.localPath is guaranteed to be defined here due to check above
+      await LlamaService.loadEmbeddingModel(model.localPath!, model.name);
 
       await StorageService.addRecentModel(model);
 
