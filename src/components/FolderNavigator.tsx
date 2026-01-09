@@ -13,6 +13,7 @@ import {
 import RNFS from 'react-native-fs';
 import DocumentPicker from '@react-native-documents/picker';
 import {Logger} from '../utils/Logger';
+import {FolderPickerService} from '../services/FolderPickerService';
 
 interface FolderNavigatorProps {
   onSelectFolder: (folderPath: string) => void;
@@ -113,55 +114,79 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
 
   const handlePickFolderIOS = async () => {
     try {
-      Logger.info('Opening iOS document picker for folder selection');
+      Logger.info('Opening iOS folder picker');
       setLoading(true);
 
-      // Check if pickDirectory is available (sponsor-only feature)
-      if (typeof DocumentPicker.pickDirectory === 'function') {
-        const result = await DocumentPicker.pickDirectory();
-        Logger.info('Folder picked:', result.uri);
+      // Check if native picker is available
+      const pickerAvailable = FolderPickerService.isDirectoryPickerAvailable();
+      Logger.info(`Native picker available: ${pickerAvailable}`);
 
-        if (result && result.uri) {
-          onSelectFolder(result.uri);
+      if (!pickerAvailable) {
+        setLoading(false);
+        showFolderPickerAlternatives();
+        return;
+      }
+
+      // Use the service to pick folder with permission handling
+      const folderPath = await FolderPickerService.pickFolder();
+
+      if (folderPath) {
+        // Test folder access before selecting
+        const accessTest = await FolderPickerService.testFolderAccess(folderPath);
+        if (accessTest.accessible) {
+          Logger.info(`Folder accessible with ${accessTest.itemCount} items`);
+          onSelectFolder(folderPath);
+        } else {
+          setLoading(false);
+          Alert.alert(
+            'Access Denied',
+            `Cannot access this folder: ${accessTest.error}`,
+          );
         }
       } else {
-        // Fallback: pickDirectory is not available (sponsor-only)
         setLoading(false);
-        Alert.alert(
-          'Feature Not Available',
-          'Folder picking requires the sponsor version of @react-native-documents/picker.\n\n' +
-          'Alternative: Use Files app to copy your vault to "On My iPhone" → LocalOSApp folder, ' +
-          'then we can access it from the app\'s Documents directory.',
-          [
-            {text: 'OK'},
-            {
-              text: 'Use App Folder',
-              onPress: async () => {
-                // Navigate to app's Documents directory
-                const docsPath = RNFS.DocumentDirectoryPath;
-                Logger.info(`Switching to app documents: ${docsPath}`);
-
-                try {
-                  setLoading(true);
-                  await navigateToFolder(docsPath);
-                } catch (err) {
-                  setLoading(false);
-                  Alert.alert('Error', `Cannot access documents folder: ${err}`);
-                }
-              },
-            },
-          ],
-        );
       }
     } catch (err) {
       setLoading(false);
-      if (DocumentPicker.isCancel(err)) {
-        Logger.info('User cancelled folder picker');
-      } else {
-        Logger.error('Error picking folder:', err);
-        Alert.alert('Error', `Failed to pick folder: ${err}`);
-      }
+      Logger.error('Error in folder picker:', err);
+      Alert.alert(
+        'Error',
+        `Failed to pick folder: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
+  };
+
+  const showFolderPickerAlternatives = () => {
+    Alert.alert(
+      'Folder Picker Not Available',
+      'The native folder picker is not available in this version.\n\n' +
+        'Choose an alternative:',
+      [
+        {
+          text: 'Browse Manually',
+          onPress: () => {
+            // Navigate to app's Documents directory
+            const docsPath = RNFS.DocumentDirectoryPath;
+            Logger.info(`Switching to manual browse: ${docsPath}`);
+            setLoading(true);
+            navigateToFolder(docsPath);
+          },
+        },
+        {
+          text: 'Use Documents Folder',
+          onPress: () => {
+            const docsPath = RNFS.DocumentDirectoryPath;
+            Logger.info(`Using app documents: ${docsPath}`);
+            onSelectFolder(docsPath);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setLoading(false),
+        },
+      ],
+    );
   };
 
   const navigateToFolder = async (folderPath: string) => {
