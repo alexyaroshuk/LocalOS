@@ -9,7 +9,8 @@ workflows:
         XCODE_SCHEME: "LocalOSApp"
       node: 20.11.0
       xcode: 26
-      cocoapods: default
+      cocoapods: 1.14.3
+      ruby: 3.3
     scripts:
       - name: Install npm dependencies
         script: |
@@ -18,6 +19,7 @@ workflows:
         script: |
           cd ios
           bundle install
+          bundle exec pod repo update
           bundle exec pod install
       - name: Build iOS Release for Device
         script: |
