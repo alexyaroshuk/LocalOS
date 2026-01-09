@@ -10,7 +10,7 @@ workflows:
       node: 20.11.0
       xcode: 26
       cocoapods: 1.14.3
-      ruby: 3.3
+      ruby: 3.3.0
     scripts:
       - name: Install npm dependencies
         script: |
