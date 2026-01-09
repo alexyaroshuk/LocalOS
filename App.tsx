@@ -22,13 +22,14 @@ import {ToolTestScreen} from './src/screens/ToolTestScreen';
 import {MemoryViewerScreen} from './src/screens/MemoryViewerScreen';
 import {VectorSearchTestScreen} from './src/screens/VectorSearchTestScreen';
 import {VaultBrowserScreen} from './src/screens/VaultBrowserScreen';
+import {FileSystemTestScreen} from './src/screens/FileSystemTestScreen';
 import {ModelInfo} from './src/types';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
 
-type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault';
+type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault' | 'filesystem';
 
 function App() {
   return (
@@ -64,6 +65,16 @@ function AppContent() {
       await DatabaseService.initialize();
       DatabaseProxy.setUsingSQLite(true);
       console.log('[App] SQLite database initialized');
+
+      // Initialize tool service (registers all tools)
+      const {ToolService} = require('./src/services/ToolService');
+      ToolService.initialize();
+      console.log('[App] Tool service initialized');
+
+      // Initialize vault service
+      const {VaultService} = require('./src/services/VaultService');
+      await VaultService.initialize();
+      console.log('[App] Vault service initialized');
 
       // Load the last used model (if any)
       const {StorageService} = require('./src/services/StorageService');
@@ -158,6 +169,12 @@ function AppContent() {
             <VaultBrowserScreen />
           </View>
         )}
+
+        {currentScreen === 'filesystem' && (
+          <View style={styles.screenContainer}>
+            <FileSystemTestScreen />
+          </View>
+        )}
       </View>
 
       {/* Bottom Navigation */}
@@ -249,6 +266,21 @@ function AppContent() {
               currentScreen === 'vault' && styles.navButtonTextActive,
             ]}>
             Vault
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'filesystem' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('filesystem')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'filesystem' && styles.navButtonTextActive,
+            ]}>
+            Files
           </Text>
         </TouchableOpacity>
       </View>
