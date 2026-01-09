@@ -56,7 +56,9 @@
       "Bash(npx react-native start --reset-cache)",
       "WebSearch",
       "WebFetch(domain:react-native-documents.github.io)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm info:*)",
+      "WebFetch(domain:www.npmjs.com)"
     ],
     "deny": [],
     "ask": []

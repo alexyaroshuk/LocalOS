@@ -11,7 +11,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import RNFS from 'react-native-fs';
-import DocumentPicker from '@react-native-documents/picker';
+import {pickDirectory} from '@react-native-documents/picker';
 import {Logger} from '../utils/Logger';
 import {FolderPickerService} from '../services/FolderPickerService';
 
@@ -37,11 +37,19 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
 
   useEffect(() => {
     Logger.info('FolderNavigator mounted, initializing...');
-    initializeNavigator().catch(err => {
-      Logger.error('initializeNavigator failed:', err);
+
+    if (Platform.OS === 'ios') {
+      // On iOS, just set loading to false to show the picker button
+      Logger.info('iOS: Ready for folder picker');
       setLoading(false);
-      Alert.alert('Error', `Failed to initialize folder navigator: ${err}`);
-    });
+    } else {
+      // On Android, initialize with permission checks
+      initializeNavigator().catch(err => {
+        Logger.error('initializeNavigator failed:', err);
+        setLoading(false);
+        Alert.alert('Error', `Failed to initialize folder navigator: ${err}`);
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -114,28 +122,21 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
 
   const handlePickFolderIOS = async () => {
     try {
-      Logger.info('Opening iOS folder picker');
+      Logger.info('Opening iOS native directory picker');
       setLoading(true);
 
-      // Check if native picker is available
-      const pickerAvailable = FolderPickerService.isDirectoryPickerAvailable();
-      Logger.info(`Native picker available: ${pickerAvailable}`);
+      const result = await pickDirectory({
+        requestLongTermAccess: false,
+      });
 
-      if (!pickerAvailable) {
-        setLoading(false);
-        showFolderPickerAlternatives();
-        return;
-      }
+      if (result && result.uri) {
+        Logger.info(`Folder selected: ${result.uri}`);
 
-      // Use the service to pick folder with permission handling
-      const folderPath = await FolderPickerService.pickFolder();
-
-      if (folderPath) {
         // Test folder access before selecting
-        const accessTest = await FolderPickerService.testFolderAccess(folderPath);
+        const accessTest = await FolderPickerService.testFolderAccess(result.uri);
         if (accessTest.accessible) {
           Logger.info(`Folder accessible with ${accessTest.itemCount} items`);
-          onSelectFolder(folderPath);
+          onSelectFolder(result.uri);
         } else {
           setLoading(false);
           Alert.alert(
@@ -145,48 +146,32 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
         }
       } else {
         setLoading(false);
+        Logger.info('User cancelled folder picker');
       }
     } catch (err) {
       setLoading(false);
-      Logger.error('Error in folder picker:', err);
+      Logger.error('Error opening folder picker:', err);
+
+      // If picker fails, offer fallback to manual browser
       Alert.alert(
-        'Error',
-        `Failed to pick folder: ${err instanceof Error ? err.message : String(err)}`,
+        'Picker Error',
+        `Failed to open folder picker: ${err instanceof Error ? err.message : String(err)}\n\nUse manual folder browser instead?`,
+        [
+          {
+            text: 'No',
+            style: 'cancel',
+          },
+          {
+            text: 'Browse Manually',
+            onPress: async () => {
+              const docsPath = RNFS.DocumentDirectoryPath;
+              setLoading(true);
+              await navigateToFolder(docsPath);
+            },
+          },
+        ],
       );
     }
-  };
-
-  const showFolderPickerAlternatives = () => {
-    Alert.alert(
-      'Folder Picker Not Available',
-      'The native folder picker is not available in this version.\n\n' +
-        'Choose an alternative:',
-      [
-        {
-          text: 'Browse Manually',
-          onPress: () => {
-            // Navigate to app's Documents directory
-            const docsPath = RNFS.DocumentDirectoryPath;
-            Logger.info(`Switching to manual browse: ${docsPath}`);
-            setLoading(true);
-            navigateToFolder(docsPath);
-          },
-        },
-        {
-          text: 'Use Documents Folder',
-          onPress: () => {
-            const docsPath = RNFS.DocumentDirectoryPath;
-            Logger.info(`Using app documents: ${docsPath}`);
-            onSelectFolder(docsPath);
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => setLoading(false),
-        },
-      ],
-    );
   };
 
   const navigateToFolder = async (folderPath: string) => {
@@ -291,7 +276,7 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
     return currentPath.replace(RNFS.DocumentDirectoryPath, 'Documents');
   };
 
-  // iOS: Show document picker button if no current path
+  // iOS: Show native picker options if no current path
   if (Platform.OS === 'ios' && !currentPath) {
     return (
       <View style={styles.container}>
@@ -309,9 +294,9 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
             📁 Select Your Obsidian Vault
           </Text>
 
-          <Text style={styles.iosSectionTitle}>Option 1: Use Document Picker (Recommended)</Text>
+          <Text style={styles.iosSectionTitle}>Pick Folder (Recommended)</Text>
           <Text style={styles.iosInstructionsText}>
-            Browse and select your vault from anywhere on your device.
+            Browse and select your vault from anywhere on your device using the native file picker.
           </Text>
 
           <TouchableOpacity
@@ -327,16 +312,16 @@ export const FolderNavigator: React.FC<FolderNavigatorProps> = ({
 
           <View style={styles.iosDivider} />
 
-          <Text style={styles.iosSectionTitle}>Option 2: Use App's Documents Folder</Text>
+          <Text style={styles.iosSectionTitle}>Fallback: Manual Browser</Text>
           <Text style={styles.iosInstructionsText}>
-            Copy your vault to "On My iPhone" → "LocalOSApp" using the Files app, then browse from the app's folder.
+            If the file picker doesn't work, manually browse your device folders.
           </Text>
 
           <TouchableOpacity
             style={styles.iosSecondaryButton}
             onPress={handleUseFolderNavigatorIOS}
             disabled={loading}>
-            <Text style={styles.iosSecondaryButtonText}>📁 Browse App Folder</Text>
+            <Text style={styles.iosSecondaryButtonText}>📁 Browse Folders</Text>
           </TouchableOpacity>
         </View>
       </View>
