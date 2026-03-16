@@ -51,7 +51,7 @@ You help the user with:
 Available tools:
 ${toolsJson}
 
-Format: [tool_name(param="value")]`;
+Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
     if (needsExamples) {
       prompt += `
@@ -72,6 +72,13 @@ User shares behavioral traits → CORE MEMORY:
 
 User asks about themselves → IMMEDIATE SEARCH:
 "What do you know about me?" → [archival_memory_search(query="user preferences habits", top_k=10)]
+
+User asks about time/date → DATETIME:
+"What time is it?" → [get_current_datetime()]
+"What's today's date?" → [get_current_datetime()]
+
+User asks about vault → VAULT:
+"What folders are in my vault?" → [list_vault_structure()]
 
 User mentions task → CREATE OR UPDATE:
 "Remind me to call mom daily" → [archival_memory_insert(content="Recurring task: Call mom daily", tags=["task", "recurring"])]`;
@@ -114,7 +121,7 @@ DO NOT:
 - Say "I don't have access" - YOU HAVE ALL TOOLS
 - Skip tool calling - IT IS MANDATORY
 
-Format: [tool_name(param="value")]`;
+Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
     if (needsExamples) {
       prompt += `
@@ -124,6 +131,7 @@ YOU MUST RESPOND EXACTLY LIKE THIS:
 "My favorite color is blue" → [core_memory_append(label="user_profile", content="Favorite color: blue")]
 "What do you know about me?" → [archival_memory_search(query="user", top_k=10)]
 "What time is it?" → [get_current_datetime()]
+"What folders are in my vault?" → [list_vault_structure()]
 "Latest news" → [search_web(query="latest news")]
 
 NO OTHER FORMAT IS ACCEPTABLE.`;
@@ -151,7 +159,7 @@ ${toolsJson}
 
 Use core_memory for user preferences/personality. Use archival_memory for facts/events/tasks.
 
-Format: [tool_name(param="value")]`;
+Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
   },
 };
 
@@ -189,7 +197,9 @@ When to use each memory type:
 Memory Operations:
 - User shares info → Save immediately (core_memory_append or archival_memory_insert)
 - User asks "what do you know" → Search (archival_memory_search)
-- User mentions task → Store (archival_memory_insert with tags=["task"])`;
+- User mentions task → Store (archival_memory_insert with tags=["task"])
+
+Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
     if (needsExamples) {
       prompt += `
@@ -200,6 +210,12 @@ You: [core_memory_append(label="user_profile", content="Prefers dark mode")]
 
 User: "What do you remember about me?"
 You: [archival_memory_search(query="user preferences", top_k=10)]
+
+User: "What time is it?"
+You: [get_current_datetime()]
+
+User: "What folders are in my vault?"
+You: [list_vault_structure()]
 
 User: "Remind me to exercise daily"
 You: [archival_memory_insert(content="Recurring task: Exercise daily", tags=["task", "recurring", "health"])]`;

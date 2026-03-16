@@ -826,6 +826,73 @@ User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
+   * Execute a tool directly (triggered without model) and generate a natural language response.
+   * Used by trigger-word handlers so the model narrates the result instead of returning raw JSON.
+   */
+  private static async runTriggerTool(
+    toolName: string,
+    toolArgs: Record<string, any>,
+    messages: Message[],
+    config: Partial<LlamaConfig>,
+    onToken?: (token: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any,
+    ) => void,
+  ): Promise<{response: string; usedTool: boolean; toolName: string}> {
+    onToolUsage?.('tool_call', toolName, toolArgs);
+
+    const toolResult = await ToolService.executeTool({
+      id: generateId(),
+      name: toolName,
+      arguments: toolArgs,
+    });
+
+    onToolUsage?.('tool_result', toolName, toolArgs, toolResult);
+
+    if (toolResult.error) {
+      return {response: `Tool error: ${toolResult.error}`, usedTool: true, toolName};
+    }
+
+    // Build prompt context so the model can give a natural answer
+    const systemPrompt = this.getToolSystemPrompt();
+    const systemMessage: Message = {
+      id: 'system-tools',
+      role: 'system',
+      content: systemPrompt,
+      timestamp: Date.now(),
+    };
+    const toolResultMessage: Message = {
+      id: 'tool-result',
+      role: 'system',
+      content: `RESULT: ${JSON.stringify(toolResult.result)}\n\nRespond naturally using this data. NO tool syntax.`,
+      timestamp: Date.now(),
+    };
+
+    onToolUsage?.('generating');
+
+    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
+    const finalResponseConfig = {
+      ...config,
+      temperature: config.temperature ?? Math.min(modelConfig.toolDetectionTemp * 1.5, 0.7),
+    };
+
+    const finalResponse = await this.chatCompletion(
+      [systemMessage, ...messages, toolResultMessage],
+      finalResponseConfig,
+      onToken,
+    );
+
+    return {
+      response: this.filterToolJson(finalResponse),
+      usedTool: true,
+      toolName,
+    };
+  }
+
+  /**
    * Filter out function call from text (Pythonic format)
    */
   private static filterToolJson(text: string): string {
@@ -947,6 +1014,19 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return JSON.stringify({name: functionName, arguments: args});
     }
 
+    // THIRD: Try no-argument bracket format: [tool_name] (model omits parens for no-arg tools)
+    const noArgBracketPattern = /\[([\w_]+)\]/;
+    const noArgMatch = noArgBracketPattern.exec(text);
+    if (noArgMatch) {
+      const functionName = noArgMatch[1];
+      // Verify it matches a known tool name to avoid false positives
+      const knownTool = this.availableTools.find(t => t.name === functionName);
+      if (knownTool) {
+        Logger.debug('✅ Found no-arg bracket format tool:', functionName);
+        return JSON.stringify({name: functionName, arguments: {}});
+      }
+    }
+
     // Fall back to old XML format for backwards compatibility
     const tagPattern = /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/;
     const tagMatch = tagPattern.exec(text);
@@ -1046,6 +1126,22 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           usedTool: true,
           toolName: 'search_web',
         };
+      }
+
+      // DATETIME TRIGGER: Bypass model for time/date queries
+      const datetimeTriggers = ['what time', 'what date', 'current time', 'current date', "what's the time", "what's today", "what day is", 'time is it', 'date is it', 'date today'];
+      const hasDatetimeTrigger = datetimeTriggers.some(w => lowerContent.includes(w));
+      if (hasDatetimeTrigger && this.availableTools.some(t => t.name === 'get_current_datetime')) {
+        Logger.info('🕐 DATETIME TRIGGER DETECTED - Forcing get_current_datetime call');
+        return await this.runTriggerTool('get_current_datetime', {}, messages, config, onToken, onToolUsage);
+      }
+
+      // VAULT LISTING TRIGGER: Bypass model for vault structure queries
+      const vaultListTriggers = ['what folders', 'list folders', 'vault structure', 'folders in my vault', 'folders in the vault', 'what files'];
+      const hasVaultListTrigger = vaultListTriggers.some(w => lowerContent.includes(w));
+      if (hasVaultListTrigger && this.availableTools.some(t => t.name === 'list_vault_structure')) {
+        Logger.info('📁 VAULT LIST TRIGGER DETECTED - Forcing list_vault_structure call');
+        return await this.runTriggerTool('list_vault_structure', {}, messages, config, onToken, onToolUsage);
       }
     }
 
