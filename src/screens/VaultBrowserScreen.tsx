@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import {VaultService} from '../services/VaultService';
+import {SampleVaultService} from '../services/SampleVaultService';
 import {FolderNavigator} from '../components/FolderNavigator';
 import {
   VaultFolder,
@@ -26,6 +27,7 @@ export const VaultBrowserScreen: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('setup');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [sampleVaultProgress, setSampleVaultProgress] = useState<string>('');
 
   // Setup mode state
   const [vaultConfig, setVaultConfig] = useState<VaultConfig | null>(null);
@@ -117,6 +119,35 @@ export const VaultBrowserScreen: React.FC = () => {
 
   const handleCancelNavigator = () => {
     setViewMode('setup');
+  };
+
+  const handleLoadSampleVault = async () => {
+    try {
+      setLoading(true);
+      setSampleVaultProgress('Starting...');
+
+      await SampleVaultService.createAndSetSampleVault(msg => {
+        setSampleVaultProgress(msg);
+      });
+
+      const config = await VaultService.getVaultConfig();
+      setVaultConfig(config);
+      await loadVaultContents(SampleVaultService.vaultPath);
+      setViewMode('browser');
+
+      Alert.alert(
+        'Sample Vault Loaded',
+        `${SampleVaultService.fileCount} markdown files created.\n\nYou can now ask the AI about your vault, e.g. "What folders are in my vault?" or "Tell me about my Tokyo trip".`,
+      );
+    } catch (error) {
+      Logger.error('Failed to load sample vault:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      Alert.alert('Error', `Failed to create sample vault:\n\n${errorMessage}`);
+    } finally {
+      setLoading(false);
+      setSampleVaultProgress('');
+    }
   };
 
   const loadVaultContents = async (vaultPath: string, folder?: string) => {
@@ -243,6 +274,20 @@ export const VaultBrowserScreen: React.FC = () => {
                 📂 Browse & Select Folder
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sampleVaultButton}
+              onPress={handleLoadSampleVault}>
+              <Text style={styles.sampleVaultButtonText}>
+                🧪 Load Sample Vault
+              </Text>
+            </TouchableOpacity>
+
+            {sampleVaultProgress !== '' && (
+              <Text style={styles.sampleVaultProgress}>
+                {sampleVaultProgress}
+              </Text>
+            )}
           </View>
 
           <View style={styles.infoCard}>
@@ -502,6 +547,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '600',
+  },
+  sampleVaultButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 10,
+    minWidth: 200,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  sampleVaultButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  sampleVaultProgress: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
   },
   infoCard: {
     backgroundColor: '#E3F2FD',

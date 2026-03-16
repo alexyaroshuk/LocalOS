@@ -76,3 +76,4 @@ yarn-error.log
 PRODUCT_EVALUATION.md
 plan.md
 docs/ai-web-search-implementation.md
+.claude/settings.local.json
