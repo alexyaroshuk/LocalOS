@@ -1086,7 +1086,10 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       if ((hasMdFile || isWhereQuery) && this.availableTools.some(t => t.name === 'search_vault')) {
         // Extract the filename/search term
         let searchQuery = userMessage.content;
-        const mdMatch = userMessage.content.match(/\b([\w\s-]+\.md)\b/i);
+        // Match Title Case filename (e.g. "Vector Search.md") — uppercase words only, avoids sentence prefixes
+        // Fallback to single lowercase word filename (e.g. "readme.md")
+        const mdMatch = userMessage.content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) ||
+                        userMessage.content.match(/\b([\w-]+\.md)\b/i);
         if (mdMatch) {
           searchQuery = mdMatch[1].trim();
         } else {
