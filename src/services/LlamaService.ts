@@ -1078,11 +1078,40 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     // LAYER 2: TRIGGER WORD DETECTION - Bypass model if trigger words detected
     if (userMessage) {
       const lowerContent = userMessage.content.toLowerCase();
-      const triggerWords = ['search', 'find', 'news', 'latest', 'headlines', 'trending', "what's happening", 'current events'];
 
+      // VAULT FILE SEARCH TRIGGER (must run before web search to prevent false positives)
+      // Handles: "where is X.md", "find X.md", queries containing a .md filename
+      const hasMdFile = /\b[\w\s-]+\.md\b/i.test(userMessage.content);
+      const isWhereQuery = lowerContent.includes('where is') || lowerContent.includes('where can i find');
+      if ((hasMdFile || isWhereQuery) && this.availableTools.some(t => t.name === 'search_vault')) {
+        // Extract the filename/search term
+        let searchQuery = userMessage.content;
+        const mdMatch = userMessage.content.match(/\b([\w\s-]+\.md)\b/i);
+        if (mdMatch) {
+          searchQuery = mdMatch[1].trim();
+        } else {
+          searchQuery = searchQuery.replace(/^(where is|where can i find|find|locate)\s+/i, '').replace(/\?.*$/, '').trim();
+        }
+        Logger.info(`🔍 VAULT FILE SEARCH TRIGGER - Searching vault for: "${searchQuery}"`);
+        return await this.runTriggerTool('search_vault', {query: searchQuery}, messages, config, onToken, onToolUsage);
+      }
+
+      // VAULT FILES IN FOLDER TRIGGER
+      // Handles: "what files are in [folder]", "files in [folder]", "list files in [folder]"
+      const filesInFolderMatch = lowerContent.match(/(?:what files|list files|files)\s+(?:are\s+)?(?:in|inside)\s+(?:the\s+)?([a-z0-9 _-]+?)(?:\s+folder)?(?:\s*\?|$)/i);
+      if (filesInFolderMatch && this.availableTools.some(t => t.name === 'list_vault_files')) {
+        const folderName = filesInFolderMatch[1].trim();
+        Logger.info(`📂 VAULT FILES IN FOLDER TRIGGER - Listing files in: "${folderName}"`);
+        return await this.runTriggerTool('list_vault_files', {folder: folderName}, messages, config, onToken, onToolUsage);
+      }
+
+      // Detect vault-related queries to suppress false web search triggers
+      const isVaultQuery = lowerContent.includes('vault') || lowerContent.includes('note') || lowerContent.includes('folder') || hasMdFile;
+
+      const triggerWords = ['search', 'find', 'news', 'latest', 'headlines', 'trending', "what's happening", 'current events'];
       const hasTrigger = triggerWords.some(word => lowerContent.includes(word));
 
-      if (hasTrigger && this.availableTools.some(t => t.name === 'search_web')) {
+      if (hasTrigger && !isVaultQuery && this.availableTools.some(t => t.name === 'search_web')) {
         Logger.info('🔧 TRIGGER DETECTED - Forcing search_web call, bypassing model');
 
         // Extract query from user message
@@ -1136,8 +1165,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         return await this.runTriggerTool('get_current_datetime', {}, messages, config, onToken, onToolUsage);
       }
 
-      // VAULT LISTING TRIGGER: Bypass model for vault structure queries
-      const vaultListTriggers = ['what folders', 'list folders', 'vault structure', 'folders in my vault', 'folders in the vault', 'what files'];
+      // VAULT LISTING TRIGGER: Bypass model for vault structure queries (folders only)
+      const vaultListTriggers = ['what folders', 'list folders', 'vault structure', 'folders in my vault', 'folders in the vault'];
       const hasVaultListTrigger = vaultListTriggers.some(w => lowerContent.includes(w));
       if (hasVaultListTrigger && this.availableTools.some(t => t.name === 'list_vault_structure')) {
         Logger.info('📁 VAULT LIST TRIGGER DETECTED - Forcing list_vault_structure call');
