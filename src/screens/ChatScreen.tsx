@@ -20,6 +20,7 @@ import {Toast} from '../components/Toast';
 import {NoteProposalModal} from '../components/NoteProposalModal';
 import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage} from '../types';
 import {AIService} from '../services/AIService';
+import {LMStudioService} from '../services/LMStudioService';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
 import {VaultService} from '../services/VaultService';
@@ -49,12 +50,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [streamingText, setStreamingText] = useState('');
   const [toolsEnabled, setToolsEnabled] = useState(true); // Enable tools by default
   const [_toolUsageState, setToolUsageState] = useState<{
-    stage: 'thinking' | 'using_tool' | 'processing' | null;
+    stage: 'thinking' | 'using_tool' | 'processing' | 'generating' | 'idle' | null;
     toolName?: string;
   }>({stage: null});
-  const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'none'>('llama');
+  const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'lmstudio' | 'none'>('llama');
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
+  const [showLMStudioUrlModal, setShowLMStudioUrlModal] = useState(false);
+  const [lmStudioUrlInput, setLMStudioUrlInput] = useState('');
   const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
   const [contextStats, setContextStats] = useState<{
     totalTokens: number;
@@ -504,6 +507,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         'AI Not Ready',
         aiBackend === 'apple'
           ? 'Apple Intelligence not ready. Please try again.'
+          : aiBackend === 'lmstudio'
+          ? 'LM Studio is not reachable. Make sure it is running with the local server enabled.'
           : 'Please load a model from the Models screen.',
         [
           {text: 'Load Model', onPress: onModelSelect},
@@ -982,43 +987,48 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
-  const switchBackend = async () => {
-    const targetBackend = aiBackend === 'apple' ? 'llama' : 'apple';
+  const switchBackend = () => {
+    const doSwitch = async (target: 'apple' | 'llama' | 'lmstudio') => {
+      try {
+        const success = await AIService.switchBackend(target);
+        if (success) {
+          const info = AIService.getBackendInfo();
+          setAiBackend(target);
+          setBackendInfo(info.modelName);
+        } else {
+          const reason =
+            target === 'apple'
+              ? 'Apple Intelligence not available on this device'
+              : target === 'lmstudio'
+              ? `LM Studio not reachable at ${LMStudioService.getBaseUrl()}.\n\nCheck the logs for the exact error, or tap "LM Studio (custom URL)" to enter a different address.`
+              : 'Could not switch to Llama.cpp';
+          Alert.alert('Switch Failed', reason);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to switch backend');
+        Logger.error('Backend switch error:', error);
+      }
+    };
 
-    Alert.alert(
-      'Switch Backend',
-      `Switch to ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}?`,
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Switch',
-          onPress: async () => {
-            try {
-              const success = await AIService.switchBackend(targetBackend);
-              if (success) {
-                const info = AIService.getBackendInfo();
-                setAiBackend(targetBackend);
-                setBackendInfo(info.modelName);
-                Alert.alert(
-                  'Backend Switched',
-                  `Now using ${targetBackend === 'apple' ? 'Apple Intelligence' : 'Llama.cpp'}`,
-                );
-              } else {
-                Alert.alert(
-                  'Switch Failed',
-                  targetBackend === 'apple'
-                    ? 'Apple Intelligence not available on this device'
-                    : 'Could not switch to Llama.cpp',
-                );
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to switch backend');
-              Logger.error('Backend switch error:', error);
-            }
-          },
-        },
-      ],
-    );
+    const connectLMStudio = (url?: string) => {
+      if (url) {
+        LMStudioService.setBaseUrl(url);
+      }
+      doSwitch('lmstudio');
+    };
+
+    const promptLMStudioUrl = () => {
+      setLMStudioUrlInput(LMStudioService.getBaseUrl());
+      setShowLMStudioUrlModal(true);
+    };
+
+    Alert.alert('Switch Backend', `Current: ${aiBackend}`, [
+      {text: 'Llama.cpp', onPress: () => doSwitch('llama')},
+      {text: 'LM Studio', onPress: () => connectLMStudio()},
+      {text: 'LM Studio (custom URL)', onPress: promptLMStudioUrl},
+      {text: 'Apple Intelligence', onPress: () => doSwitch('apple')},
+      {text: 'Cancel', style: 'cancel'},
+    ]);
   };
 
   const renderItem = useCallback(
@@ -1204,7 +1214,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
             <Text style={styles.backendButtonText}>
-              {aiBackend === 'apple' ? '🔄 → Llama' : '🔄 → Apple'}
+              {aiBackend === 'apple' ? '⚡ Apple' : aiBackend === 'lmstudio' ? '🖥 LM Studio' : '🦙 Llama'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
@@ -1324,6 +1334,60 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         animationType="slide"
         onRequestClose={() => setShowLogs(false)}>
         <LogViewerScreen onClose={() => setShowLogs(false)} />
+      </Modal>
+
+      {/* LM Studio URL Modal */}
+      <Modal
+        visible={showLMStudioUrlModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLMStudioUrlModal(false)}>
+        <View style={styles.urlModalOverlay}>
+          <View style={styles.urlModalBox}>
+            <Text style={styles.urlModalTitle}>LM Studio URL</Text>
+            <TextInput
+              style={styles.urlModalInput}
+              value={lmStudioUrlInput}
+              onChangeText={setLMStudioUrlInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder="http://192.168.x.x:1234"
+              placeholderTextColor="#888"
+            />
+            <View style={styles.urlModalButtons}>
+              <TouchableOpacity
+                style={styles.urlModalCancel}
+                onPress={() => setShowLMStudioUrlModal(false)}>
+                <Text style={styles.urlModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.urlModalConnect}
+                onPress={() => {
+                  setShowLMStudioUrlModal(false);
+                  const doSwitch = async (target: 'apple' | 'llama' | 'lmstudio') => {
+                    try {
+                      const success = await AIService.switchBackend(target);
+                      if (success) {
+                        const info = AIService.getBackendInfo();
+                        setAiBackend(target);
+                        setBackendInfo(info.modelName);
+                      } else {
+                        Alert.alert('Switch Failed', `LM Studio not reachable at ${LMStudioService.getBaseUrl()}.`);
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to switch backend');
+                      Logger.error('Backend switch error:', error);
+                    }
+                  };
+                  LMStudioService.setBaseUrl(lmStudioUrlInput.trim());
+                  doSwitch('lmstudio');
+                }}>
+                <Text style={styles.urlModalConnectText}>Connect</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* Note Proposal Modal */}
@@ -1581,6 +1645,57 @@ const styles = StyleSheet.create({
   editCancelText: {
     fontSize: 20,
     color: '#856404',
+    fontWeight: '600',
+  },
+  urlModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  urlModalBox: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+  },
+  urlModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  urlModalInput: {
+    backgroundColor: '#2C2C2E',
+    color: '#FFFFFF',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  urlModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  urlModalCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  urlModalCancelText: {
+    color: '#888',
+    fontSize: 15,
+  },
+  urlModalConnect: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  urlModalConnectText: {
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '600',
   },
 });

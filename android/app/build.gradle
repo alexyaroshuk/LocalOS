@@ -96,8 +96,11 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // Allow cleartext HTTP in debug so LM Studio (localhost) is reachable
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug

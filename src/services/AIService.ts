@@ -8,10 +8,11 @@
 import {Platform} from 'react-native';
 import {LlamaService} from './LlamaService';
 import {AppleIntelligenceService} from './AppleIntelligenceService';
+import {LMStudioService} from './LMStudioService';
 import {Message, LlamaConfig} from '../types';
 import {Logger, LogSection} from '../utils/Logger';
 
-type AIBackend = 'apple' | 'llama' | 'none';
+type AIBackend = 'apple' | 'llama' | 'lmstudio' | 'none';
 
 export class AIService {
   private static currentBackend: AIBackend = 'none';
@@ -51,6 +52,8 @@ export class AIService {
       return AppleIntelligenceService.isInitializedCheck();
     } else if (this.currentBackend === 'llama') {
       return LlamaService.isModelLoaded();
+    } else if (this.currentBackend === 'lmstudio') {
+      return true; // readiness checked async via LMStudioService.isAvailable()
     }
     return false;
   }
@@ -75,6 +78,8 @@ export class AIService {
       );
     } else if (this.currentBackend === 'llama') {
       return await LlamaService.chatCompletion(messages, config, onToken);
+    } else if (this.currentBackend === 'lmstudio') {
+      return await LMStudioService.chatCompletion(messages, config, onToken);
     } else {
       throw new Error('No AI backend available');
     }
@@ -115,6 +120,14 @@ export class AIService {
         onToken,
         onToolUsage,
       );
+    } else if (this.currentBackend === 'lmstudio') {
+      return await LMStudioService.chatCompletionWithTools(
+        messages,
+        tools,
+        config,
+        onToken,
+        onToolUsage,
+      );
     } else {
       throw new Error('No AI backend available');
     }
@@ -144,6 +157,13 @@ export class AIService {
         modelName: llamaModel?.name || 'No model loaded',
         isReady,
       };
+    } else if (this.currentBackend === 'lmstudio') {
+      const model = LMStudioService.getCurrentModel() ?? 'auto (LM Studio)';
+      return {
+        backend: 'lmstudio',
+        modelName: model,
+        isReady,
+      };
     } else {
       return {
         backend: 'none',
@@ -168,6 +188,8 @@ export class AIService {
       return false; // Apple Intelligence does NOT support tool calling in current SDK
     } else if (this.currentBackend === 'llama') {
       return LlamaService.areToolsEnabled();
+    } else if (this.currentBackend === 'lmstudio') {
+      return true; // LM Studio supports OpenAI-native tool calling
     }
     return false;
   }
@@ -197,6 +219,8 @@ export class AIService {
   static async stopGeneration(): Promise<void> {
     if (this.currentBackend === 'llama') {
       await LlamaService.stopGeneration();
+    } else if (this.currentBackend === 'lmstudio') {
+      LMStudioService.stopGeneration();
     }
     // Apple Intelligence doesn't expose a stop API yet
   }
@@ -218,7 +242,7 @@ export class AIService {
   /**
    * Force switch to specific backend (advanced usage)
    */
-  static async switchBackend(backend: 'apple' | 'llama'): Promise<boolean> {
+  static async switchBackend(backend: 'apple' | 'llama' | 'lmstudio'): Promise<boolean> {
     Logger.info(`🔄 Switching to ${backend} backend...`);
     Logger.info(`🔄 Attempting to switch to ${backend} backend...`);
 
@@ -250,6 +274,19 @@ export class AIService {
       this.initializationAttempted = true;
       Logger.info('✅ Switched to Apple Intelligence');
       Logger.info('✅ Switched to Apple Intelligence');
+      return true;
+    } else if (backend === 'lmstudio') {
+      const available = await LMStudioService.isAvailable();
+      if (!available) {
+        Logger.error(
+          `LM Studio not reachable at ${LMStudioService.getBaseUrl()}. ` +
+          'Make sure LM Studio is running with the local server enabled.',
+        );
+        return false;
+      }
+      this.currentBackend = 'lmstudio';
+      this.initializationAttempted = true;
+      Logger.info(`✅ Switched to LM Studio (${LMStudioService.getBaseUrl()})`);
       return true;
     } else {
       this.currentBackend = 'llama';
