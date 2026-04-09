@@ -10,7 +10,7 @@ export interface Message {
 export interface ActionMessage {
   id: string;
   role: 'action';
-  actionType: 'thinking' | 'tool_call' | 'tool_result' | 'generating';
+  actionType: 'thinking' | 'tool_call' | 'tool_result' | 'generating' | 'decision';
   content: string; // Description like "Thought for 2s" or "Used search_web"
   timestamp: number;
   startTime: number;
@@ -125,7 +125,7 @@ export interface MessageWithTools extends Message {
 }
 
 // Agent action tracking types
-export type AgentActionType = 'thinking' | 'tool_call' | 'tool_result' | 'generating';
+export type AgentActionType = 'thinking' | 'decision' | 'tool_call' | 'tool_result' | 'generating';
 
 export interface AgentAction {
   id: string;

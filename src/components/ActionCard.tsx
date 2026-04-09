@@ -21,6 +21,8 @@ export const ActionCard: React.FC<ActionCardProps> = memo(({action}) => {
     switch (type) {
       case 'thinking':
         return '🤔';
+      case 'decision':
+        return '🧠';
       case 'tool_call':
         return '🔧';
       case 'tool_result':
@@ -39,6 +41,8 @@ export const ActionCard: React.FC<ActionCardProps> = memo(({action}) => {
     switch (action.type) {
       case 'thinking':
         return isInProgress ? 'Thinking...' : `Thought${duration}`;
+      case 'decision':
+        return 'Model reasoning';
       case 'tool_call':
         return isInProgress
           ? `Using ${action.toolName || 'tool'}...`
@@ -58,6 +62,8 @@ export const ActionCard: React.FC<ActionCardProps> = memo(({action}) => {
     switch (action.type) {
       case 'thinking':
         return '#007AFF';
+      case 'decision':
+        return '#9B59B6';
       case 'tool_call':
         return '#FF9500';
       case 'tool_result':

@@ -31,6 +31,7 @@ export class LlamaService {
   private static modelConfig: ModelConfig | null = null; // Model-specific configuration
   private static currentPromptType: SystemPromptType = 'letta'; // Current system prompt variant
   private static smartToolDetection: boolean = false; // Skip Layer 2 keyword triggers, let LLM decide
+  private static lastReasoning: string = ''; // Store last model reasoning for UI display
 
   /**
    * Initialize and load a model
@@ -578,6 +579,13 @@ export class LlamaService {
 
   static isSmartToolDetection(): boolean {
     return this.smartToolDetection;
+  }
+
+  /**
+   * Get last model reasoning for display
+   */
+  static getLastReasoning(): string {
+    return this.lastReasoning;
   }
 
   /**
@@ -1251,6 +1259,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       if (!toolCallMatch) {
         Logger.info('❌ NO TOOL CALL DETECTED');
+        const reasoning = firstResponse.substring(0, 250);
+        this.lastReasoning = reasoning;
+        Logger.info('💭 Model reasoning:', reasoning);
 
         // LAYER 3: REFUSAL OVERRIDE - Check if model refused and force tool call
         const refusalPhrases = [
@@ -1322,6 +1333,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       Logger.info('✅ TOOL CALL DETECTED:', toolCallMatch);
 
+      // Extract reasoning text (everything before the tool call)
+      const reasoningMatch = firstResponse.match(/^([\s\S]*?)\[[\w_]+/);
+      const reasoning = reasoningMatch ? reasoningMatch[1].trim() : firstResponse.substring(0, 150);
+      this.lastReasoning = reasoning.substring(0, 250);
+      Logger.info('💭 Model reasoning:', reasoning.substring(0, 300));
+
       try {
         const toolCall = JSON.parse(toolCallMatch);
 
@@ -1336,7 +1353,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           return {response: cleanResponse, usedTool: false};
         }
 
-        Logger.info('✅ Valid tool call detected:', {name: toolName, arguments: toolArgs});
+        Logger.info(`✅ Decided to use tool: ${toolName} with args:`, toolArgs);
 
         // Notify UI: tool is being called
         if (onToolUsage) {

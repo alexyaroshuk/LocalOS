@@ -603,10 +603,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             const now = Date.now();
 
             if (stage === 'tool_call') {
-              // Complete thinking action if exists, then add new tool call action in ONE update
+              // Complete thinking action if exists, then add decision + tool call action
               const previousActionId = currentActionIdRef.current; // Capture old ID before overwriting
               const toolCallId = generateId();
               currentActionIdRef.current = toolCallId;
+
+              // Get model reasoning from LlamaService
+              const {LlamaService} = require('../services/LlamaService');
+              const reasoning = LlamaService.getLastReasoning() || `Decided to use ${tool}`;
+              const reasoningPreview = reasoning.length > 100 ? reasoning.substring(0, 100) + '...' : reasoning;
+
+              const decisionAction: ActionMessage = {
+                id: generateId(),
+                role: 'action',
+                actionType: 'decision',
+                content: `🤔 ${reasoningPreview}`,
+                timestamp: Date.now(),
+                startTime: now,
+                isComplete: true,
+              };
+
               const toolCallAction: ActionMessage = {
                 id: toolCallId,
                 role: 'action',
@@ -635,8 +651,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                   }
                   return msg;
                 });
-                // Then add the new tool call action
-                return [...updated, toolCallAction];
+                // Then add decision and tool call actions
+                return [...updated, decisionAction, toolCallAction];
               });
 
               setToolUsageState({stage: 'using_tool', toolName: tool});
@@ -1239,13 +1255,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               Tools {toolsEnabled ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={toggleSmartToolDetection} style={styles.toolsButton}>
+          <TouchableOpacity onPress={toggleSmartToolDetection} style={styles.smartButton}>
             <Text
               style={[
-                styles.toolsButtonText,
+                styles.smartButtonText,
                 smartToolDetection && styles.toolsButtonActive,
               ]}>
-              Smart {smartToolDetection ? 'ON' : 'OFF'}
+              🧠
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowLogs(true)}>
@@ -1551,6 +1567,16 @@ const styles = StyleSheet.create({
   },
   toolsButtonActive: {
     color: '#34C759',
+  },
+  smartButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F0F0F0',
+  },
+  smartButtonText: {
+    fontSize: 14,
+    color: '#666',
   },
   logsButton: {
     fontSize: 14,
