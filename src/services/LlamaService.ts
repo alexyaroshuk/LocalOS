@@ -1338,6 +1338,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       const reasoning = reasoningMatch ? reasoningMatch[1].trim() : firstResponse.substring(0, 150);
       this.lastReasoning = reasoning.substring(0, 250);
       Logger.info('💭 Model reasoning:', reasoning.substring(0, 300));
+      Logger.debug('Reasoning stored for UI display:', this.lastReasoning);
 
       try {
         const toolCall = JSON.parse(toolCallMatch);

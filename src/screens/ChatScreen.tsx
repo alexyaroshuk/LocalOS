@@ -609,7 +609,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               currentActionIdRef.current = toolCallId;
 
               // Get model reasoning from LlamaService
-              const {LlamaService} = require('../services/LlamaService');
               const reasoning = LlamaService.getLastReasoning() || `Decided to use ${tool}`;
               const reasoningPreview = reasoning.length > 100 ? reasoning.substring(0, 100) + '...' : reasoning;
 
@@ -1075,6 +1074,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           toolArgs: actionMsg.toolArgs,
           toolResult: actionMsg.toolResult,
           error: actionMsg.error,
+          thinkingContent: actionMsg.actionType === 'decision' ? actionMsg.content : undefined,
         };
 
         return <ActionCard action={action} />;
