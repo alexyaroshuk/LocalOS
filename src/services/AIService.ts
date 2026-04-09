@@ -219,6 +219,17 @@ export class AIService {
   }
 
   /**
+   * Enable or disable smart tool detection mode
+   * When enabled, Layer 2 keyword triggers are skipped and the LLM always decides
+   */
+  static setSmartToolDetection(enabled: boolean): void {
+    if (this.currentBackend === 'llama') {
+      LlamaService.setSmartToolDetection(enabled);
+    }
+    // lmstudio and Apple Intelligence backends: no-op (no Layer 2 equivalent)
+  }
+
+  /**
    * Stop ongoing generation
    */
   static async stopGeneration(): Promise<void> {

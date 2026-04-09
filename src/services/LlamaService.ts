@@ -30,6 +30,7 @@ export class LlamaService {
   private static useLangchainPrompt: boolean = true; // Default to Langchain mode
   private static modelConfig: ModelConfig | null = null; // Model-specific configuration
   private static currentPromptType: SystemPromptType = 'letta'; // Current system prompt variant
+  private static smartToolDetection: boolean = false; // Skip Layer 2 keyword triggers, let LLM decide
 
   /**
    * Initialize and load a model
@@ -568,6 +569,18 @@ export class LlamaService {
   }
 
   /**
+   * Enable or disable smart tool detection (skips Layer 2 keyword triggers)
+   */
+  static setSmartToolDetection(enabled: boolean): void {
+    this.smartToolDetection = enabled;
+    Logger.info(`🧠 Smart tool detection: ${enabled ? 'ON (LLM decides)' : 'OFF (keyword triggers active)'}`);
+  }
+
+  static isSmartToolDetection(): boolean {
+    return this.smartToolDetection;
+  }
+
+  /**
    * Get full system prompt text (for debugging/viewing)
    */
   static getFullSystemPrompt(): string {
@@ -1075,7 +1088,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     }
 
     // LAYER 2: TRIGGER WORD DETECTION - Bypass model if trigger words detected
-    if (userMessage) {
+    // Skipped when smartToolDetection is enabled (LLM always decides in that mode)
+    if (userMessage && !this.smartToolDetection) {
       const lowerContent = userMessage.content.toLowerCase();
 
       // VAULT FILE SEARCH TRIGGER (must run before web search to prevent false positives)
