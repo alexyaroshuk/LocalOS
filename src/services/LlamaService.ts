@@ -1019,12 +1019,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     const noArgMatch = noArgBracketPattern.exec(text);
     if (noArgMatch) {
       const functionName = noArgMatch[1];
-      // Verify it matches a known tool name to avoid false positives
-      const knownTool = this.availableTools.find(t => t.name === functionName);
-      if (knownTool) {
-        Logger.debug('✅ Found no-arg bracket format tool:', functionName);
-        return JSON.stringify({name: functionName, arguments: {}});
-      }
+      // Accept the match — if tool doesn't exist, it will fail gracefully during execution
+      Logger.debug('✅ Found no-arg bracket format tool:', functionName);
+      return JSON.stringify({name: functionName, arguments: {}});
     }
 
     // Fall back to old XML format for backwards compatibility

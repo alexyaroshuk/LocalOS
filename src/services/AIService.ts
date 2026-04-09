@@ -200,6 +200,11 @@ export class AIService {
   static enableTools(tools?: any[]): void {
     if (this.currentBackend === 'llama') {
       LlamaService.enableTools(tools);
+    } else if (this.currentBackend === 'lmstudio') {
+      // LMStudio auto-fetches tools from ToolService if none provided
+      // (ToolService must be initialized first)
+      const {ToolService} = require('./ToolService');
+      ToolService.initialize();
     }
     // Apple Intelligence does not support tools in current SDK version
   }

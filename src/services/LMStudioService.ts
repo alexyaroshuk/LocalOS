@@ -142,7 +142,9 @@ export class LMStudioService {
     ) => void,
   ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
     const model = this.selectedModel ?? (await this._getFirstAvailableModel());
-    const openAITools = tools.map(_toolToOpenAI);
+    // Auto-fetch registered tools if none provided
+    const effectiveTools = tools.length > 0 ? tools : ToolService.getAllTools();
+    const openAITools = effectiveTools.map(_toolToOpenAI);
 
     const apiMessages: OpenAIMessage[] = messages.map(m => ({
       role: m.role as OpenAIMessage['role'],
