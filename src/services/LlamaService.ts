@@ -293,6 +293,8 @@ export class LlamaService {
     try {
       const llamaConfig = {
         ...DEFAULT_LLAMA_CONFIG,
+        // Use model's actual context size from modelConfig, not the default
+        contextSize: this.modelConfig?.contextSize ?? DEFAULT_LLAMA_CONFIG.contextSize,
         ...config,
       };
 
