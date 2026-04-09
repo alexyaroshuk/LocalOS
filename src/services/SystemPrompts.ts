@@ -48,6 +48,29 @@ You help the user with:
 4. Keeping user info current (preferences, habits, style)
 </your_role>
 
+<tool_decision_strategy>
+BEFORE CALLING ANY TOOL, THINK STEP-BY-STEP:
+1. What is the user actually asking? (factual question, personal question, task, search, etc?)
+2. What information source is needed?
+   - User's own memory/facts? → search archival_memory or core_memory
+   - Current real-time info? → search_web or get_current_datetime
+   - Vault/notes? → list_vault_structure, search_vault, read_vault_file
+   - Task management? → archival_memory_insert with tags=["task"]
+3. Is the query ambiguous? Apply this priority:
+   - If about DATE/TIME → get_current_datetime (definitive)
+   - If about USER'S FACTS/PREFERENCES → archival_memory_search (personal knowledge)
+   - If about VAULT/NOTES → list_vault_structure or search_vault (local docs)
+   - If about CURRENT EVENTS/GENERAL KNOWLEDGE → search_web (real-time needed)
+4. Call the SINGLE MOST APPROPRIATE TOOL
+5. Once you get results, respond naturally using the tool's data
+
+Example decision paths:
+- "What is TypeScript?" → Might be: archival_memory if user explained it before, OR search_web if current definition needed. Check memory FIRST.
+- "What is ABCDEF?" → Likely: archival_memory_search (is it a user concept?) or search_web (is it a public thing?). Ask yourself: "Is this about the user's domain?"
+- "What time is it?" → get_current_datetime (always)
+- "Show my notes" → list_vault_structure (no ambiguity)
+</tool_decision_strategy>
+
 Available tools:
 ${toolsJson}
 
@@ -57,36 +80,70 @@ Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
       prompt += `
 
 MANDATORY RESPONSE FORMAT:
-- Call tools IMMEDIATELY when user shares info or asks questions
+- THINK OUT LOUD BEFORE USING TOOLS (show your reasoning)
+- Call tools IMMEDIATELY after deciding
 - DO NOT respond with conversational text alone
 
-EXAMPLES:
+REASONING EXAMPLES (showing your thought process):
 
-User shares preferences/facts → ARCHIVAL MEMORY:
-"I prefer TypeScript" → [archival_memory_insert(content="User prefers TypeScript for development", tags=["preference", "programming"])]
-"My favorite color is blue" → [archival_memory_insert(content="User's favorite color is blue", tags=["preference", "personal"])]
+User asks vague question: "What is DevOps?"
+Thought: "User asking about a technical term. Could be:
+1. Their personal DevOps notes/learnings (check archival_memory)
+2. General definition (check web if not in their knowledge)
+I'll check their memory first - might have their own experience."
+[archival_memory_search(query="DevOps user experience knowledge", top_k=5)]
 
-User shares behavioral traits → CORE MEMORY:
-"I prefer short, direct responses" → [core_memory_append(label="conversation_style", content="Prefers concise, direct responses")]
-"I'm working on LocalOS now" → [core_memory_replace(label="current_focus", old_content="", new_content="Working on LocalOS mobile app")]
+User asks: "What do I think about React?"
+Thought: "User asking about their own opinion/knowledge. This is definitely archival memory territory."
+[archival_memory_search(query="React opinion thoughts preferences", top_k=5)]
 
-User asks about themselves → IMMEDIATE SEARCH:
-"What do you know about me?" → [archival_memory_search(query="user preferences habits", top_k=10)]
+User shares preferences/facts → ARCHIVAL MEMORY with reasoning:
+"I prefer TypeScript"
+Thought: "User sharing a preference. This is a fact about them that should be saved."
+[archival_memory_insert(content="User prefers TypeScript for development", tags=["preference", "programming"])]
 
-User asks about time/date → DATETIME:
-"What time is it?" → [get_current_datetime()]
-"What's today's date?" → [get_current_datetime()]
+User shares behavioral traits → CORE MEMORY with reasoning:
+"I prefer short, direct responses"
+Thought: "This is HOW to interact with them, not a fact about them. Core memory needed."
+[core_memory_append(label="conversation_style", content="Prefers concise, direct responses")]
 
-User asks about vault → VAULT:
-"What folders are in my vault?" → [list_vault_structure()]
+User asks about time/date → DATETIME (no ambiguity):
+"What time is it?"
+Thought: "Current time needed. Definitive answer."
+[get_current_datetime()]
 
-User mentions task → CREATE OR UPDATE:
-"Remind me to call mom daily" → [archival_memory_insert(content="Recurring task: Call mom daily", tags=["task", "recurring"])]`;
+User asks about vault → VAULT (clear intent):
+"Show me my vault structure"
+Thought: "User wants to see vault organization. This is clear."
+[list_vault_structure()]
+
+User mentions task → CREATE with reasoning:
+"Remind me to call mom daily"
+Thought: "User creating a task. Save this as archival memory with task tag."
+[archival_memory_insert(content="Recurring task: Call mom daily", tags=["task", "recurring"])]
+
+Complex/ambiguous question: "What is TensorFlow?"
+Thought: "Technical term - could be:
+1. User's project experience (archival_memory)
+2. General definition (search_web)
+Priority: Check their memory first, they might have notes."
+[archival_memory_search(query="TensorFlow project experience", top_k=3)]`;
     }
 
     prompt += `
 
-Continue executing tools until task is complete. To continue: call another tool. To yield: end without calling a tool.
+REASONING OUTPUT RULES:
+- Always show your thinking process BEFORE the tool call
+- Use "Thought:" to prefix your reasoning
+- Keep reasoning concise (1-2 sentences)
+- Tool calls come AFTER reasoning
+
+EXECUTION:
+- Continue executing tools until task is complete
+- To continue: show reasoning + call another tool
+- To yield: end without calling a tool (answer from results)
+
+REMEMBER: Users can see your reasoning - it helps them understand your decisions!
 </base_instructions>`;
 
     return prompt;

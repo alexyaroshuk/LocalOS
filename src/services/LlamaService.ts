@@ -1259,9 +1259,10 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       if (!toolCallMatch) {
         Logger.info('❌ NO TOOL CALL DETECTED');
-        const reasoning = firstResponse.substring(0, 250);
+        // Model decided not to use a tool - store its response as reasoning
+        const reasoning = firstResponse.substring(0, 300).trim();
         this.lastReasoning = reasoning;
-        Logger.info('💭 Model reasoning:', reasoning);
+        Logger.info('💭 Model decision (no tool):', reasoning.replace(/\s+/g, ' '));
 
         // LAYER 3: REFUSAL OVERRIDE - Check if model refused and force tool call
         const refusalPhrases = [
@@ -1334,11 +1335,26 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       Logger.info('✅ TOOL CALL DETECTED:', toolCallMatch);
 
       // Extract reasoning text (everything before the tool call)
-      const reasoningMatch = firstResponse.match(/^([\s\S]*?)\[[\w_]+/);
-      const reasoning = reasoningMatch ? reasoningMatch[1].trim() : firstResponse.substring(0, 150);
-      this.lastReasoning = reasoning.substring(0, 250);
-      Logger.info('💭 Model reasoning:', reasoning.substring(0, 300));
-      Logger.debug('Reasoning stored for UI display:', this.lastReasoning);
+      // Try to find text before [ or < (bracket or XML format)
+      let reasoning = '';
+      const pythonMatch = firstResponse.match(/^([\s\S]*?)\[[\w_]+/);
+      const xmlMatch = firstResponse.match(/^([\s\S]*?)<[\w_]+/);
+
+      if (pythonMatch) {
+        reasoning = pythonMatch[1].trim();
+      } else if (xmlMatch) {
+        reasoning = xmlMatch[1].trim();
+      } else {
+        // Fallback: try first 200 chars if no clear tool marker
+        reasoning = firstResponse.substring(0, 200).trim();
+      }
+
+      // Clean up reasoning: remove extra whitespace, keep key thoughts
+      reasoning = reasoning.replace(/\s+/g, ' ').trim();
+
+      this.lastReasoning = reasoning.substring(0, 300); // Store up to 300 chars for UI
+      Logger.info('💭 Model reasoning:', reasoning.substring(0, 350));
+      Logger.debug('Full reasoning stored:', this.lastReasoning);
 
       try {
         const toolCall = JSON.parse(toolCallMatch);
