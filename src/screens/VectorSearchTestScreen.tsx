@@ -379,28 +379,56 @@ export const VectorSearchTestScreen: React.FC = () => {
         </Text>
 
         <View style={styles.modelCard}>
-          <Text style={styles.modelName}>all-MiniLM-L6-v2 (Recommended)</Text>
+          <Text style={styles.modelName}>✅ nomic-embed-text-v1.5 Q8_0 (Recommended)</Text>
           <Text style={styles.modelDetails}>
-            • Size: ~25MB{'\n'}
-            • Dimensions: 384{'\n'}
-            • Best for: General-purpose, fast{'\n'}
-            • Quality: Good
+            • Size: ~130MB (Q8_0 quantization){'\n'}
+            • Dimensions: 768{'\n'}
+            • Context: Up to 8192 tokens{'\n'}
+            • Quality: Excellent{'\n'}
+            • Why: Best quality/size balance for semantic search
           </Text>
           <Text style={styles.modelLink}>
-            https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF
+            https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q8_0.gguf
           </Text>
         </View>
 
         <View style={styles.modelCard}>
-          <Text style={styles.modelName}>nomic-embed-text-v1.5</Text>
+          <Text style={styles.modelName}>🚀 nomic-embed-text-v2 (New 2026)</Text>
           <Text style={styles.modelDetails}>
-            • Size: ~130MB{'\n'}
-            • Dimensions: 768{'\n'}
-            • Best for: High quality results{'\n'}
-            • Quality: Excellent
+            • Size: ~30-50MB estimated{'\n'}
+            • Dimensions: 768 (Matryoshka flexible dims){'\n'}
+            • Quality: Better than v1.5{'\n'}
+            • Note: Check HuggingFace for GGUF quantizations
           </Text>
           <Text style={styles.modelLink}>
-            https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF
+            https://huggingface.co/nomic-ai/nomic-embed-text-v1.5
+          </Text>
+        </View>
+
+        <View style={styles.modelCard}>
+          <Text style={styles.modelName}>📦 MiniBGE-Lite (Ultra-compact)</Text>
+          <Text style={styles.modelDetails}>
+            • Size: &lt;50MB{'\n'}
+            • Dimensions: 384{'\n'}
+            • Best for: Mobile, on-device inference{'\n'}
+            • Quality: Good for the size{'\n'}
+            • Trade-off: Smaller but slightly lower quality
+          </Text>
+          <Text style={styles.modelLink}>
+            https://huggingface.co/search?q=MiniBGE-Lite+GGUF&type=model
+          </Text>
+        </View>
+
+        <View style={styles.modelCard}>
+          <Text style={styles.modelName}>all-MiniLM-L6-v2</Text>
+          <Text style={styles.modelDetails}>
+            • Size: ~25MB{'\n'}
+            • Dimensions: 384{'\n'}
+            • Best for: Fast, minimal size{'\n'}
+            • Quality: Good
+          </Text>
+          <Text style={styles.modelLink}>
+            https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF
           </Text>
         </View>
 
@@ -417,20 +445,8 @@ export const VectorSearchTestScreen: React.FC = () => {
           </Text>
         </View>
 
-        <View style={styles.modelCard}>
-          <Text style={styles.modelName}>gte-small</Text>
-          <Text style={styles.modelDetails}>
-            • Size: ~33MB{'\n'}
-            • Dimensions: 384{'\n'}
-            • Best for: General text embedding{'\n'}
-            • Quality: Very Good
-          </Text>
-          <Text style={styles.modelLink}>
-            https://huggingface.co/second-state/gte-small-Embedding-GGUF
-          </Text>
-        </View>
-
         <Text style={styles.modelNote}>
+          💡 Quantization guide: Q8_0 = best quality/size balance • Q6_K = high quality • Q5_K_M = good balance • Q4_K_M = smallest{'\n\n'}
           Note: Download the .gguf file, then add it via the Models screen
         </Text>
       </View>
