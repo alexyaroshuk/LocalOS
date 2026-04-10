@@ -5,6 +5,7 @@ import RNFS from 'react-native-fs';
 import {DownloadStatus} from '../types';
 import {MODEL_STORAGE_DIR} from '../utils/constants';
 import {isValidModelPath} from '../utils/helpers';
+import {Logger} from '../utils/Logger';
 
 export class ModelStorageService {
   private static modelDir: string = `${RNFS.DocumentDirectoryPath}/${MODEL_STORAGE_DIR}`;
@@ -14,12 +15,17 @@ export class ModelStorageService {
    */
   static async initialize(): Promise<void> {
     try {
+      Logger.debug(`Checking model directory: ${this.modelDir}`);
       const exists = await RNFS.exists(this.modelDir);
       if (!exists) {
+        Logger.debug('Model directory does not exist, creating...');
         await RNFS.mkdir(this.modelDir);
-        console.log('Model directory created:', this.modelDir);
+        Logger.debug('✅ Model directory created');
+      } else {
+        Logger.debug('✅ Model directory already exists');
       }
     } catch (error) {
+      Logger.error('Failed to initialize model directory:', error instanceof Error ? error.message : String(error));
       console.error('Failed to initialize model directory:', error);
       throw error;
     }

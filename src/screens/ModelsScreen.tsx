@@ -43,20 +43,31 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
   const initializeModels = async () => {
     try {
+      Logger.debug('📱 ModelsScreen: Initializing models...');
+
       // Initialize storage directory
+      Logger.debug('📁 Initializing model storage directory...');
       await ModelStorageService.initialize();
+      Logger.debug('✅ Model storage directory initialized');
 
       // Check available space
+      Logger.debug('💾 Checking available storage space...');
       const space = await ModelStorageService.getAvailableSpace();
       setAvailableSpace(space);
+      Logger.debug(`Available space: ${(space / 1024 / 1024 / 1024).toFixed(2)} GB`);
 
       // Load saved model info
+      Logger.debug('📦 Loading saved model info from AsyncStorage...');
       const savedModels = await StorageService.loadDownloadedModels();
+      Logger.debug(`✅ Loaded ${savedModels.length} saved models`);
 
       // Load recent models
+      Logger.debug('📋 Loading recent models...');
       const recent = await StorageService.loadRecentModels();
+      Logger.debug(`Loaded ${recent.length} recent models`);
 
       // Verify recent models still exist
+      Logger.debug('🔍 Verifying recent models still exist on filesystem...');
       const validRecentModels = await Promise.all(
         recent.map(async model => {
           const exists = await ModelStorageService.modelExists(model.filename);
@@ -64,8 +75,10 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         }),
       );
       setRecentModels(validRecentModels.filter(m => m !== null) as ModelInfo[]);
+      Logger.debug(`✅ Found ${validRecentModels.filter(m => m !== null).length} valid recent models`);
 
       // Check which models are actually downloaded
+      Logger.debug('🔍 Checking recommended models on filesystem...');
       const updatedModels = await Promise.all(
         RECOMMENDED_MODELS.map(async model => {
           const exists = await ModelStorageService.modelExists(model.filename);
@@ -83,17 +96,25 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
           };
         }),
       );
+      Logger.debug(`✅ Processed ${updatedModels.length} recommended models`);
 
       // Add imported models that are not in RECOMMENDED_MODELS
+      Logger.debug('🔍 Filtering imported models...');
       const importedModels = savedModels.filter(
         saved => !RECOMMENDED_MODELS.some(rec => rec.id === saved.id),
       );
+      Logger.debug(`Found ${importedModels.length} imported models`);
 
       // Deduplicate by path to avoid showing the same model twice
+      Logger.debug('🧹 Deduplicating models by path...');
       const allModels = [...updatedModels, ...importedModels];
       const seenPaths = new Set<string | undefined>();
+      let duplicateCount = 0;
+
       const deduplicatedModels = allModels.filter(model => {
         if (model.localPath && seenPaths.has(model.localPath)) {
+          Logger.debug(`Removing duplicate: ${model.name} (${model.localPath})`);
+          duplicateCount++;
           return false; // Skip duplicate path
         }
         if (model.localPath) {
@@ -102,11 +123,14 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         return true;
       });
 
+      Logger.debug(`✅ Deduplicated from ${allModels.length} to ${deduplicatedModels.length} models (${duplicateCount} removed)`);
       setModels(deduplicatedModels);
 
+      Logger.debug('✅ ModelsScreen initialization complete');
       // Note: Last used model is loaded by App.tsx on startup, not here
       // This prevents duplicate load attempts and race conditions
     } catch (error) {
+      Logger.error('❌ Failed to initialize models:', error instanceof Error ? error.message : String(error));
       console.error('Failed to initialize models:', error);
       Alert.alert('Error', 'Failed to initialize model storage');
     }

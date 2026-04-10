@@ -4,6 +4,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ChatSession, ModelInfo, LlamaConfig} from '../types';
 import {STORAGE_KEYS, DEFAULT_LLAMA_CONFIG} from '../utils/constants';
+import {Logger} from '../utils/Logger';
 
 export class StorageService {
   /**
@@ -66,16 +67,22 @@ export class StorageService {
    */
   static async saveDownloadedModels(models: ModelInfo[]): Promise<void> {
     try {
+      Logger.debug(`Saving ${models.length} models to storage...`);
+
       // Deduplicate by localPath and id before saving
       const seenPaths = new Set<string | undefined>();
       const seenIds = new Set<string>();
+      let duplicateCount = 0;
+
       const deduplicated = models.filter(model => {
         if (seenIds.has(model.id)) {
-          console.warn('Removing duplicate model with id:', model.id);
+          Logger.debug(`Removing duplicate model with id: ${model.id}`);
+          duplicateCount++;
           return false;
         }
         if (model.localPath && seenPaths.has(model.localPath)) {
-          console.warn('Removing duplicate model with path:', model.localPath);
+          Logger.debug(`Removing duplicate model with path: ${model.localPath}`);
+          duplicateCount++;
           return false;
         }
         seenIds.add(model.id);
@@ -85,11 +92,16 @@ export class StorageService {
         return true;
       });
 
+      Logger.debug(`Deduplicated from ${models.length} to ${deduplicated.length} models (${duplicateCount} removed)`);
+
       await AsyncStorage.setItem(
         STORAGE_KEYS.DOWNLOADED_MODELS,
         JSON.stringify(deduplicated),
       );
+
+      Logger.debug('Models saved to AsyncStorage');
     } catch (error) {
+      Logger.error('Failed to save downloaded models:', error instanceof Error ? error.message : String(error));
       console.error('Failed to save downloaded models:', error);
       throw error;
     }
@@ -100,16 +112,25 @@ export class StorageService {
    */
   static async loadDownloadedModels(): Promise<ModelInfo[]> {
     try {
+      Logger.debug('Loading downloaded models from AsyncStorage...');
       const data = await AsyncStorage.getItem(STORAGE_KEYS.DOWNLOADED_MODELS);
-      if (!data) return [];
+      if (!data) {
+        Logger.debug('No downloaded models found');
+        return [];
+      }
 
+      Logger.debug('Parsing models data...');
       const models: ModelInfo[] = JSON.parse(data);
+      Logger.debug(`Loaded ${models.length} models from storage`);
 
       // Deduplicate by localPath to prevent duplicates
       const seenPaths = new Set<string | undefined>();
-      return models.filter(model => {
+      let duplicateCount = 0;
+
+      const deduplicated = models.filter(model => {
         if (model.localPath && seenPaths.has(model.localPath)) {
-          console.warn('Removing duplicate model with path:', model.localPath);
+          Logger.debug(`Removing duplicate model with path: ${model.localPath}`);
+          duplicateCount++;
           return false;
         }
         if (model.localPath) {
@@ -117,7 +138,11 @@ export class StorageService {
         }
         return true;
       });
+
+      Logger.debug(`Deduplicated from ${models.length} to ${deduplicated.length} models (${duplicateCount} removed)`);
+      return deduplicated;
     } catch (error) {
+      Logger.error('Failed to load downloaded models:', error instanceof Error ? error.message : String(error));
       console.error('Failed to load downloaded models:', error);
       return [];
     }
@@ -157,14 +182,19 @@ export class StorageService {
   static async saveCurrentModel(model: ModelInfo | null): Promise<void> {
     try {
       if (model) {
+        Logger.debug(`Saving current model: ${model.name}`);
         await AsyncStorage.setItem(
           STORAGE_KEYS.CURRENT_MODEL,
           JSON.stringify(model),
         );
+        Logger.debug('✅ Current model saved');
       } else {
+        Logger.debug('Clearing current model');
         await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_MODEL);
+        Logger.debug('✅ Current model cleared');
       }
     } catch (error) {
+      Logger.error('Failed to save current model:', error instanceof Error ? error.message : String(error));
       console.error('Failed to save current model:', error);
     }
   }
@@ -174,9 +204,18 @@ export class StorageService {
    */
   static async loadCurrentModel(): Promise<ModelInfo | null> {
     try {
+      Logger.debug('Loading current model from AsyncStorage...');
       const data = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_MODEL);
-      return data ? JSON.parse(data) : null;
+      if (data) {
+        const model = JSON.parse(data);
+        Logger.debug(`✅ Current model loaded: ${model.name}`);
+        return model;
+      } else {
+        Logger.debug('No current model saved');
+        return null;
+      }
     } catch (error) {
+      Logger.error('Failed to load current model:', error instanceof Error ? error.message : String(error));
       console.error('Failed to load current model:', error);
       return null;
     }

@@ -28,6 +28,7 @@ import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
+import {Logger} from './src/utils/Logger';
 
 type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault' | 'filesystem';
 
@@ -54,59 +55,78 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info('🚀 APP INITIALIZATION STARTING');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
       // Initialize model storage
+      Logger.info('📁 Initializing model storage...');
       await ModelStorageService.initialize();
+      Logger.info('✅ Model storage initialized');
 
       // Initialize memory service
+      Logger.info('💾 Initializing memory service...');
       await MemoryService.initialize();
+      Logger.info('✅ Memory service initialized');
 
       // Initialize SQLite database
+      Logger.info('🗄️ Initializing SQLite database...');
       const {DatabaseService} = require('./src/services/DatabaseService');
       await DatabaseService.initialize();
       DatabaseProxy.setUsingSQLite(true);
-      console.log('[App] SQLite database initialized');
+      Logger.info('✅ SQLite database initialized');
 
       // Initialize tool service (registers all tools)
+      Logger.info('🔧 Initializing tool service...');
       const {ToolService} = require('./src/services/ToolService');
       ToolService.initialize();
-      console.log('[App] Tool service initialized');
+      Logger.info('✅ Tool service initialized');
 
       // Initialize vault service
+      Logger.info('🔐 Initializing vault service...');
       const {VaultService} = require('./src/services/VaultService');
       await VaultService.initialize();
-      console.log('[App] Vault service initialized');
+      Logger.info('✅ Vault service initialized');
 
       // Load the last used model (if any)
+      Logger.info('🤖 Checking for last used model...');
       const {StorageService} = require('./src/services/StorageService');
       const {LlamaService} = require('./src/services/LlamaService');
-      const RNFS = require('react-native-fs').default;
       const lastModel = await StorageService.loadCurrentModel();
+      Logger.info('Last model data:', lastModel);
 
       if (lastModel && lastModel.downloaded && lastModel.localPath) {
-        console.log('Loading last used model:', lastModel.name);
-        // Verify the model file still exists
-        const fileExists = await RNFS.exists(lastModel.localPath);
-        if (!fileExists) {
-          console.warn('Last used model file no longer exists at:', lastModel.localPath);
-          // Clear the stale model reference
+        Logger.info(`📦 Found last used model: ${lastModel.name}`);
+        Logger.info(`📍 Model path: ${lastModel.localPath}`);
+        try {
+          Logger.info('⏳ Loading model...');
+          await LlamaService.loadModel(lastModel.localPath, lastModel.name);
+          setCurrentModel(lastModel);
+          Logger.info('✅ Last used model loaded successfully');
+        } catch (error) {
+          Logger.error('❌ Failed to load last used model');
+          Logger.error('Error:', error instanceof Error ? error.message : String(error));
+          // Clear the model if it fails to load
           await StorageService.saveCurrentModel(null);
-        } else {
-          try {
-            await LlamaService.loadModel(lastModel.localPath, lastModel.name);
-            setCurrentModel(lastModel);
-            console.log('Last used model loaded successfully');
-          } catch (error) {
-            console.error('Failed to load last used model:', error);
-            // Clear the model if it fails to load
-            await StorageService.saveCurrentModel(null);
-            // Don't block app initialization if model load fails
-          }
+          Logger.info('🧹 Cleared stale model reference');
+          // Don't block app initialization if model load fails
         }
+      } else {
+        Logger.info('ℹ️ No previous model to load');
       }
 
-      console.log('App initialized successfully');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.info('✅ APP INITIALIZATION COMPLETE');
+      Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       setIsInitialized(true);
     } catch (error) {
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error('❌ APP INITIALIZATION FAILED');
+      Logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      Logger.error('Error:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        Logger.error('Stack:', error.stack);
+      }
       console.error('Failed to initialize app:', error);
       Alert.alert(
         'Initialization Error',
