@@ -184,7 +184,17 @@ export class LlamaService {
         use_mlock: true,
         use_mmap: true,
         n_ctx: 512, // Small context for embeddings
+        n_parallel: 4, // Enable parallel mode for isolated sequence slots
       });
+
+      // Enable parallel mode to isolate embeddings and prevent KV cache pollution
+      try {
+        await this.embeddingContext.parallel.enable({n_parallel: 4});
+        Logger.info('[EmbedModel] Parallel mode enabled for isolated embeddings');
+      } catch (parallelError) {
+        Logger.warn('[EmbedModel] Failed to enable parallel mode:', parallelError);
+        // Fallback to regular embedding mode if parallel not available
+      }
 
       this.embeddingModelPath = modelPath;
       this.embeddingModelName = modelName;
@@ -435,6 +445,10 @@ export class LlamaService {
   /**
    * Generate embedding vector for text
    * Uses the dedicated embedding model instance
+   *
+   * CRITICAL: Uses parallel.embedding() to isolate each embedding in its own
+   * sequence slot. This prevents KV cache pollution where tokens from previous
+   * embeddings would affect subsequent ones, causing semantic drift.
    */
   static async generateEmbedding(text: string): Promise<number[]> {
     if (!this.embeddingContext) {
@@ -443,12 +457,18 @@ export class LlamaService {
 
     try {
       Logger.debug(`[EmbedModel] Generating embedding for: ${text.substring(0, 50)}...`);
-      const result = await this.embeddingContext.embedding(text);
+
+      // Use parallel mode to isolate each embedding in its own sequence slot
+      // This prevents KV cache pollution from affecting results
+      const {promise} = await this.embeddingContext.parallel.embedding(text);
+      const result = await promise;
+
       Logger.debug(`[EmbedModel] Generated: ${result.embedding.length} dimensions`);
+
       // CRITICAL: Copy the embedding to avoid buffer reuse issues!
       // The embedding context may return a reusable Float32Array buffer
       // that gets overwritten on the next call. We need our own copy.
-      const embeddingCopy = Array.isArray(result.embedding)
+      const embeddingCopy: number[] = Array.isArray(result.embedding)
         ? [...result.embedding]
         : Array.from(result.embedding);
       return embeddingCopy;

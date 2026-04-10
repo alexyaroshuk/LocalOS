@@ -11,6 +11,7 @@ import type {
   ConversationSummary,
   UserFact,
 } from './MockDatabaseService';
+import {Logger} from '../utils/Logger';
 
 // Re-export types for external use
 export type {
@@ -547,7 +548,7 @@ export class DatabaseService {
    * Update embedding for an existing memory
    */
   static async updateMemoryEmbedding(id: number, embedding: number[] | Float32Array): Promise<void> {
-    const embeddingBase64 = this.vectorToBlob(embedding);
+    const embeddingBase64 = this.vectorToBase64(embedding);
     this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBase64, id]);
     console.log(`[Database] Updated embedding for memory ${id}`);
   }
