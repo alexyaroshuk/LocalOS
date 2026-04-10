@@ -43,6 +43,15 @@ export const RECOMMENDED_MODELS = [
     downloaded: false,
     huggingFaceRepo: 'google/gemma-2b-it-gguf',
   },
+  {
+    id: 'nomic-embed-text-v1.5-q8',
+    name: 'Nomic Embed Text v1.5 (Q8_0)',
+    filename: 'nomic-embed-text-v1.5.Q8_0.gguf',
+    size: 130000000, // ~130MB
+    quantization: 'Q8_0',
+    downloaded: false,
+    huggingFaceRepo: 'nomic-ai/nomic-embed-text-v1.5-GGUF',
+  },
 ];
 
 // Storage keys for AsyncStorage
