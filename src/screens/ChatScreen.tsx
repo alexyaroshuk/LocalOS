@@ -76,6 +76,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     date: string;
   } | null>(null);
   const [showNoteProposal, setShowNoteProposal] = useState(false);
+  const [embeddingModelInfo, setEmbeddingModelInfo] = useState<{
+    loaded: boolean;
+    name: string | null;
+  }>({loaded: false, name: null});
 
   // Track which messages are confirmation questions and what tools they offer
   const [confirmationQuestions, setConfirmationQuestions] = useState<Map<string, {
@@ -363,6 +367,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
     // Check periodically (in case it's changed from ToolTestScreen)
     const interval = setInterval(checkPromptMode, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Monitor embedding model status
+  useEffect(() => {
+    const checkEmbeddingModel = () => {
+      const isLoaded = LlamaService.isEmbeddingModelLoaded();
+      const modelInfo = LlamaService.getEmbeddingModelInfo();
+      setEmbeddingModelInfo({
+        loaded: isLoaded,
+        name: modelInfo?.name || null,
+      });
+    };
+
+    // Check initially
+    checkEmbeddingModel();
+
+    // Check periodically (in case it's changed from ModelsScreen)
+    const interval = setInterval(checkEmbeddingModel, 500);
 
     return () => clearInterval(interval);
   }, []);
@@ -1203,6 +1227,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </View>
         </View>
 
+        {/* Embedding Model Status */}
+        <View style={styles.embeddingModelRow}>
+          <View style={[styles.embeddingBadge, embeddingModelInfo.loaded && styles.embeddingBadgeLoaded]}>
+            <Text style={styles.embeddingBadgeText}>
+              {embeddingModelInfo.loaded ? '✅' : '⊘'} {embeddingModelInfo.name ? embeddingModelInfo.name.split('.').pop() : 'Embedding'}
+            </Text>
+          </View>
+        </View>
+
         {/* Row 2: Prompt mode + context stats */}
         <View style={styles.headerRow2}>
           {aiBackend === 'llama' && toolsEnabled && (
@@ -1514,6 +1547,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  embeddingModelRow: {
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  embeddingBadge: {
+    backgroundColor: '#F0F0F0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+  },
+  embeddingBadgeLoaded: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#34C759',
+  },
+  embeddingBadgeText: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '500',
   },
   selectModelLink: {
     fontSize: 13,
