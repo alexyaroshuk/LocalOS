@@ -689,6 +689,7 @@ export class LlamaService {
 
     // Use selected prompt variant
     const promptConfig = SYSTEM_PROMPTS[this.currentPromptType];
+    Logger.debug('Building system prompt with smartToolDetection:', this.smartToolDetection);
     return promptConfig.getPrompt(coreMemory, toolsJson, needsExamples, this.smartToolDetection);
   }
 
@@ -1045,6 +1046,47 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       // Accept the match — if tool doesn't exist, it will fail gracefully during execution
       Logger.debug('✅ Found no-arg bracket format tool:', functionName);
       return JSON.stringify({name: functionName, arguments: {}});
+    }
+
+    // FOURTH: Try non-bracket Pythonic format (when model outputs reasoning + tool call without brackets)
+    // Pattern: tool_name(param="value", ...)
+    const nonBracketPattern = /\n\s*([\w_]+)\((.*?)\)(?:\n|$)/s;
+    const nonBracketMatch = nonBracketPattern.exec(text);
+
+    if (nonBracketMatch) {
+      const functionName = nonBracketMatch[1];
+      const argsString = nonBracketMatch[2];
+      Logger.debug('✅ Found non-bracket Pythonic format tool:', functionName);
+
+      // Parse arguments (same logic as bracket format)
+      const args: Record<string, any> = {};
+      if (argsString.trim()) {
+        const argPattern = /([\w_]+)\s*=\s*(?:["']([^"']*)["']|\[([^\]]*)\]|(\w+)|(\d+))/g;
+        let argMatch;
+        while ((argMatch = argPattern.exec(argsString)) !== null) {
+          const key = argMatch[1];
+          if (argMatch[2] !== undefined) {
+            args[key] = argMatch[2];
+          } else if (argMatch[3] !== undefined) {
+            const arrayContent = argMatch[3];
+            const arrayItems = arrayContent.split(',').map(item => {
+              const trimmed = item.trim();
+              return trimmed.replace(/^["']|["']$/g, '');
+            }).filter(item => item.length > 0);
+            args[key] = arrayItems;
+          } else if (argMatch[4] !== undefined) {
+            const word = argMatch[4];
+            if (word === 'True' || word === 'true') args[key] = true;
+            else if (word === 'False' || word === 'false') args[key] = false;
+            else if (word === 'None' || word === 'null') args[key] = null;
+            else args[key] = word;
+          } else if (argMatch[5] !== undefined) {
+            args[key] = parseInt(argMatch[5], 10);
+          }
+        }
+      }
+
+      return JSON.stringify({name: functionName, arguments: args});
     }
 
     // Fall back to old XML format for backwards compatibility

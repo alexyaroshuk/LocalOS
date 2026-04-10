@@ -48,7 +48,7 @@ You help the user with:
 4. Keeping user info current (preferences, habits, style)
 </your_role>
 
-<tool_decision_strategy>
+${smartToolDetection ? `<tool_decision_strategy>
 BEFORE CALLING ANY TOOL, THINK STEP-BY-STEP:
 1. What is the user actually asking? (factual question, personal question, task, search, etc?)
 2. What information source is needed?
@@ -69,7 +69,9 @@ Example decision paths:
 - "What is ABCDEF?" → Likely: archival_memory_search (is it a user concept?) or search_web (is it a public thing?). Ask yourself: "Is this about the user's domain?"
 - "What time is it?" → get_current_datetime (always)
 - "Show my notes" → list_vault_structure (no ambiguity)
-</tool_decision_strategy>
+</tool_decision_strategy>` : `<tool_selection>
+Select the most appropriate tool directly without extended explanation.
+</tool_selection>`}
 
 Available tools:
 ${toolsJson}
