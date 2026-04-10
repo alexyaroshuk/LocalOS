@@ -654,30 +654,26 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
           yourModels.map(model => renderModelCard(model, false))
         ) : (
           <Text style={styles.emptyStateText}>
-            No models yet. Import a model from your device or download one below.
+            No models yet. Import a model or download one.
           </Text>
         )}
 
-        {downloadableModels.length > 0 && (
-          <>
-            <View style={styles.sectionDivider} />
+        <View style={styles.sectionDivider} />
 
-            <TouchableOpacity
-              style={styles.expandableHeader}
-              onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
-              <Text style={styles.sectionTitle}>Download More Models</Text>
-              <Text style={styles.expandIcon}>
-                {showDownloadableModels ? '▼' : '▶'}
-              </Text>
-            </TouchableOpacity>
-            {showDownloadableModels && (
-              <>
-                <Text style={styles.sectionSubtitle}>
-                  Models available for download from Hugging Face
-                </Text>
-                {downloadableModels.map(model => renderModelCard(model, true))}
-              </>
-            )}
+        <TouchableOpacity
+          style={styles.expandableHeader}
+          onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
+          <Text style={styles.sectionTitle}>Download Models</Text>
+          <Text style={styles.expandIcon}>
+            {showDownloadableModels ? '▼' : '▶'}
+          </Text>
+        </TouchableOpacity>
+        {showDownloadableModels && downloadableModels.length > 0 && (
+          <>
+            <Text style={styles.sectionSubtitle}>
+              Available from Hugging Face
+            </Text>
+            {downloadableModels.map(model => renderModelCard(model, true))}
           </>
         )}
 
