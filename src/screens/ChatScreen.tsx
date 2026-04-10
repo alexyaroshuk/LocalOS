@@ -1185,15 +1185,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        {/* Row 1: Model Info + Langchain */}
+        {/* Row 1: Model name + status */}
+        <View style={styles.headerRow1}>
           <View style={styles.modelInfoRow}>
-            <Text style={styles.headerTitle}>{backendInfo}</Text>
+            <Text
+              style={styles.headerTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {backendInfo}
+            </Text>
             {aiBackend === 'apple' && (
               <View style={styles.applebadge}>
                 <Text style={styles.appleBadgeText}>⚡ Apple AI</Text>
               </View>
             )}
           </View>
+        </View>
+
+        {/* Row 2: Prompt mode + context stats */}
+        <View style={styles.headerRow2}>
           {aiBackend === 'llama' && toolsEnabled && (
             <View style={styles.promptModeContainer}>
               <View style={[
@@ -1234,13 +1245,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </Text>
             </View>
           )}
-          {aiBackend === 'llama' && !AIService.isReady() && (
-            <TouchableOpacity onPress={onModelSelect}>
-              <Text style={styles.selectModelLink}>Load Model</Text>
-            </TouchableOpacity>
-          )}
         </View>
-        <View style={styles.headerRight}>
+
+        {/* Row 3: Control buttons */}
+        <View style={styles.headerRow3}>
           <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
             <Text style={styles.backendButtonText}>
               {aiBackend === 'apple' ? '⚡ Apple' : aiBackend === 'lmstudio' ? '🖥 LM Studio' : '🦙 Llama'}
@@ -1271,6 +1279,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             <Text style={styles.clearButton}>Clear</Text>
           </TouchableOpacity>
         </View>
+
+        {aiBackend === 'llama' && !AIService.isReady() && (
+          <TouchableOpacity onPress={onModelSelect}>
+            <Text style={styles.selectModelLink}>Load Model</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Test Button Row */}
@@ -1446,13 +1460,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
+    flexDirection: 'column',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
     backgroundColor: '#F8F9FA',
+  },
+  headerRow1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerRow2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerRow3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerLeft: {
     flex: 1,
@@ -1461,17 +1490,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flexWrap: 'wrap',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
+    flex: 1,
   },
   modelInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0, // Allow text to truncate
   },
   applebadge: {
     backgroundColor: '#000000',
@@ -1490,13 +1521,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   promptModeContainer: {
-    marginTop: 4,
+    flexShrink: 0,
   },
   promptModeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
-    alignSelf: 'flex-start',
   },
   promptModeLangchain: {
     backgroundColor: '#34C759',
@@ -1510,14 +1540,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   contextMeterContainer: {
-    marginTop: 6,
+    minWidth: 160,
+    maxWidth: 220,
+    flexShrink: 1,
   },
   contextMeterBar: {
-    height: 4,
+    height: 3,
     backgroundColor: '#E0E0E0',
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   contextMeterFill: {
     height: '100%',

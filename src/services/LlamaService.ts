@@ -689,7 +689,7 @@ export class LlamaService {
 
     // Use selected prompt variant
     const promptConfig = SYSTEM_PROMPTS[this.currentPromptType];
-    return promptConfig.getPrompt(coreMemory, toolsJson, needsExamples);
+    return promptConfig.getPrompt(coreMemory, toolsJson, needsExamples, this.smartToolDetection);
   }
 
   /**

@@ -9,7 +9,7 @@ export interface SystemPromptConfig {
   type: SystemPromptType;
   name: string;
   description: string;
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => string;
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => string;
 }
 
 /**
@@ -20,7 +20,7 @@ const lettaPrompt: SystemPromptConfig = {
   type: 'letta',
   name: 'Letta (Memory-Focused)',
   description: 'Based on Letta AI agent framework. Emphasizes memory management and task assistance.',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     let prompt = `${coreMemory}
 
 <base_instructions>
@@ -130,7 +130,10 @@ Priority: Check their memory first, they might have notes."
 [archival_memory_search(query="TensorFlow project experience", top_k=3)]`;
     }
 
-    prompt += `
+    // Only include reasoning instructions when Smart Tool Detection is ON
+    // (when it's OFF, Layer 2 keyword triggers bypass the LLM anyway)
+    if (smartToolDetection) {
+      prompt += `
 
 REASONING OUTPUT RULES:
 - Always show your thinking process BEFORE the tool call
@@ -143,7 +146,17 @@ EXECUTION:
 - To continue: show reasoning + call another tool
 - To yield: end without calling a tool (answer from results)
 
-REMEMBER: Users can see your reasoning - it helps them understand your decisions!
+REMEMBER: Users can see your reasoning - it helps them understand your decisions!`;
+    } else {
+      prompt += `
+
+EXECUTION:
+- Call tools immediately when needed
+- Do not show extended thinking - just call the tool
+- Once task is complete: yield`;
+    }
+
+    prompt += `
 </base_instructions>`;
 
     return prompt;
@@ -158,7 +171,7 @@ const aggressivePrompt: SystemPromptConfig = {
   type: 'aggressive',
   name: 'Aggressive (Force Tools)',
   description: 'Extremely forceful. Commands the model to ALWAYS use tools first.',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     let prompt = `${coreMemory}
 
 CRITICAL: You are a TOOL-FIRST assistant. You MUST call tools BEFORE responding with text.
@@ -206,7 +219,7 @@ const minimalPrompt: SystemPromptConfig = {
   type: 'minimal',
   name: 'Minimal (Concise)',
   description: 'Short and simple. Good for models with native tool support (8B).',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     return `${coreMemory}
 
 You are LocalOS Assistant with memory and task management.
@@ -228,7 +241,7 @@ const structuredPrompt: SystemPromptConfig = {
   type: 'structured',
   name: 'Structured (Detailed)',
   description: 'Organized into clear sections. Balance between detail and conciseness.',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     let prompt = `${coreMemory}
 
 === IDENTITY ===
@@ -293,7 +306,7 @@ const customPrompt: SystemPromptConfig = {
   type: 'custom',
   name: 'Custom (Force Tool Use)',
   description: 'Short, strict prompt that forces actual tool calls.',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     return `${coreMemory}
 
 FUNCTION-CALLING AI. YOU MUST USE TOOLS.
@@ -386,7 +399,7 @@ const custom2Prompt: SystemPromptConfig = {
   type: 'custom2',
   name: 'Custom2 (Ask First)',
   description: 'Development mode: Model asks for confirmation before calling tools.',
-  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean) => {
+  getPrompt: (coreMemory: string, toolsJson: string, needsExamples: boolean, smartToolDetection?: boolean) => {
     return `${coreMemory}
 
 FUNCTION-CALLING AI WITH CONFIRMATION MODE.
