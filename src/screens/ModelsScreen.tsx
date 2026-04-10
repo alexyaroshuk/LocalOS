@@ -113,11 +113,14 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       setDownloadableModels([...available, ...recommendedNotDownloaded]);
 
       // Load current embedding model state
-      const {StorageService: StorageServiceImpl} = require('../services/StorageService');
-      const embeddingModel = await StorageServiceImpl.loadEmbeddingModel();
-      if (embeddingModel) {
-        Logger.debug(`📦 Loaded embedding model state: ${embeddingModel.name}`);
-        setCurrentEmbeddingModel(embeddingModel);
+      try {
+        const embeddingModel = await StorageService.loadEmbeddingModel();
+        if (embeddingModel) {
+          Logger.debug(`📦 Loaded embedding model state: ${embeddingModel.name}`);
+          setCurrentEmbeddingModel(embeddingModel);
+        }
+      } catch (embeddingError) {
+        Logger.debug('No embedding model state loaded');
       }
 
       Logger.debug(`✅ ModelsScreen initialization complete: ${downloaded.length} your models, ${available.length + recommendedNotDownloaded.length} available for download`);
