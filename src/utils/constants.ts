@@ -61,6 +61,7 @@ export const STORAGE_KEYS = {
   DOWNLOADED_MODELS: '@localos_downloaded_models',
   LLAMA_CONFIG: '@localos_llama_config',
   CURRENT_MODEL: '@localos_current_model',
+  EMBEDDING_MODEL: '@localos_embedding_model',
   RECENT_MODELS: '@localos_recent_models',
 };
 

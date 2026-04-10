@@ -27,8 +27,8 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   currentModel,
   onModelLoaded,
 }) => {
-  const [models, setModels] = useState<ModelInfo[]>(RECOMMENDED_MODELS);
-  const [recentModels, setRecentModels] = useState<ModelInfo[]>([]);
+  const [yourModels, setYourModels] = useState<ModelInfo[]>([]);
+  const [downloadableModels, setDownloadableModels] = useState<ModelInfo[]>([]);
   const [downloadingModels, setDownloadingModels] = useState<
     Map<string, DownloadStatus>
   >(new Map());
@@ -46,92 +46,74 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       Logger.debug('📱 ModelsScreen: Initializing models...');
 
       // Initialize storage directory
-      Logger.debug('📁 Initializing model storage directory...');
       await ModelStorageService.initialize();
-      Logger.debug('✅ Model storage directory initialized');
 
       // Check available space
-      Logger.debug('💾 Checking available storage space...');
       const space = await ModelStorageService.getAvailableSpace();
       setAvailableSpace(space);
-      Logger.debug(`Available space: ${(space / 1024 / 1024 / 1024).toFixed(2)} GB`);
 
-      // Load saved model info
-      Logger.debug('📦 Loading saved model info from AsyncStorage...');
+      // Load saved models and check filesystem
       const savedModels = await StorageService.loadDownloadedModels();
-      Logger.debug(`✅ Loaded ${savedModels.length} saved models`);
 
-      // Load recent models
-      Logger.debug('📋 Loading recent models...');
-      const recent = await StorageService.loadRecentModels();
-      Logger.debug(`Loaded ${recent.length} recent models`);
-
-      // Verify recent models still exist
-      Logger.debug('🔍 Verifying recent models still exist on filesystem...');
-      const validRecentModels = await Promise.all(
-        recent.map(async model => {
-          const exists = await ModelStorageService.modelExists(model.filename);
-          return exists ? {...model, downloaded: true} : null;
-        }),
-      );
-      setRecentModels(validRecentModels.filter(m => m !== null) as ModelInfo[]);
-      Logger.debug(`✅ Found ${validRecentModels.filter(m => m !== null).length} valid recent models`);
-
-      // Check which models are actually downloaded
-      Logger.debug('🔍 Checking recommended models on filesystem...');
-      const updatedModels = await Promise.all(
-        RECOMMENDED_MODELS.map(async model => {
-          const exists = await ModelStorageService.modelExists(model.filename);
-          const savedInfo = savedModels.find(m => m.id === model.id);
-
+      // Verify each saved model actually exists on filesystem
+      Logger.debug('🔍 Verifying saved models exist on filesystem...');
+      const verifiedModels = await Promise.all(
+        savedModels.map(async model => {
+          const exists = model.localPath
+            ? await ModelStorageService.modelExists(model.filename)
+            : false;
           return {
             ...model,
             downloaded: exists,
-            localPath: exists
-              ? ModelStorageService.getModelPath(model.filename)
-              : undefined,
-            ...savedInfo,
-            // Preserve original size if savedInfo has 0 (bug fix)
-            size: savedInfo?.size && savedInfo.size > 0 ? savedInfo.size : model.size,
+            localPath: exists ? model.localPath : undefined,
           };
         }),
       );
-      Logger.debug(`✅ Processed ${updatedModels.length} recommended models`);
 
-      // Add imported models that are not in RECOMMENDED_MODELS
-      Logger.debug('🔍 Filtering imported models...');
-      const importedModels = savedModels.filter(
-        saved => !RECOMMENDED_MODELS.some(rec => rec.id === saved.id),
-      );
-      Logger.debug(`Found ${importedModels.length} imported models`);
-
-      // Deduplicate by path to avoid showing the same model twice
-      Logger.debug('🧹 Deduplicating models by path...');
-      const allModels = [...updatedModels, ...importedModels];
-      const seenPaths = new Set<string | undefined>();
+      // Deduplicate by path and filename
+      Logger.debug('🧹 Deduplicating models...');
+      const seenPaths = new Set<string>();
+      const seenFilenames = new Set<string>();
       let duplicateCount = 0;
 
-      const deduplicatedModels = allModels.filter(model => {
-        if (model.localPath && seenPaths.has(model.localPath)) {
-          Logger.debug(`Removing duplicate: ${model.name} (${model.localPath})`);
+      const deduplicated = verifiedModels.filter(model => {
+        const path = model.localPath || '';
+        const filename = model.filename || '';
+
+        if (path && seenPaths.has(path)) {
+          Logger.debug(`Removing duplicate by path: ${model.name}`);
           duplicateCount++;
-          return false; // Skip duplicate path
+          return false;
         }
-        if (model.localPath) {
-          seenPaths.add(model.localPath);
+        if (filename && seenFilenames.has(filename)) {
+          Logger.debug(`Removing duplicate by filename: ${model.name}`);
+          duplicateCount++;
+          return false;
         }
+
+        if (path) seenPaths.add(path);
+        if (filename) seenFilenames.add(filename);
         return true;
       });
 
-      Logger.debug(`✅ Deduplicated from ${allModels.length} to ${deduplicatedModels.length} models (${duplicateCount} removed)`);
-      setModels(deduplicatedModels);
+      Logger.debug(`✅ Deduplicated from ${verifiedModels.length} to ${deduplicated.length} models (${duplicateCount} removed)`);
 
-      Logger.debug('✅ ModelsScreen initialization complete');
-      // Note: Last used model is loaded by App.tsx on startup, not here
-      // This prevents duplicate load attempts and race conditions
+      // Separate into downloaded and available for download
+      const downloaded = deduplicated.filter(m => m.downloaded);
+      const available = deduplicated.filter(m => !m.downloaded);
+
+      // Add RECOMMENDED_MODELS that aren't in the list yet
+      const availableIds = new Set(available.map(m => m.id));
+      const recommendedNotDownloaded = RECOMMENDED_MODELS.filter(
+        m => !availableIds.has(m.id) && !downloaded.some(d => d.id === m.id),
+      );
+
+      setYourModels(downloaded);
+      setDownloadableModels([...available, ...recommendedNotDownloaded]);
+
+      Logger.debug(`✅ ModelsScreen initialization complete: ${downloaded.length} your models, ${available.length + recommendedNotDownloaded.length} available for download`);
     } catch (error) {
       Logger.error('❌ Failed to initialize models:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to initialize models:', error);
       Alert.alert('Error', 'Failed to initialize model storage');
     }
   };
@@ -197,15 +179,15 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   localPath: ModelStorageService.getModelPath(model.filename),
                 };
 
-                setModels(prev =>
-                  prev.map(m => (m.id === model.id ? updatedModel : m)),
+                // Move from downloadable to your models
+                setDownloadableModels(prev =>
+                  prev.filter(m => m.id !== model.id),
                 );
+                setYourModels(prev => [...prev, updatedModel]);
 
                 // Save to storage
-                const allModels = models.map(m =>
-                  m.id === model.id ? updatedModel : m,
-                );
-                await StorageService.saveDownloadedModels(allModels);
+                const allDownloadedModels = [...yourModels, updatedModel];
+                await StorageService.saveDownloadedModels(allDownloadedModels);
 
                 // Remove from downloading map
                 setDownloadingModels(prev => {
@@ -246,6 +228,19 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     try {
       setLoadingModel(model.id);
 
+      // Validate file exists before attempting to load
+      const fileExists = await ModelStorageService.modelExists(model.filename);
+      if (!fileExists) {
+        Logger.error('❌ Model file not found at:', model.localPath);
+        // Update model list to reflect file is missing
+        setYourModels(prev => prev.filter(m => m.id !== model.id));
+        Alert.alert(
+          'Model File Missing',
+          `${model.name} was not found at ${model.localPath}.\n\nIt may have been deleted. Removing from your models.`,
+        );
+        return;
+      }
+
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       Logger.info('🔄 LOADING CHAT MODEL');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -259,11 +254,6 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       await LlamaService.loadModel(model.localPath!, model.name);
 
       await StorageService.saveCurrentModel(model);
-      await StorageService.addRecentModel(model);
-
-      // Update recent models list
-      const recent = await StorageService.loadRecentModels();
-      setRecentModels(recent);
 
       onModelLoaded(model);
 
@@ -329,6 +319,17 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     try {
       setLoadingModel(model.id);
 
+      // Validate file exists before attempting to load
+      const fileExists = await ModelStorageService.modelExists(model.filename);
+      if (!fileExists) {
+        Logger.error('❌ Embedding model file not found at:', model.localPath);
+        Alert.alert(
+          'Model File Missing',
+          `${model.name} was not found at ${model.localPath}.\n\nIt may have been deleted.`,
+        );
+        return;
+      }
+
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       Logger.info('🔢 LOADING EMBEDDING MODEL');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -341,11 +342,8 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       // TypeScript safety: model.localPath is guaranteed to be defined here due to check above
       await LlamaService.loadEmbeddingModel(model.localPath!, model.name);
 
-      await StorageService.addRecentModel(model);
-
-      // Update recent models list
-      const recent = await StorageService.loadRecentModels();
-      setRecentModels(recent);
+      // Save embedding model preference for auto-load on next startup
+      await StorageService.saveEmbeddingModel(model);
 
       Logger.info('✅ Embedding model loaded successfully');
       Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
@@ -393,14 +391,20 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
             try {
               await ModelStorageService.deleteModel(model.filename);
 
-              const updatedModel = {...model, downloaded: false, localPath: undefined};
-              setModels(prev =>
-                prev.map(m => (m.id === model.id ? updatedModel : m)),
-              );
+              // Move from your models to downloadable
+              setYourModels(prev => prev.filter(m => m.id !== model.id));
 
-              await StorageService.saveDownloadedModels(
-                models.map(m => (m.id === model.id ? updatedModel : m)),
-              );
+              // Add back to downloadable list (remove localPath)
+              const undownloadedModel = {...model, downloaded: false, localPath: undefined};
+              setDownloadableModels(prev => {
+                // Check if it's already in downloadable
+                const exists = prev.some(m => m.id === model.id);
+                return exists ? prev : [...prev, undownloadedModel];
+              });
+
+              // Save to storage (only downloaded models)
+              const remainingModels = yourModels.filter(m => m.id !== model.id);
+              await StorageService.saveDownloadedModels(remainingModels);
 
               // Update available space
               const space = await ModelStorageService.getAvailableSpace();
@@ -477,7 +481,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                 }
 
                 // Check if model with this path already exists
-                const existingModel = models.find(m => m.localPath === destPath);
+                const existingModel = yourModels.find(m => m.localPath === destPath);
                 if (existingModel) {
                   Logger.info('Model already exists in list, not adding duplicate');
                   Alert.alert(
@@ -499,9 +503,9 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   localPath: destPath,
                 };
 
-                // Add to models list and save with updated list
-                const updatedModelsList = [...models, importedModel];
-                setModels(updatedModelsList);
+                // Add to your models list and save
+                const updatedModelsList = [...yourModels, importedModel];
+                setYourModels(updatedModelsList);
 
                 // Save to storage (use updated list, not stale state)
                 await StorageService.saveDownloadedModels(updatedModelsList);
@@ -527,12 +531,11 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     }
   };
 
-  const renderModelCard = (model: ModelInfo) => {
+  const renderModelCard = (model: ModelInfo, isDownloadable: boolean = false) => {
     const downloadStatus = downloadingModels.get(model.id);
     const isLoading = loadingModel === model.id;
-    // Check both currentModel prop and that LlamaService has this model loaded
-    const isCurrent = currentModel?.id === model.id && LlamaService.isModelLoaded() &&
-                      LlamaService.getCurrentModel()?.name === model.name;
+    // Check if this is the current loaded chat model
+    const isCurrent = !isDownloadable && currentModel?.id === model.id;
 
     return (
       <View key={model.id} style={styles.modelCard}>
@@ -629,23 +632,12 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       </View>
 
       <ScrollView style={styles.content}>
-        {recentModels.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Recent Models</Text>
-            <Text style={styles.sectionSubtitle}>
-              Quick access to recently used models
-            </Text>
-            {recentModels.map(renderModelCard)}
-            <View style={styles.sectionDivider} />
-          </>
-        )}
-
-        <Text style={styles.sectionTitle}>Downloaded Models</Text>
-        {models.filter(m => m.downloaded).length > 0 ? (
-          models.filter(m => m.downloaded).map(renderModelCard)
+        <Text style={styles.sectionTitle}>Your Models</Text>
+        {yourModels.length > 0 ? (
+          yourModels.map(model => renderModelCard(model, false))
         ) : (
           <Text style={styles.emptyStateText}>
-            No models downloaded yet. Import a model or download one below.
+            No models yet. Import a model from your device or download one below.
           </Text>
         )}
 
@@ -654,7 +646,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         <TouchableOpacity
           style={styles.expandableHeader}
           onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
-          <Text style={styles.sectionTitle}>Downloadable Models</Text>
+          <Text style={styles.sectionTitle}>Download More Models</Text>
           <Text style={styles.expandIcon}>
             {showDownloadableModels ? '▼' : '▶'}
           </Text>
@@ -664,11 +656,11 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
             <Text style={styles.sectionSubtitle}>
               Models available for download from Hugging Face
             </Text>
-            {models.filter(m => !m.downloaded).length > 0 ? (
-              models.filter(m => !m.downloaded).map(renderModelCard)
+            {downloadableModels.length > 0 ? (
+              downloadableModels.map(model => renderModelCard(model, true))
             ) : (
               <Text style={styles.emptyStateText}>
-                All recommended models are already downloaded!
+                All available models are already downloaded!
               </Text>
             )}
           </>

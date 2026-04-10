@@ -115,6 +115,31 @@ function AppContent() {
         Logger.info('ℹ️ No previous model to load');
       }
 
+      // Load the last used embedding model (if any)
+      Logger.info('🔢 Checking for last used embedding model...');
+      const lastEmbeddingModel = await StorageService.loadEmbeddingModel();
+      Logger.info('Last embedding model data:', lastEmbeddingModel);
+
+      if (lastEmbeddingModel && lastEmbeddingModel.downloaded && lastEmbeddingModel.localPath) {
+        Logger.info(`📦 Found last used embedding model: ${lastEmbeddingModel.name}`);
+        Logger.info(`📍 Embedding model path: ${lastEmbeddingModel.localPath}`);
+        try {
+          Logger.info('⏳ Loading embedding model...');
+          await LlamaService.loadEmbeddingModel(lastEmbeddingModel.localPath, lastEmbeddingModel.name);
+          Logger.info('✅ Last used embedding model loaded successfully');
+          Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
+        } catch (error) {
+          Logger.warn('⚠️ Failed to auto-load embedding model (non-critical)');
+          Logger.warn('Error:', error instanceof Error ? error.message : String(error));
+          // Clear the embedding model if it fails to load
+          await StorageService.saveEmbeddingModel(null);
+          Logger.info('🧹 Cleared stale embedding model reference');
+          // Don't block app initialization if embedding model load fails
+        }
+      } else {
+        Logger.info('ℹ️ No previous embedding model to load');
+      }
+
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       Logger.info('✅ APP INITIALIZATION COMPLETE');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

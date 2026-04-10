@@ -268,6 +268,49 @@ export class StorageService {
   }
 
   /**
+   * Save embedding model preference (for auto-load on startup)
+   */
+  static async saveEmbeddingModel(model: ModelInfo | null): Promise<void> {
+    try {
+      if (model) {
+        Logger.debug(`Saving embedding model: ${model.name}`);
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.EMBEDDING_MODEL,
+          JSON.stringify(model),
+        );
+        Logger.debug('✅ Embedding model saved');
+      } else {
+        Logger.debug('Clearing embedding model');
+        await AsyncStorage.removeItem(STORAGE_KEYS.EMBEDDING_MODEL);
+        Logger.debug('✅ Embedding model cleared');
+      }
+    } catch (error) {
+      Logger.error('Failed to save embedding model:', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * Load embedding model preference
+   */
+  static async loadEmbeddingModel(): Promise<ModelInfo | null> {
+    try {
+      Logger.debug('Loading embedding model from AsyncStorage...');
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.EMBEDDING_MODEL);
+      if (data) {
+        const model = JSON.parse(data);
+        Logger.debug(`✅ Embedding model loaded: ${model.name}`);
+        return model;
+      } else {
+        Logger.debug('No embedding model saved');
+        return null;
+      }
+    } catch (error) {
+      Logger.error('Failed to load embedding model:', error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }
+
+  /**
    * Clear all app data
    */
   static async clearAll(): Promise<void> {
