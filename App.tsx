@@ -29,6 +29,7 @@ import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
 import {Logger} from './src/utils/Logger';
+import RNFS from 'react-native-fs';
 
 type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault' | 'filesystem';
 
@@ -118,16 +119,23 @@ function AppContent() {
       // Load the last used embedding model (if any)
       Logger.info('🔢 Checking for last used embedding model...');
       const lastEmbeddingModel = await StorageService.loadEmbeddingModel();
-      Logger.info('Last embedding model data:', lastEmbeddingModel);
+      Logger.debug('Last embedding model data:', lastEmbeddingModel);
 
       if (lastEmbeddingModel && lastEmbeddingModel.downloaded && lastEmbeddingModel.localPath) {
         Logger.info(`📦 Found last used embedding model: ${lastEmbeddingModel.name}`);
         Logger.info(`📍 Embedding model path: ${lastEmbeddingModel.localPath}`);
         try {
-          Logger.info('⏳ Loading embedding model...');
-          await LlamaService.loadEmbeddingModel(lastEmbeddingModel.localPath, lastEmbeddingModel.name);
-          Logger.info('✅ Last used embedding model loaded successfully');
-          Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
+          // Verify file exists before loading
+          const fileExists = await RNFS.exists(lastEmbeddingModel.localPath);
+          if (!fileExists) {
+            Logger.warn('⚠️ Embedding model file not found, clearing reference');
+            await StorageService.saveEmbeddingModel(null);
+          } else {
+            Logger.info('⏳ Loading embedding model...');
+            await LlamaService.loadEmbeddingModel(lastEmbeddingModel.localPath, lastEmbeddingModel.name);
+            Logger.info('✅ Last used embedding model loaded successfully');
+            Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
+          }
         } catch (error) {
           Logger.warn('⚠️ Failed to auto-load embedding model (non-critical)');
           Logger.warn('Error:', error instanceof Error ? error.message : String(error));
@@ -137,7 +145,7 @@ function AppContent() {
           // Don't block app initialization if embedding model load fails
         }
       } else {
-        Logger.info('ℹ️ No previous embedding model to load');
+        Logger.info('ℹ️ No previous embedding model saved');
       }
 
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

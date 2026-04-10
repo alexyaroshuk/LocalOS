@@ -35,6 +35,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
   const [availableSpace, setAvailableSpace] = useState<number>(0);
   const [showDownloadableModels, setShowDownloadableModels] = useState<boolean>(false);
+  const [currentEmbeddingModel, setCurrentEmbeddingModel] = useState<ModelInfo | null>(null);
 
   useEffect(() => {
     initializeModels();
@@ -110,6 +111,14 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       setYourModels(downloaded);
       setDownloadableModels([...available, ...recommendedNotDownloaded]);
+
+      // Load current embedding model state
+      const {StorageService: StorageServiceImpl} = require('../services/StorageService');
+      const embeddingModel = await StorageServiceImpl.loadEmbeddingModel();
+      if (embeddingModel) {
+        Logger.debug(`📦 Loaded embedding model state: ${embeddingModel.name}`);
+        setCurrentEmbeddingModel(embeddingModel);
+      }
 
       Logger.debug(`✅ ModelsScreen initialization complete: ${downloaded.length} your models, ${available.length + recommendedNotDownloaded.length} available for download`);
     } catch (error) {
@@ -345,6 +354,9 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
       // Save embedding model preference for auto-load on next startup
       await StorageService.saveEmbeddingModel(model);
 
+      // Update current embedding model state for UI
+      setCurrentEmbeddingModel(model);
+
       Logger.info('✅ Embedding model loaded successfully');
       Logger.info('🎉 DUAL INSTANCE MODE ACTIVE!');
       Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -535,13 +547,18 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
     const downloadStatus = downloadingModels.get(model.id);
     const isLoading = loadingModel === model.id;
     // Check if this is the current loaded chat model
-    const isCurrent = !isDownloadable && currentModel?.id === model.id;
+    const isChatActive = !isDownloadable && currentModel?.id === model.id;
+    // Check if this is the current embedding model
+    const isEmbeddingActive = !isDownloadable && currentEmbeddingModel?.id === model.id;
 
     return (
       <View key={model.id} style={styles.modelCard}>
         <View style={styles.modelHeader}>
           <Text style={styles.modelName}>{model.name}</Text>
-          {isCurrent && <Text style={styles.currentBadge}>ACTIVE</Text>}
+          <View style={styles.badgesContainer}>
+            {isChatActive && <Text style={styles.currentBadge}>✓ Chat</Text>}
+            {isEmbeddingActive && <Text style={styles.embeddingBadge}>✓ Embed</Text>}
+          </View>
         </View>
 
         <Text style={styles.modelDetails}>
@@ -572,24 +589,24 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   <TouchableOpacity
                     style={[styles.button, styles.loadButton]}
                     onPress={() => handleLoadModel(model)}
-                    disabled={isLoading || isCurrent}>
+                    disabled={isLoading || isChatActive}>
                     {isLoading ? (
                       <ActivityIndicator color="#FFFFFF" size="small" />
                     ) : (
                       <Text style={styles.buttonText}>
-                        {isCurrent ? '✓ Chat' : '🤖 Chat'}
+                        {isChatActive ? '✓ Chat' : '🤖 Chat'}
                       </Text>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.embedButton]}
                     onPress={() => handleLoadEmbeddingModel(model)}
-                    disabled={isLoading}>
+                    disabled={isLoading || isEmbeddingActive}>
                     {isLoading ? (
                       <ActivityIndicator color="#FFFFFF" size="small" />
                     ) : (
                       <Text style={styles.buttonText}>
-                        🔢 Embed
+                        {isEmbeddingActive ? '✓ Embed' : '🔢 Embed'}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -597,7 +614,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                 <TouchableOpacity
                   style={[styles.button, styles.deleteButton]}
                   onPress={() => handleDeleteModel(model)}
-                  disabled={isLoading || isCurrent}>
+                  disabled={isLoading || isChatActive || isEmbeddingActive}>
                   <Text style={styles.deleteButtonText}>Delete</Text>
                 </TouchableOpacity>
               </>
@@ -641,27 +658,25 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
           </Text>
         )}
 
-        <View style={styles.sectionDivider} />
-
-        <TouchableOpacity
-          style={styles.expandableHeader}
-          onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
-          <Text style={styles.sectionTitle}>Download More Models</Text>
-          <Text style={styles.expandIcon}>
-            {showDownloadableModels ? '▼' : '▶'}
-          </Text>
-        </TouchableOpacity>
-        {showDownloadableModels && (
+        {downloadableModels.length > 0 && (
           <>
-            <Text style={styles.sectionSubtitle}>
-              Models available for download from Hugging Face
-            </Text>
-            {downloadableModels.length > 0 ? (
-              downloadableModels.map(model => renderModelCard(model, true))
-            ) : (
-              <Text style={styles.emptyStateText}>
-                All available models are already downloaded!
+            <View style={styles.sectionDivider} />
+
+            <TouchableOpacity
+              style={styles.expandableHeader}
+              onPress={() => setShowDownloadableModels(!showDownloadableModels)}>
+              <Text style={styles.sectionTitle}>Download More Models</Text>
+              <Text style={styles.expandIcon}>
+                {showDownloadableModels ? '▼' : '▶'}
               </Text>
+            </TouchableOpacity>
+            {showDownloadableModels && (
+              <>
+                <Text style={styles.sectionSubtitle}>
+                  Models available for download from Hugging Face
+                </Text>
+                {downloadableModels.map(model => renderModelCard(model, true))}
+              </>
             )}
           </>
         )}
@@ -756,8 +771,21 @@ const styles = StyleSheet.create({
     color: '#000',
     flex: 1,
   },
+  badgesContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   currentBadge: {
     backgroundColor: '#34C759',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  embeddingBadge: {
+    backgroundColor: '#9C27B0',
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
