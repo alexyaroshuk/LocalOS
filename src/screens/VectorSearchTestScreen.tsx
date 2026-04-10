@@ -28,16 +28,16 @@ interface SearchResult {
 
 // Test dataset to demonstrate semantic search
 const TEST_MEMORIES = [
-  {content: 'I love programming in TypeScript', category: 'preference', importance: 8, tags: ['user', 'preferences', 'programming']},
-  {content: 'I enjoy coding with TS', category: 'preference', importance: 8, tags: ['user', 'preferences', 'programming']},
-  {content: 'My favorite color is blue', category: 'preference', importance: 6, tags: ['user', 'preferences']},
-  {content: 'I work on React Native applications', category: 'fact', importance: 9, tags: ['user', 'work']},
-  {content: 'I build mobile apps using React Native', category: 'fact', importance: 9, tags: ['user', 'work']},
-  {content: 'I prefer coffee over tea', category: 'preference', importance: 5, tags: ['user', 'preferences']},
-  {content: 'I wake up early in the morning', category: 'preference', importance: 7, tags: ['user', 'preferences', 'habits']},
-  {content: 'Python is my second favorite language', category: 'preference', importance: 7, tags: ['user', 'preferences', 'programming']},
-  {content: 'I live in San Francisco', category: 'fact', importance: 8, tags: ['user', 'location']},
-  {content: 'I like listening to jazz music', category: 'preference', importance: 6, tags: ['user', 'preferences', 'music']},
+  {content: 'I love programming in TypeScript', category: 'preference', importance: 8},
+  {content: 'I enjoy coding with TS', category: 'preference', importance: 8},
+  {content: 'My favorite color is blue', category: 'preference', importance: 6},
+  {content: 'I work on React Native applications', category: 'fact', importance: 9},
+  {content: 'I build mobile apps using React Native', category: 'fact', importance: 9},
+  {content: 'I prefer coffee over tea', category: 'preference', importance: 5},
+  {content: 'I wake up early in the morning', category: 'preference', importance: 7},
+  {content: 'Python is my second favorite language', category: 'preference', importance: 7},
+  {content: 'I live in San Francisco', category: 'fact', importance: 8},
+  {content: 'I like listening to jazz music', category: 'preference', importance: 6},
 ];
 
 export const VectorSearchTestScreen: React.FC = () => {
@@ -84,8 +84,7 @@ export const VectorSearchTestScreen: React.FC = () => {
         await EmbeddingService.saveMemoryWithEmbedding(
           memory.content,
           memory.category as any,
-          memory.importance,
-          {tags: memory.tags}
+          memory.importance
         );
       }
 

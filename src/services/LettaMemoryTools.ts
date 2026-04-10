@@ -187,13 +187,6 @@ export class LettaMemoryTools {
             'Content to write to the memory. All unicode (including emojis) are supported.',
           required: true,
         },
-        {
-          name: 'tags',
-          type: 'array',
-          description:
-            'Optional list of tags to associate with this memory for better organization and filtering.',
-          required: false,
-        },
       ],
       execute: async (args: Record<string, any>) => {
         try {
@@ -257,13 +250,6 @@ export class LettaMemoryTools {
           required: false,
         },
         {
-          name: 'tags',
-          type: 'array',
-          description:
-            'Optional list of tags to filter search results. Only passages with these tags will be returned.',
-          required: false,
-        },
-        {
           name: 'top_k',
           type: 'number',
           description:
@@ -273,7 +259,7 @@ export class LettaMemoryTools {
       ],
       execute: async (args: Record<string, any>) => {
         try {
-          const {query, search_type = 'vector', tags = [], top_k = 5} = args;
+          const {query, search_type = 'vector', top_k = 5} = args;
 
           Logger.info(`[MemoryTool] archival_memory_search query: "${query}", type: ${search_type}`);
 
@@ -297,24 +283,8 @@ export class LettaMemoryTools {
             Logger.info(`[MemoryTool] Found ${memories.length} results via keyword search`);
           }
 
-          // Filter by tags if provided
-          if (tags.length > 0) {
-            Logger.debug(`[MemoryTool] Filtering ${memories.length} results by tags:`, tags);
-            memories = memories.filter(m => {
-              const memoryMetadata = JSON.parse(m.metadata || '{}');
-              const memoryTags = memoryMetadata.tags || [];
-              return tags.some((tag: string) =>
-                memoryTags.includes(tag)
-              );
-            });
-            Logger.debug(`[MemoryTool] After tag filter: ${memories.length} results remain`);
-          }
-
           if (memories.length === 0) {
-            Logger.warn(`[MemoryTool] ⚠️ No results found after filtering for query: "${query}"`);
-            if (tags.length > 0) {
-              Logger.warn(`[MemoryTool] Tag filter was active with tags:`, tags);
-            }
+            Logger.warn(`[MemoryTool] ⚠️ No results found for query: "${query}"`);
             return {
               success: true,
               message: `No results found for query: "${query}"`,
