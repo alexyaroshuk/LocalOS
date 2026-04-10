@@ -130,6 +130,19 @@ export const VectorSearchTestScreen: React.FC = () => {
 
       Logger.info(`[VectorTest] Search completed in ${endTime - startTime}ms`);
       Logger.info(`[VectorTest] Found ${results.length} results`);
+      Logger.info(`[VectorTest] Search type: ${searchType}`);
+      Logger.info(`[VectorTest] Query: "${query}"`);
+
+      // Log top 5 results with details
+      if (results.length > 0) {
+        Logger.info(`[VectorTest] ╔════ TOP 5 RESULTS ════╗`);
+        results.slice(0, 5).forEach((result, index) => {
+          const similarity = result.similarity ? `(${(result.similarity * 100).toFixed(1)}% match)` : '';
+          Logger.info(`[VectorTest] #${index + 1} ${similarity} | ${result.content.substring(0, 60)}...`);
+          Logger.info(`[VectorTest]    Category: ${result.category}, Importance: ${result.importance}`);
+        });
+        Logger.info(`[VectorTest] ╚════════════════════════╝`);
+      }
     } catch (error) {
       Logger.error('Search failed:', error);
       Alert.alert('Error', `Search failed: ${error}`);

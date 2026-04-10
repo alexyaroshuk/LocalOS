@@ -561,6 +561,12 @@ export class DatabaseService {
     limit: number = 5,
     minSimilarity: number = 0.0
   ): Promise<Array<ArchiveMemory & {similarity: number}>> {
+    // CRITICAL: Always make a fresh copy of the query vector
+    // The embedding model may return a shared buffer that gets reused
+    const queryVector = Array.isArray(queryEmbedding)
+      ? [...queryEmbedding]  // Copy regular arrays
+      : Array.from(queryEmbedding);  // Copy Float32Array
+
     // Debug: Check total memories and those with embeddings
     const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
     const totalCount = totalResult.rows?.[0]?.count || 0;
@@ -569,6 +575,7 @@ export class DatabaseService {
     const withEmbedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
     const withEmbedCount = withEmbedResult.rows?.[0]?.count || 0;
     console.log(`[Database] Memories with non-empty embeddings: ${withEmbedCount}`);
+    console.log(`[Database] Query vector dimensions: ${queryVector.length}D`);
 
     // Get all memories with embeddings
     const result = this.db.executeSync('SELECT id, content, category, importance, created_at, updated_at, metadata, embedding FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
@@ -581,9 +588,18 @@ export class DatabaseService {
       return [];
     }
 
-    // Convert query to array if needed
-    const queryVector = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
-    console.log(`[Database] Query vector dimensions: ${queryVector.length}D`);
+    // Check if all embeddings have same dimensions (important for consistency!)
+    let dimensionMismatch = false;
+    for (let i = 0; i < Math.min(3, memories.length); i++) {
+      const embedding = this.base64ToVector(memories[i].embedding);
+      if (embedding.length !== queryVector.length) {
+        console.error(`[Database] ⚠️ DIMENSION MISMATCH! Memory ${memories[i].id} has ${embedding.length}D but query is ${queryVector.length}D`);
+        dimensionMismatch = true;
+      }
+    }
+    if (dimensionMismatch) {
+      Logger.error('[Database] ❌ EMBEDDING CORRUPTION DETECTED! Database has embeddings from different models. Clear database and reload test data with current embedding model.');
+    }
 
     // Calculate similarity for each memory
     const memoriesWithSimilarity = memories

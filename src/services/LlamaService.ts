@@ -445,7 +445,13 @@ export class LlamaService {
       Logger.debug(`[EmbedModel] Generating embedding for: ${text.substring(0, 50)}...`);
       const result = await this.embeddingContext.embedding(text);
       Logger.debug(`[EmbedModel] Generated: ${result.embedding.length} dimensions`);
-      return result.embedding;
+      // CRITICAL: Copy the embedding to avoid buffer reuse issues!
+      // The embedding context may return a reusable Float32Array buffer
+      // that gets overwritten on the next call. We need our own copy.
+      const embeddingCopy = Array.isArray(result.embedding)
+        ? [...result.embedding]
+        : Array.from(result.embedding);
+      return embeddingCopy;
     } catch (error) {
       Logger.error('[EmbedModel] Generation error:', error);
       throw error;
