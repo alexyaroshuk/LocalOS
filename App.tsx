@@ -79,17 +79,28 @@ function AppContent() {
       // Load the last used model (if any)
       const {StorageService} = require('./src/services/StorageService');
       const {LlamaService} = require('./src/services/LlamaService');
+      const RNFS = require('react-native-fs').default;
       const lastModel = await StorageService.loadCurrentModel();
 
       if (lastModel && lastModel.downloaded && lastModel.localPath) {
         console.log('Loading last used model:', lastModel.name);
-        try {
-          await LlamaService.loadModel(lastModel.localPath, lastModel.name);
-          setCurrentModel(lastModel);
-          console.log('Last used model loaded successfully');
-        } catch (error) {
-          console.error('Failed to load last used model:', error);
-          // Don't block app initialization if model load fails
+        // Verify the model file still exists
+        const fileExists = await RNFS.exists(lastModel.localPath);
+        if (!fileExists) {
+          console.warn('Last used model file no longer exists at:', lastModel.localPath);
+          // Clear the stale model reference
+          await StorageService.saveCurrentModel(null);
+        } else {
+          try {
+            await LlamaService.loadModel(lastModel.localPath, lastModel.name);
+            setCurrentModel(lastModel);
+            console.log('Last used model loaded successfully');
+          } catch (error) {
+            console.error('Failed to load last used model:', error);
+            // Clear the model if it fails to load
+            await StorageService.saveCurrentModel(null);
+            // Don't block app initialization if model load fails
+          }
         }
       }
 

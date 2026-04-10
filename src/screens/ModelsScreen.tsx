@@ -89,16 +89,23 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         saved => !RECOMMENDED_MODELS.some(rec => rec.id === saved.id),
       );
 
-      setModels([...updatedModels, ...importedModels]);
-
-      // Auto-load last used model if available
-      const lastModel = await StorageService.loadCurrentModel();
-      if (lastModel && lastModel.downloaded) {
-        const modelInfo = updatedModels.find(m => m.id === lastModel.id);
-        if (modelInfo) {
-          await handleLoadModel(modelInfo);
+      // Deduplicate by path to avoid showing the same model twice
+      const allModels = [...updatedModels, ...importedModels];
+      const seenPaths = new Set<string | undefined>();
+      const deduplicatedModels = allModels.filter(model => {
+        if (model.localPath && seenPaths.has(model.localPath)) {
+          return false; // Skip duplicate path
         }
-      }
+        if (model.localPath) {
+          seenPaths.add(model.localPath);
+        }
+        return true;
+      });
+
+      setModels(deduplicatedModels);
+
+      // Note: Last used model is loaded by App.tsx on startup, not here
+      // This prevents duplicate load attempts and race conditions
     } catch (error) {
       console.error('Failed to initialize models:', error);
       Alert.alert('Error', 'Failed to initialize model storage');
@@ -468,11 +475,12 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                   localPath: destPath,
                 };
 
-                // Add to models list
-                setModels(prev => [...prev, importedModel]);
+                // Add to models list and save with updated list
+                const updatedModelsList = [...models, importedModel];
+                setModels(updatedModelsList);
 
-                // Save to storage
-                await StorageService.saveDownloadedModels([...models, importedModel]);
+                // Save to storage (use updated list, not stale state)
+                await StorageService.saveDownloadedModels(updatedModelsList);
 
                 // Update available space
                 const space = await ModelStorageService.getAvailableSpace();

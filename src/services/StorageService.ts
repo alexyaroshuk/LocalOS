@@ -62,13 +62,32 @@ export class StorageService {
   }
 
   /**
-   * Save downloaded models info
+   * Save downloaded models info (deduplicated by path)
    */
   static async saveDownloadedModels(models: ModelInfo[]): Promise<void> {
     try {
+      // Deduplicate by localPath and id before saving
+      const seenPaths = new Set<string | undefined>();
+      const seenIds = new Set<string>();
+      const deduplicated = models.filter(model => {
+        if (seenIds.has(model.id)) {
+          console.warn('Removing duplicate model with id:', model.id);
+          return false;
+        }
+        if (model.localPath && seenPaths.has(model.localPath)) {
+          console.warn('Removing duplicate model with path:', model.localPath);
+          return false;
+        }
+        seenIds.add(model.id);
+        if (model.localPath) {
+          seenPaths.add(model.localPath);
+        }
+        return true;
+      });
+
       await AsyncStorage.setItem(
         STORAGE_KEYS.DOWNLOADED_MODELS,
-        JSON.stringify(models),
+        JSON.stringify(deduplicated),
       );
     } catch (error) {
       console.error('Failed to save downloaded models:', error);
@@ -77,12 +96,27 @@ export class StorageService {
   }
 
   /**
-   * Load downloaded models info
+   * Load downloaded models info (deduplicated by path)
    */
   static async loadDownloadedModels(): Promise<ModelInfo[]> {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.DOWNLOADED_MODELS);
-      return data ? JSON.parse(data) : [];
+      if (!data) return [];
+
+      const models: ModelInfo[] = JSON.parse(data);
+
+      // Deduplicate by localPath to prevent duplicates
+      const seenPaths = new Set<string | undefined>();
+      return models.filter(model => {
+        if (model.localPath && seenPaths.has(model.localPath)) {
+          console.warn('Removing duplicate model with path:', model.localPath);
+          return false;
+        }
+        if (model.localPath) {
+          seenPaths.add(model.localPath);
+        }
+        return true;
+      });
     } catch (error) {
       console.error('Failed to load downloaded models:', error);
       return [];
