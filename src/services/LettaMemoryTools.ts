@@ -299,6 +299,7 @@ export class LettaMemoryTools {
 
           // Filter by tags if provided
           if (tags.length > 0) {
+            Logger.debug(`[MemoryTool] Filtering ${memories.length} results by tags:`, tags);
             memories = memories.filter(m => {
               const memoryMetadata = JSON.parse(m.metadata || '{}');
               const memoryTags = memoryMetadata.tags || [];
@@ -306,9 +307,14 @@ export class LettaMemoryTools {
                 memoryTags.includes(tag)
               );
             });
+            Logger.debug(`[MemoryTool] After tag filter: ${memories.length} results remain`);
           }
 
           if (memories.length === 0) {
+            Logger.warn(`[MemoryTool] ⚠️ No results found after filtering for query: "${query}"`);
+            if (tags.length > 0) {
+              Logger.warn(`[MemoryTool] Tag filter was active with tags:`, tags);
+            }
             return {
               success: true,
               message: `No results found for query: "${query}"`,

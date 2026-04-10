@@ -386,10 +386,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     checkEmbeddingModel();
 
     // Check periodically (in case it's changed from ModelsScreen)
-    const interval = setInterval(checkEmbeddingModel, 500);
+    // Use longer interval to avoid excessive re-renders
+    const interval = setInterval(checkEmbeddingModel, 2000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Also check embedding model status whenever messages change (e.g., after tool execution)
+  useEffect(() => {
+    const isLoaded = LlamaService.isEmbeddingModelLoaded();
+    const modelInfo = LlamaService.getEmbeddingModelInfo();
+    setEmbeddingModelInfo({
+      loaded: isLoaded,
+      name: modelInfo?.name || null,
+    });
+  }, [messages]);
 
   const initializeAI = async () => {
     try {
