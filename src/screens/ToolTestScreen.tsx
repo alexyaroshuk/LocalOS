@@ -104,6 +104,19 @@ export const ToolTestScreen: React.FC = () => {
     Logger.info('🤖 [EmbedDebug] Chat model name:', chatInfo?.name || 'none');
   };
 
+  const handleUnloadEmbeddingModel = async () => {
+    try {
+      Logger.info('🔢 [EmbedDebug] Unloading embedding model...');
+      await LlamaService.releaseEmbeddingModel();
+      Logger.info('🔢 [EmbedDebug] ✅ Embedding model unloaded successfully');
+      Alert.alert('Success', 'Embedding model unloaded. Semantic search is now disabled.');
+      checkEmbeddingModelStatus();
+    } catch (error) {
+      Logger.error('🔢 [EmbedDebug] ❌ Failed to unload:', error);
+      Alert.alert('Error', `Failed to unload embedding model: ${error}`);
+    }
+  };
+
   const testEmbeddingGeneration = async () => {
     try {
       const testText = "Test semantic search with embeddings";
@@ -874,6 +887,15 @@ export const ToolTestScreen: React.FC = () => {
                 {embeddingModelStatus.loaded ? '🧪 Test Embedding' : '⚠️ No Model'}
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.debugButton, styles.unloadButton]}
+              onPress={handleUnloadEmbeddingModel}
+              disabled={!embeddingModelStatus.loaded}>
+              <Text style={styles.debugButtonText}>
+                {embeddingModelStatus.loaded ? '🔌 Unload' : '✓ Unloaded'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -1462,6 +1484,9 @@ const styles = StyleSheet.create({
   searchTestButton: {
     backgroundColor: '#9C27B0',
     marginTop: 8,
+  },
+  unloadButton: {
+    backgroundColor: '#FF3B30',
   },
   debugHint: {
     color: '#999',
