@@ -1124,6 +1124,25 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return tagMatch[1];
     }
 
+    // FIFTH: Try JSON format with "type": "function" (OpenAI function calling format)
+    // Example: {"type": "function", "name": "fetch_web_page", "parameters": {...}}
+    const typeFunctionPattern = /\{[\s\S]*?"type"\s*:\s*"function"[\s\S]*?\}/;
+    const typeFunctionMatch = typeFunctionPattern.exec(text);
+    if (typeFunctionMatch) {
+      try {
+        const parsed = JSON.parse(typeFunctionMatch[0]);
+        // Convert from OpenAI format to our format
+        const converted = {
+          name: parsed.name,
+          arguments: parsed.parameters || {},
+        };
+        Logger.debug('✅ Found OpenAI JSON function format:', parsed.name);
+        return JSON.stringify(converted);
+      } catch (e) {
+        Logger.debug('Failed to parse OpenAI format, falling through');
+      }
+    }
+
     // Fall back to raw JSON (old format)
     const jsonPattern = /\{[\s\S]*?"(tool|name)"[\s\S]*?\}/;
     const jsonMatch = jsonPattern.exec(text);

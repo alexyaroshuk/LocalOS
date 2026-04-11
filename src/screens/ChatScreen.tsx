@@ -603,10 +603,43 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 Logger.error(`   Error: ${step.error}`);
               }
 
+              // Create ActionMessage for orchestration step (not chat message)
+              const now = Date.now();
               if (step.status === 'running') {
+                const stepActionId = generateId();
+                const stepAction: ActionMessage = {
+                  id: stepActionId,
+                  role: 'action',
+                  actionType: 'thinking',
+                  content: `🔄 Orchestration: ${step.name}...`,
+                  timestamp: now,
+                  startTime: step.startTime || now,
+                  isComplete: false,
+                };
+                setMessages(prev => [...prev, stepAction]);
                 setStreamingText(`⏳ ${step.name}...`);
               } else if (step.status === 'completed') {
-                setStreamingText(`✓ ${step.name} (${step.duration}ms)`);
+                // Update last action message to show completion
+                const duration = step.duration || 0;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  // Find the last thinking action and mark it complete
+                  for (let i = updated.length - 1; i >= 0; i--) {
+                    if (updated[i].role === 'action' && (updated[i] as ActionMessage).actionType === 'thinking') {
+                      const actionMsg = updated[i] as ActionMessage;
+                      updated[i] = {
+                        ...actionMsg,
+                        content: `✓ Orchestration: ${step.name} (${duration}ms)`,
+                        endTime: now,
+                        duration,
+                        isComplete: true,
+                      };
+                      break;
+                    }
+                  }
+                  return updated;
+                });
+                setStreamingText(`✓ ${step.name} (${duration}ms)`);
               }
             },
           );
