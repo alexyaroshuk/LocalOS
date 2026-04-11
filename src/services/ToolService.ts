@@ -1,11 +1,12 @@
 /**
  * Service for managing and executing tools (function calling)
  */
-import {Tool, ToolCall, ToolResult} from '../types';
+import {Tool, ToolCall, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import MemoryService from './MemoryService';
 import {LettaMemoryTools} from './LettaMemoryTools';
 import {VaultService} from './VaultService';
+import {AIService} from './AIService';
 
 export class ToolService {
   private static tools: Map<string, Tool> = new Map();
@@ -417,9 +418,10 @@ export class ToolService {
       execute: async (args: Record<string, any>) => {
         try {
           const urlStr = args.url as string;
-          const extractPrompt = (args.extract_prompt as string) || 'Provide a concise summary of the main content';
+          const extractPrompt = (args.extract_prompt as string) || 'Provide a concise summary of the main content in 2-3 sentences.';
 
           console.log(`[FETCH PAGE] URL: ${urlStr}`);
+          console.log(`[FETCH PAGE] Extraction prompt: ${extractPrompt}`);
 
           // Validate URL
           let url: URL;
@@ -467,31 +469,77 @@ export class ToolService {
 
           let html = await response.text();
 
-          // Remove scripts and styles
+          // Extract title from meta tags or title tag
+          let pageTitle = '';
+          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          if (titleMatch) {
+            pageTitle = titleMatch[1].trim();
+          } else {
+            const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+            if (h1Match) {
+              pageTitle = h1Match[1].trim();
+            }
+          }
+
+          // Remove scripts, styles, nav, footer, header, ads
           html = html
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+            .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+            .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+            .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+            .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '');
 
           // Convert HTML to readable text
-          html = html
+          const plainText = html
             .replace(/<[^>]+>/g, ' ')
             .replace(/&nbsp;/g, ' ')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
             .replace(/&amp;/g, '&')
             .replace(/\s+/g, ' ')
             .trim();
 
-          // Limit to first 3000 characters to avoid token overflow
-          const content = html.substring(0, 3000);
+          // Limit content to 2000 chars for LLM processing (balance: enough context, manageable tokens)
+          const contentForExtraction = plainText.substring(0, 2000);
+
+          console.log(`[FETCH PAGE] Content fetched: ${contentForExtraction.length} characters`);
+
+          // Use local LLM to extract/summarize
+          console.log(`[FETCH PAGE] Calling local LLM for intelligent extraction...`);
+
+          const extractionMessages: Message[] = [
+            {
+              id: generateId(),
+              role: 'user',
+              content: `Please analyze this webpage content and ${extractPrompt}\n\nWebpage URL: ${urlStr}\nPage Title: ${pageTitle}\n\nContent:\n${contentForExtraction}`,
+              timestamp: Date.now(),
+            },
+          ];
+
+          const extractionResult = await AIService.chatCompletion(
+            extractionMessages,
+            {
+              temperature: 0.7,
+              maxTokens: 300,
+            }
+          );
+
+          const summary = extractionResult.response || extractionResult.message || '';
+
+          console.log(`[FETCH PAGE] ✅ Extraction complete`);
 
           return {
             success: true,
             url: urlStr,
-            content,
-            content_length: content.length,
-            extraction_prompt: extractPrompt,
-            note: content.length === 3000 ? 'Content truncated to 3000 characters' : undefined,
+            title: pageTitle || 'Untitled',
+            summary,
+            full_content: plainText,
+            content_length: plainText.length,
+            extraction_method: 'local_llm',
+            note: contentForExtraction.length === 2000 ? 'Content truncated to 2000 characters for processing' : undefined,
           };
         } catch (error) {
           console.error('Fetch page error:', error);

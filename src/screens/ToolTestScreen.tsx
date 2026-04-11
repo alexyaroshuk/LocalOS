@@ -290,6 +290,10 @@ export const ToolTestScreen: React.FC = () => {
       search_web: {
         query: 'Latest React Native news',
       },
+      fetch_web_page: {
+        url: 'https://www.python.org',
+        extract_prompt: 'What is this website about? Summarize in 2-3 sentences.',
+      },
     };
 
     return sampleData[toolName]?.[paramName] || '';
@@ -368,6 +372,9 @@ export const ToolTestScreen: React.FC = () => {
           break;
         case 'search_web':
           testPrompt = 'Search for latest React Native news';
+          break;
+        case 'fetch_web_page':
+          testPrompt = 'Fetch the content from https://www.python.org and tell me what it is about';
           break;
         // Memory tools - specific prompts
         case 'archival_memory_insert':
@@ -506,6 +513,37 @@ export const ToolTestScreen: React.FC = () => {
         {tool.parameters.length > 0 && (
           <View style={styles.parametersSection}>
             <Text style={styles.parametersTitle}>Parameters (auto-filled with sample data):</Text>
+
+            {/* Preset URLs for fetch_web_page tool */}
+            {tool.name === 'fetch_web_page' && (
+              <View style={styles.presetsSection}>
+                <Text style={styles.presetsTitle}>Quick Test URLs:</Text>
+                <View style={styles.presetsGrid}>
+                  {[
+                    {name: 'NYT', url: 'https://www.nytimes.com'},
+                    {name: 'BBC', url: 'https://www.bbc.com'},
+                    {name: 'CNN', url: 'https://www.cnn.com'},
+                    {name: 'Tech Crunch', url: 'https://techcrunch.com'},
+                    {name: 'HackerNews', url: 'https://news.ycombinator.com'},
+                    {name: 'Python', url: 'https://www.python.org'},
+                  ].map(preset => (
+                    <TouchableOpacity
+                      key={preset.url}
+                      style={styles.presetButton}
+                      onPress={() => {
+                        const currentParams = toolParams.get(tool.name) || {};
+                        setToolParams(new Map(toolParams).set(tool.name, {
+                          ...currentParams,
+                          url: preset.url,
+                        }));
+                      }}>
+                      <Text style={styles.presetButtonText}>{preset.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {tool.parameters.map(param => {
               const sampleValue = getDefaultParamValue(tool.name, param.name);
               return (
@@ -1350,6 +1388,36 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  presetsSection: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  presetsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  presetsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  presetButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#FF9500',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF9500',
+  },
+  presetButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   buttonRow: {
     flexDirection: 'row',
