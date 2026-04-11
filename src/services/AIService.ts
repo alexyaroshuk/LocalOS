@@ -230,6 +230,34 @@ export class AIService {
   }
 
   /**
+   * Execute a multi-step orchestrated workflow
+   * Handles complex tasks like web search (search → fetch → synthesize)
+   */
+  static async executeOrchestration(
+    workflowType: 'web_search' | 'memory_update' | 'deep_analysis',
+    userQuery: string,
+    config?: Partial<LlamaConfig>,
+    onProgress?: (step: any) => void,
+  ): Promise<any> {
+    if (!this.initializationAttempted) {
+      await this.initialize();
+    }
+
+    if (!this.isReady()) {
+      throw new Error('AI backend not ready. Load a model first.');
+    }
+
+    // Lazy load OrchestrationService to avoid circular imports
+    const {OrchestrationService} = require('./OrchestrationService');
+    return await OrchestrationService.executeWorkflow(
+      workflowType,
+      userQuery,
+      config,
+      onProgress,
+    );
+  }
+
+  /**
    * Stop ongoing generation
    */
   static async stopGeneration(): Promise<void> {

@@ -534,6 +534,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     await StorageService.updateSession(updatedSession);
   };
 
+  /**
+   * Detect if query needs web search orchestration
+   */
+  const needsWebSearchOrchestration = (query: string): boolean => {
+    const lowerQuery = query.toLowerCase();
+    const webSearchKeywords = [
+      'search', 'find', 'look up', 'what\'s new', 'latest', 'current',
+      'news', 'today', 'recent', 'trending', 'breaking', 'update',
+      'how do i find', 'can you find', 'please search', 'search for',
+      'what is', 'who is', 'where is', 'when did', 'why did',
+      'tell me about', 'show me', 'get me', 'fetch', 'web',
+    ];
+    return webSearchKeywords.some(keyword => lowerQuery.includes(keyword));
+  };
+
   const handleSend = async () => {
     if (!inputText.trim() || isGenerating) return;
 
@@ -570,6 +585,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Logger.info(`User: ${inputText.trim()}`);
     Logger.info(`Tools enabled: ${toolsEnabled}`);
 
+    // Check if this query needs web search orchestration
+    const needsOrchestration = needsWebSearchOrchestration(inputText.trim());
+    if (needsOrchestration) {
+      Logger.info('🌐 Web search query detected - using orchestration workflow');
+    }
+
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsGenerating(true);
@@ -578,6 +599,76 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     currentActionIdRef.current = null;
 
     try {
+      // Handle orchestrated workflow for web search queries
+      if (needsOrchestration && toolsEnabled && AIService.areToolsSupported()) {
+        Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Logger.info('🌐 ORCHESTRATION INITIATED FROM CHATSCREEN');
+        Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Logger.info(`Query detected: "${inputText.trim()}"`);
+        setToolUsageState({stage: 'thinking'});
+
+        try {
+          const result = await AIService.executeOrchestration(
+            'web_search',
+            inputText.trim(),
+            {},
+            (step) => {
+              Logger.info(`📍 Orchestration Step Update: ${step.name}`);
+              Logger.info(`   Status: ${step.status}`);
+              if (step.duration) {
+                Logger.info(`   Duration: ${step.duration}ms`);
+              }
+              if (step.error) {
+                Logger.error(`   Error: ${step.error}`);
+              }
+
+              if (step.status === 'running') {
+                setStreamingText(`⏳ ${step.name}...`);
+              } else if (step.status === 'completed') {
+                setStreamingText(`✓ ${step.name} (${step.duration}ms)`);
+              }
+            },
+          );
+
+          Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          Logger.info('✅ ORCHESTRATION COMPLETED SUCCESSFULLY');
+          Logger.info(`Duration: ${result.duration}ms`);
+          Logger.info(`Response length: ${result.response.length} chars`);
+          Logger.info(`Citations: ${result.citations?.length || 0}`);
+          Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+          // Add citations if available
+          if (result.citations && result.citations.length > 0) {
+            const citationText = '\n\n**Sources:**\n' +
+              result.citations
+                .map((c: any) => `- [${c.title}](${c.url})`)
+                .join('\n');
+
+            const finalResponse = result.response + citationText;
+
+            const assistantMessage: Message = {
+              id: generateId(),
+              role: 'assistant',
+              content: finalResponse,
+              timestamp: Date.now(),
+            };
+
+            Logger.info(`Added assistant message with ${result.citations.length} citations`);
+            setMessages(prev => [...prev, assistantMessage]);
+            setStreamingText('');
+            setToolUsageState({stage: null});
+          }
+          return;
+        } catch (orchError) {
+          Logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          Logger.error('❌ ORCHESTRATION FAILED - FALLING BACK TO REGULAR CHAT');
+          Logger.error('Error:', orchError instanceof Error ? orchError.message : String(orchError));
+          Logger.debug('Full error:', orchError);
+          Logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          setToolUsageState({stage: null});
+          // Fall through to regular chat handling below
+        }
+      }
       // Get recent messages for context (limit to avoid exceeding context window)
       // Filter out action messages - only send user/assistant/system messages to AI
       let contextMessages = [...messages, userMessage]
