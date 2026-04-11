@@ -22,6 +22,7 @@ export class ToolService {
     // Register all tools
     this.registerTool(this.getCurrentDateTimeTool());
     this.registerTool(this.getSearchWebTool());
+    this.registerTool(this.getFetchWebPageTool());
 
     // Register Letta-compatible memory tools
     LettaMemoryTools.getAllTools().forEach(tool => this.registerTool(tool));
@@ -244,7 +245,7 @@ export class ToolService {
     return {
       name: 'search_web',
       description:
-        'Call this to search for: current events, news, headlines, tutorials, documentation, "what\'s happening", "find X", "search X", or any topic the user asks about.',
+        'Search the web and get URLs for top 5 results. Returns structured data with title and URL for each result. Use this to find current events, news, headlines, tutorials, documentation, "what\'s happening", "find X", "search X", or any topic the user asks about. After getting results, fetch content from URLs using webFetch tool.',
       parameters: [
         {
           name: 'query',
@@ -300,30 +301,54 @@ export class ToolService {
           const html = await response.text();
 
           // Parse search results from HTML
-          const results: string[] = [];
+          const results: Array<{title: string; url: string; snippet?: string}> = [];
 
-          // Extract titles - look for result links
-          const titleRegex = /<a[^>]*class="result__a"[^>]*>([^<]+)<\/a>/g;
-          const snippetRegex = /<a[^>]*class="result__snippet"[^>]*>([^<]+)<\/a>/g;
+          // Extract results with URLs and titles
+          // DuckDuckGo result structure: <a href="URL" class="result__a">Title</a>
+          const resultRegex = /<a[^>]*href="([^"]+)"[^>]*class="result__a"[^>]*>([^<]+)<\/a>/g;
 
-          let titleMatch;
+          let match;
           let count = 0;
-          while ((titleMatch = titleRegex.exec(html)) !== null && count < 5) {
-            const title = titleMatch[1].trim();
-            if (title) {
-              results.push(title);
+          while ((match = resultRegex.exec(html)) !== null && count < 5) {
+            const rawUrl = match[1].trim();
+            const title = match[2].trim();
+
+            if (title && rawUrl) {
+              // Decode URL entities
+              const url = rawUrl
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'");
+
+              results.push({
+                title,
+                url,
+              });
               count++;
             }
           }
 
-          // If no titles found, try to extract snippets
+          // If no results found, try alternative parsing
           if (results.length === 0) {
-            let snippetMatch;
+            // Try to find any <a> tags with href that might be results
+            const altRegex = /<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/g;
             count = 0;
-            while ((snippetMatch = snippetRegex.exec(html)) !== null && count < 5) {
-              const snippet = snippetMatch[1].trim();
-              if (snippet) {
-                results.push(snippet);
+            while ((match = altRegex.exec(html)) !== null && count < 5) {
+              const rawUrl = match[1].trim();
+              const title = match[2].trim();
+
+              // Filter out navigation and empty links
+              if (title && rawUrl && rawUrl.length > 5 && !rawUrl.startsWith('javascript:')) {
+                const url = rawUrl
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'");
+
+                results.push({title, url});
                 count++;
               }
             }
@@ -335,9 +360,14 @@ export class ToolService {
               success: true,
               query,
               results: [
-                `Search completed for "${query}". DuckDuckGo returned results but parsing format may have changed. The search functionality is working.`,
+                {
+                  title: `Search completed for "${query}"`,
+                  url: 'https://duckduckgo.com/?q=' + encodeURIComponent(query),
+                  snippet: 'DuckDuckGo returned results but parsing format may have changed. Try the link to see results directly.',
+                },
               ],
-              source: 'DuckDuckGo HTML',
+              source: 'DuckDuckGo',
+              count: 1,
             };
           }
 
@@ -354,6 +384,121 @@ export class ToolService {
             success: false,
             error: error instanceof Error ? error.message : 'Search failed',
             query: args.query as string,
+          };
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: fetch_web_page
+   * Fetch and summarize content from a specific URL
+   */
+  private static getFetchWebPageTool(): Tool {
+    return {
+      name: 'fetch_web_page',
+      description:
+        'Fetch the actual content from a webpage URL and get a summary. Use this after search_web to read the full content of search results. Pass a URL and optional prompt for what information to extract. Returns the page content or summary.',
+      parameters: [
+        {
+          name: 'url',
+          type: 'string',
+          description: 'The URL to fetch',
+          required: true,
+        },
+        {
+          name: 'extract_prompt',
+          type: 'string',
+          description:
+            'Optional: What information to extract from the page (e.g., "summarize the main points", "find the news headline")',
+          required: false,
+        },
+      ],
+      execute: async (args: Record<string, any>) => {
+        try {
+          const urlStr = args.url as string;
+          const extractPrompt = (args.extract_prompt as string) || 'Provide a concise summary of the main content';
+
+          console.log(`[FETCH PAGE] URL: ${urlStr}`);
+
+          // Validate URL
+          let url: URL;
+          try {
+            url = new URL(urlStr);
+          } catch {
+            return {
+              success: false,
+              error: `Invalid URL: ${urlStr}`,
+              url: urlStr,
+            };
+          }
+
+          // Fetch the page with timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+          const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            return {
+              success: false,
+              error: `Failed to fetch: HTTP ${response.status}`,
+              url: urlStr,
+            };
+          }
+
+          const contentType = response.headers.get('content-type') || '';
+          if (!contentType.includes('text/html')) {
+            return {
+              success: false,
+              error: 'URL does not return HTML content',
+              url: urlStr,
+            };
+          }
+
+          let html = await response.text();
+
+          // Remove scripts and styles
+          html = html
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+          // Convert HTML to readable text
+          html = html
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          // Limit to first 3000 characters to avoid token overflow
+          const content = html.substring(0, 3000);
+
+          return {
+            success: true,
+            url: urlStr,
+            content,
+            content_length: content.length,
+            extraction_prompt: extractPrompt,
+            note: content.length === 3000 ? 'Content truncated to 3000 characters' : undefined,
+          };
+        } catch (error) {
+          console.error('Fetch page error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch page',
+            url: args.url as string,
           };
         }
       },
