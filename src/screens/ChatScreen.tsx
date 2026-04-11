@@ -534,20 +534,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     await StorageService.updateSession(updatedSession);
   };
 
-  /**
-   * Detect if query needs web search orchestration
-   */
-  const needsWebSearchOrchestration = (query: string): boolean => {
-    const lowerQuery = query.toLowerCase();
-    const webSearchKeywords = [
-      'search', 'find', 'look up', 'what\'s new', 'latest', 'current',
-      'news', 'today', 'recent', 'trending', 'breaking', 'update',
-      'how do i find', 'can you find', 'please search', 'search for',
-      'what is', 'who is', 'where is', 'when did', 'why did',
-      'tell me about', 'show me', 'get me', 'fetch', 'web',
-    ];
-    return webSearchKeywords.some(keyword => lowerQuery.includes(keyword));
-  };
 
   const handleSend = async () => {
     if (!inputText.trim() || isGenerating) return;
@@ -585,12 +571,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Logger.info(`User: ${inputText.trim()}`);
     Logger.info(`Tools enabled: ${toolsEnabled}`);
 
-    // Check if this query needs web search orchestration
-    const needsOrchestration = needsWebSearchOrchestration(inputText.trim());
-    if (needsOrchestration) {
-      Logger.info('🌐 Web search query detected - using orchestration workflow');
-    }
-
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsGenerating(true);
@@ -599,8 +579,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     currentActionIdRef.current = null;
 
     try {
-      // Handle orchestrated workflow for web search queries
-      if (needsOrchestration && toolsEnabled && AIService.areToolsSupported()) {
+      // Use orchestration for all requests when tools are enabled
+      // Let the LLM decide in the parse_intent step whether web search is needed
+      if (toolsEnabled && AIService.areToolsSupported()) {
         Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         Logger.info('🌐 ORCHESTRATION INITIATED FROM CHATSCREEN');
         Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

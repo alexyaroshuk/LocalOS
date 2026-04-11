@@ -140,19 +140,33 @@ export class OrchestrationService {
       ...config,
     };
 
-    // Step 1: Parse Intent
+    // Step 1: Parse Intent - Let LLM decide if web search is needed
     const parseStep = await this.executeStep(
       state,
       'parse_intent',
       'Analyzing query intent...',
       async () => {
-        const parsePrompt = `Analyze this user query and determine if it needs real-time web information.
+        const parsePrompt = `You are an intelligent query router. Analyze the user's query and decide if it requires real-time web search.
+
 User query: "${userQuery}"
 
-Respond with:
-1. Should we search the web? (yes/no)
-2. What is the optimal search query? (1-2 sentences max)
-3. What type of information are they seeking? (news/tutorial/product/research/other)`;
+Consider:
+- Does this query ask for current/recent information? (news, trends, "latest", "today", "this week")
+- Does this query ask for something you might not know about? (specific products, new technologies, current events)
+- Does this query ask for finding something specific? (search for, find, look up, where can I find)
+- Or is this something you can answer from your knowledge? (explain concepts, general knowledge, how-to guides)
+
+Respond with ONLY "yes" or "no" on the first line.
+Then briefly explain your reasoning.
+
+Example:
+yes
+This asks for latest news which changes daily and requires real-time information.
+
+OR
+
+no
+This is asking me to explain a concept, which I can do without web search.`;
 
         const messages: Message[] = [
           {
@@ -165,12 +179,14 @@ Respond with:
 
         const response = await AIService.chatCompletion(
           messages,
-          {...defaultConfig, maxTokens: 200},
+          {...defaultConfig, maxTokens: 150},
         );
+
+        const shouldSearch = response.toLowerCase().startsWith('yes');
 
         return {
           analysis: response,
-          shouldSearch: response.toLowerCase().includes('yes'),
+          shouldSearch,
         };
       },
       onProgress,
