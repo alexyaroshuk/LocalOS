@@ -101,12 +101,14 @@ export class LlamaService {
       Logger.info('🚀 Initializing model with context size:', llamaConfig.contextSize);
 
       // Initialize llama context
+      // NOTE: use_mlock disabled for iOS - large models (6GB+) exceed app memory limits
+      // use_mmap handles streaming the model from storage
       this.context = await initLlama({
         model: modelPath,
         n_ctx: llamaConfig.contextSize,
         n_gpu_layers: llamaConfig.nGpuLayers,
-        use_mlock: true, // Keep model in RAM
-        use_mmap: true, // Use memory mapping
+        use_mlock: false, // Disabled: iOS memory constraints (1-2GB limit) vs model size
+        use_mmap: true,   // Memory mapping allows efficient streaming from disk
       });
 
       this.currentModelPath = modelPath;
@@ -181,8 +183,8 @@ export class LlamaService {
       this.embeddingContext = await initLlama({
         model: modelPath,
         embedding: true, // Enable embedding mode
-        use_mlock: true,
-        use_mmap: true,
+        use_mlock: false, // Disabled: iOS memory constraints
+        use_mmap: true,   // Memory mapping for efficient loading
         n_ctx: 512, // Small context for embeddings
         n_parallel: 4, // Enable parallel mode for isolated sequence slots
       });

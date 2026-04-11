@@ -2,7 +2,7 @@
  * Model-specific configurations for different LLMs
  */
 
-export type ModelType = 'llama-3.2-1b-function-calling' | 'llama-3.1-8b-instruct';
+export type ModelType = 'llama-3.2-1b-function-calling' | 'llama-3.1-8b-instruct' | 'llama-8x3b-moe';
 
 export interface ModelConfig {
   /** Model type identifier */
@@ -59,6 +59,17 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     contextSize: 8192, // 8K context - realistic for mobile (128K theoretical max, but memory intensive)
     description: 'Official Meta model with native tool calling via transformers chat templates. Better tool calling accuracy.',
   },
+  'llama-8x3b-moe': {
+    type: 'llama-8x3b-moe',
+    displayName: 'Llama 3.2 8x3B MOE (18.4B)',
+    toolFormat: 'langchain-pydantic',
+    needsToolExamples: true, // MOE models benefit from tool examples
+    toolDetectionTemp: 0.7,
+    toolDetectionMaxTokens: 250,
+    useLangchainPrompt: true,
+    contextSize: 2048, // Reduced context for large 18.4B model on mobile - mmap handles rest
+    description: 'Large 18.4B Mixture of Experts model. Requires mmap (no mlock on iOS due to memory constraints). Good reasoning and tool calling.',
+  },
 };
 
 /**
@@ -66,6 +77,12 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
  */
 export function detectModelType(modelName: string): ModelType {
   const lowerName = modelName.toLowerCase();
+
+  // Check for Llama 8x3B MOE (must check before 8B to avoid false matches)
+  if ((lowerName.includes('8x3b') || lowerName.includes('8x 3b') || lowerName.includes('8x3 b')) &&
+      (lowerName.includes('3.2') || lowerName.includes('llama'))) {
+    return 'llama-8x3b-moe';
+  }
 
   // Check for Llama 3.1 8B
   if (lowerName.includes('llama') && lowerName.includes('3.1') && lowerName.includes('8b')) {
