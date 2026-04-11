@@ -303,12 +303,32 @@ Return as a simple numbered list with URLs only, e.g:
 
         Logger.info(`📌 Parsed ${selectedUrls.length} URLs from LLM evaluation`);
 
-        const selectedResults = selectedUrls
-          .map(url => searchResults.find(r => r.url === url))
+        // Try to match URLs (exact match or partial domain match)
+        const selectedResults = urlMatches
+          .map(parsedUrl => {
+            // Try exact match first
+            let match = searchResults.find(r => r.url === parsedUrl);
+
+            // Try domain match if no exact match (handles redirect URLs)
+            if (!match) {
+              const parsedDomain = new URL(parsedUrl).hostname;
+              match = searchResults.find(r => {
+                try {
+                  return new URL(r.url).hostname === parsedDomain;
+                } catch {
+                  return false;
+                }
+              });
+            }
+
+            return match;
+          })
           .filter(Boolean) as SearchResult[];
 
         if (selectedResults.length === 0) {
-          Logger.warn('⚠️ No URLs matched - LLM evaluation may have failed, using first 3 results');
+          Logger.warn('⚠️ No URLs matched - URL parsing may have failed, using first 3 results');
+          Logger.debug('Parsed URLs:', urlMatches);
+          Logger.debug('Search result URLs:', searchResults.map(r => r.url));
           return {
             analysis: response,
             selectedUrls: searchResults.slice(0, 3),
@@ -420,7 +440,30 @@ Return as a simple numbered list with URLs only, e.g:
         Logger.info('🤝 Synthesizing final answer from fetched content...');
         Logger.info(`📚 Using ${fetchedPages.length} sources for synthesis`);
 
-        const synthesisPrompt = `User query: "${userQuery}"
+        let synthesisPrompt: string;
+        let maxTokens = 800;
+
+        // Handle case where no pages were successfully fetched
+        if (fetchedPages.length === 0) {
+          Logger.warn('⚠️ No pages fetched successfully - providing fallback response');
+
+          // Use search result snippets as fallback
+          const fallbackContent = selectedResults
+            .map((r: SearchResult, i: number) => `[Source ${i + 1}: ${r.title}]\nURL: ${r.url}`)
+            .join('\n\n');
+
+          synthesisPrompt = `User query: "${userQuery}"
+
+I was unable to fetch detailed content from web pages due to network issues. However, here are the search results I found:
+
+${fallbackContent}
+
+Please provide a helpful response based on these search results. Explain what these sources appear to offer and suggest that the user visit them directly for the latest information. Be honest that detailed content couldn't be retrieved due to network issues.`;
+
+          maxTokens = 400;
+          Logger.info('Using fallback synthesis with search results only');
+        } else {
+          synthesisPrompt = `User query: "${userQuery}"
 
 Here is information from ${fetchedPages.length} relevant web pages:
 
@@ -437,6 +480,7 @@ ${page.summary}
 Please provide a comprehensive answer to the user's query, synthesizing information from these sources.
 Include citations like [Source N] when referencing information.
 Be accurate, concise, and helpful.`;
+        }
 
         Logger.debug(`Synthesis prompt length: ${synthesisPrompt.length} chars`);
 
@@ -450,26 +494,46 @@ Be accurate, concise, and helpful.`;
         ];
 
         Logger.info('🧠 Calling LLM for final synthesis...');
-        const response = await AIService.chatCompletion(
-          messages,
-          {...defaultConfig, maxTokens: 800},
-        );
+        try {
+          const response = await AIService.chatCompletion(
+            messages,
+            {...defaultConfig, maxTokens},
+          );
 
-        Logger.info(`✅ Synthesis complete - ${response.length} chars generated`);
-        Logger.debug(`Response preview: ${response.substring(0, 150)}...`);
+          Logger.info(`✅ Synthesis complete - ${response.length} chars generated`);
+          Logger.debug(`Response preview: ${response.substring(0, 150)}...`);
 
-        const sources = fetchedPages.map(p => ({
-          title: p.title,
-          url: p.url,
-        }));
+          const sources = fetchedPages.length > 0
+            ? fetchedPages.map((p: FetchedPage) => ({title: p.title, url: p.url}))
+            : selectedResults.map((p: SearchResult) => ({title: p.title, url: p.url}));
 
-        Logger.info(`📖 Final sources for citation:`, sources.length);
-        Logger.debug('Sources:', sources);
+          Logger.info(`📖 Final sources for citation: ${sources.length}`);
+          Logger.debug('Sources:', sources);
 
-        return {
-          synthesis: response,
-          sources,
-        };
+          return {
+            synthesis: response,
+            sources,
+          };
+        } catch (synthError) {
+          Logger.error('Synthesis LLM call failed:', synthError instanceof Error ? synthError.message : String(synthError));
+
+          // Fallback: return a basic response if synthesis fails
+          const fallbackResponse = `I found several relevant sources for "${userQuery}":
+
+${selectedResults
+  .slice(0, 3)
+  .map((r: SearchResult, i: number) => `${i + 1}. **${r.title}** - ${r.url}`)
+  .join('\n')}
+
+Unfortunately, I was unable to synthesize a detailed response due to technical issues. Please visit the sources above for the most current information.`;
+
+          Logger.warn('⚠️ Returning fallback response due to synthesis failure');
+
+          return {
+            synthesis: fallbackResponse,
+            sources: selectedResults.map((p: SearchResult) => ({title: p.title, url: p.url})),
+          };
+        }
       },
       onProgress,
     );
