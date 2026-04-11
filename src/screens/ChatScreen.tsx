@@ -603,43 +603,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 Logger.error(`   Error: ${step.error}`);
               }
 
-              // Create ActionMessage for orchestration step (not chat message)
-              const now = Date.now();
+              // Update UI state to show progress (NO messages created during orchestration)
               if (step.status === 'running') {
-                const stepActionId = generateId();
-                const stepAction: ActionMessage = {
-                  id: stepActionId,
-                  role: 'action',
-                  actionType: 'thinking',
-                  content: `🔄 Orchestration: ${step.name}...`,
-                  timestamp: now,
-                  startTime: step.startTime || now,
-                  isComplete: false,
-                };
-                setMessages(prev => [...prev, stepAction]);
                 setStreamingText(`⏳ ${step.name}...`);
               } else if (step.status === 'completed') {
-                // Update last action message to show completion
-                const duration = step.duration || 0;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  // Find the last thinking action and mark it complete
-                  for (let i = updated.length - 1; i >= 0; i--) {
-                    if (updated[i].role === 'action' && (updated[i] as ActionMessage).actionType === 'thinking') {
-                      const actionMsg = updated[i] as ActionMessage;
-                      updated[i] = {
-                        ...actionMsg,
-                        content: `✓ Orchestration: ${step.name} (${duration}ms)`,
-                        endTime: now,
-                        duration,
-                        isComplete: true,
-                      };
-                      break;
-                    }
-                  }
-                  return updated;
-                });
-                setStreamingText(`✓ ${step.name} (${duration}ms)`);
+                setStreamingText(`✓ ${step.name} (${step.duration}ms)`);
               }
             },
           );
@@ -651,27 +619,27 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           Logger.info(`Citations: ${result.citations?.length || 0}`);
           Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-          // Add citations if available
+          // NOW create the final assistant message with citations (only after orchestration is done)
+          let finalResponse = result.response;
           if (result.citations && result.citations.length > 0) {
             const citationText = '\n\n**Sources:**\n' +
               result.citations
                 .map((c: any) => `- [${c.title}](${c.url})`)
                 .join('\n');
-
-            const finalResponse = result.response + citationText;
-
-            const assistantMessage: Message = {
-              id: generateId(),
-              role: 'assistant',
-              content: finalResponse,
-              timestamp: Date.now(),
-            };
-
-            Logger.info(`Added assistant message with ${result.citations.length} citations`);
-            setMessages(prev => [...prev, assistantMessage]);
-            setStreamingText('');
-            setToolUsageState({stage: null});
+            finalResponse = result.response + citationText;
+            Logger.info(`Added ${result.citations.length} citations to response`);
           }
+
+          const assistantMessage: Message = {
+            id: generateId(),
+            role: 'assistant',
+            content: finalResponse,
+            timestamp: Date.now(),
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+          setStreamingText('');
+          setToolUsageState({stage: null});
           return;
         } catch (orchError) {
           Logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
