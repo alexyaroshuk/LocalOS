@@ -1124,26 +1124,63 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return tagMatch[1];
     }
 
-    // FIFTH: Try JSON format with "type": "function" (OpenAI function calling format)
-    // Example: {"type": "function", "name": "fetch_web_page", "parameters": {...}}
-    const typeFunctionPattern = /\{[\s\S]*?"type"\s*:\s*"function"[\s\S]*?\}/;
-    const typeFunctionMatch = typeFunctionPattern.exec(text);
-    if (typeFunctionMatch) {
-      try {
-        const parsed = JSON.parse(typeFunctionMatch[0]);
-        // Convert from OpenAI format to our format
-        const converted = {
-          name: parsed.name,
-          arguments: parsed.parameters || {},
-        };
-        Logger.debug('✅ Found OpenAI JSON function format:', parsed.name);
-        return JSON.stringify(converted);
-      } catch (e) {
-        Logger.debug('Failed to parse OpenAI format, falling through');
+    // FIFTH: Try any valid JSON that has "name" or "tool" or "type": "function"
+    // Handles: {"name": "...", "arguments": {...}} or {"type": "function", "name": "...", "parameters": {...}}
+    // Look for JSON blocks more carefully
+    const jsonStartIndex = text.indexOf('{');
+    if (jsonStartIndex !== -1) {
+      let braceCount = 0;
+      let jsonEndIndex = -1;
+
+      for (let i = jsonStartIndex; i < text.length; i++) {
+        if (text[i] === '{') braceCount++;
+        else if (text[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonEndIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (jsonEndIndex !== -1) {
+        const potentialJson = text.substring(jsonStartIndex, jsonEndIndex + 1);
+        try {
+          const parsed = JSON.parse(potentialJson);
+
+          // Handle OpenAI format: {"type": "function", "name": "...", "parameters": {...}}
+          if (parsed.type === 'function' && parsed.name) {
+            Logger.debug('✅ Found OpenAI JSON function format:', parsed.name);
+            return JSON.stringify({
+              name: parsed.name,
+              arguments: parsed.parameters || {},
+            });
+          }
+
+          // Handle our format: {"name": "...", "arguments": {...}}
+          if (parsed.name) {
+            Logger.debug('✅ Found standard JSON format:', parsed.name);
+            return JSON.stringify({
+              name: parsed.name,
+              arguments: parsed.arguments || {},
+            });
+          }
+
+          // Handle old format: {"tool": "...", ...}
+          if (parsed.tool) {
+            Logger.debug('✅ Found legacy tool format:', parsed.tool);
+            return JSON.stringify({
+              name: parsed.tool,
+              arguments: parsed.arguments || {},
+            });
+          }
+        } catch (e) {
+          Logger.debug('Failed to parse JSON block:', (e as Error).message);
+        }
       }
     }
 
-    // Fall back to raw JSON (old format)
+    // Last resort: try raw JSON pattern
     const jsonPattern = /\{[\s\S]*?"(tool|name)"[\s\S]*?\}/;
     const jsonMatch = jsonPattern.exec(text);
     return jsonMatch ? jsonMatch[0] : null;
