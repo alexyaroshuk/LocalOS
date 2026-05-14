@@ -1418,6 +1418,110 @@ User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
+   * Parse a Gemma 4 tool call from raw text when llama.cpp's response
+   * parser didn't extract it into `tool_calls` (happens when driving
+   * completion via `prompt:` instead of `messages:`).
+   *
+   * Format: `<|tool_call>call:fn_name{key:<|"|>val<|"|>,...}<tool_call|>`
+   */
+  private static parseGemma4ToolCallFromText(
+    text: string,
+  ): Array<{type: 'function'; id?: string; function: {name: string; arguments: string}}> | null {
+    if (!text || !text.includes('<|tool_call>')) return null;
+    const re = /<\|tool_call>call:([\w_]+)(\{[\s\S]*?\})<tool_call\|>/g;
+    const calls: Array<{type: 'function'; function: {name: string; arguments: string}}> = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const name = m[1];
+      const body = m[2];
+      let argsObj: Record<string, any> = {};
+      try {
+        argsObj = this.gemma4DecodeObject(body);
+      } catch (decodeErr) {
+        Logger.warn(`Gemma 4 args decode failed for ${name}:`, decodeErr);
+      }
+      calls.push({
+        type: 'function',
+        function: {name, arguments: JSON.stringify(argsObj)},
+      });
+    }
+    return calls.length > 0 ? calls : null;
+  }
+
+  /**
+   * Decode a Gemma 4 DSL object body `{k:v,k2:v2}` into a plain object.
+   * Handles strings wrapped in `<|"|>...<|"|>`, numbers, booleans, null,
+   * nested objects/arrays.
+   */
+  private static gemma4DecodeObject(body: string): Record<string, any> {
+    const trimmed = body.trim();
+    if (trimmed === '{}' || trimmed === '') return {};
+    if (trimmed[0] !== '{' || trimmed[trimmed.length - 1] !== '}') {
+      throw new Error(`Not an object body: ${trimmed.substring(0, 80)}`);
+    }
+    const inner = trimmed.slice(1, -1);
+    const result: Record<string, any> = {};
+    const parts = this.gemma4SplitTopLevel(inner, ',');
+    for (const part of parts) {
+      const idx = part.indexOf(':');
+      if (idx < 0) continue;
+      const key = part.slice(0, idx).trim();
+      const raw = part.slice(idx + 1).trim();
+      result[key] = this.gemma4DecodeValue(raw);
+    }
+    return result;
+  }
+
+  private static gemma4DecodeValue(raw: string): any {
+    const s = raw.trim();
+    if (s.startsWith('<|"|>') && s.endsWith('<|"|>')) {
+      return s.slice(5, -5);
+    }
+    if (s === 'true') return true;
+    if (s === 'false') return false;
+    if (s === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    if (s.startsWith('{') && s.endsWith('}')) return this.gemma4DecodeObject(s);
+    if (s.startsWith('[') && s.endsWith(']')) {
+      const inner = s.slice(1, -1);
+      return this.gemma4SplitTopLevel(inner, ',').map(item => this.gemma4DecodeValue(item));
+    }
+    return s;
+  }
+
+  /**
+   * Split a Gemma 4 DSL body on `sep` at top level (skipping nested braces,
+   * brackets, and string delimiters).
+   */
+  private static gemma4SplitTopLevel(s: string, sep: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let inStr = false;
+    let buf = '';
+    for (let i = 0; i < s.length; i++) {
+      if (s.startsWith('<|"|>', i)) {
+        inStr = !inStr;
+        buf += '<|"|>';
+        i += 4;
+        continue;
+      }
+      if (!inStr) {
+        const c = s[i];
+        if (c === '{' || c === '[') depth++;
+        else if (c === '}' || c === ']') depth--;
+        else if (c === sep && depth === 0) {
+          parts.push(buf);
+          buf = '';
+          continue;
+        }
+      }
+      buf += s[i];
+    }
+    if (buf.trim()) parts.push(buf);
+    return parts;
+  }
+
+  /**
    * Encode a value into Gemma 4's tool DSL.
    * Strings wrapped in `<|"|>...<|"|>`, numbers/booleans literal, objects
    * as `{k:v,...}`, arrays as `[v,...]`. Matches the chat template's
@@ -1610,9 +1714,20 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         this.lastReasoning = String(result.reasoning_content).substring(0, 300);
       }
 
-      const toolCalls = result.tool_calls as
+      let toolCalls = result.tool_calls as
         | Array<{type: 'function'; id?: string; function: {name: string; arguments: string}}>
         | undefined;
+
+      // FALLBACK: llama.cpp's response parser sometimes leaves `tool_calls`
+      // empty when we drive completion via raw `prompt:`. The Gemma 4 tokens
+      // are present in `content` as text — parse them ourselves.
+      if ((!toolCalls || toolCalls.length === 0) && result.content) {
+        const parsed = this.parseGemma4ToolCallFromText(String(result.content));
+        if (parsed && parsed.length > 0) {
+          Logger.info(`🔄 Parsed ${parsed.length} tool call(s) from text (llama.cpp missed native channel)`);
+          toolCalls = parsed;
+        }
+      }
 
       if (!toolCalls || toolCalls.length === 0) {
         const rawContent = String(result.content ?? result.text ?? prevContent ?? '').trim();
@@ -1629,13 +1744,6 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       }
 
       Logger.info(`🔧 Iter ${iter + 1}: model requested ${toolCalls.length} tool call(s)`);
-
-      // Anything the model emitted as plain content before the tool call
-      // belongs at the start of the prefill so the model "sees" its own
-      // prior output when continuing.
-      if (result.content && iter === 0) {
-        prefill += String(result.content);
-      }
 
       // Execute every requested tool, then append the inline
       // `<|tool_call>call:name{args}<tool_call|><|tool_response>response:name{result}<tool_response|>`
