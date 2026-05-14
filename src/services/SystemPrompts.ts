@@ -3,7 +3,7 @@
  * Different prompts to test which works best for tool calling
  */
 
-export type SystemPromptType = 'letta' | 'aggressive' | 'minimal' | 'structured' | 'custom' | 'custom2';
+export type SystemPromptType = 'letta' | 'aggressive' | 'minimal' | 'structured' | 'custom' | 'custom2' | 'none';
 
 export interface SystemPromptConfig {
   type: SystemPromptType;
@@ -507,6 +507,18 @@ You: <archival_memory_search query="user preferences habits" top_k="10" />`;
   },
 };
 
+/**
+ * No system prompt - bypass for isolating base model behavior.
+ * Returns empty string so chatCompletionWithTools skips system injection.
+ * Core memory + tool list also suppressed. Use to diagnose prompt vs model issues.
+ */
+const nonePrompt: SystemPromptConfig = {
+  type: 'none',
+  name: 'None (Raw)',
+  description: 'No system prompt at all. Tests pure base model behavior. Tools disabled implicitly (model receives no tool list).',
+  getPrompt: () => '',
+};
+
 export const SYSTEM_PROMPTS: Record<SystemPromptType, SystemPromptConfig> = {
   letta: lettaPrompt,
   aggressive: aggressivePrompt,
@@ -514,6 +526,7 @@ export const SYSTEM_PROMPTS: Record<SystemPromptType, SystemPromptConfig> = {
   structured: structuredPrompt,
   custom: customPrompt,
   custom2: custom2Prompt,
+  none: nonePrompt,
 };
 
 /**

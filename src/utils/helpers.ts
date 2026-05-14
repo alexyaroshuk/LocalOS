@@ -93,7 +93,21 @@ export function getChatTemplate(
     return prompt;
   }
 
-  // Gemma / Gemma 3 / Gemma 3n format
+  // Gemma 4 format - distinct from Gemma 2/3.
+  // Uses <|turn>role / <turn|> markers and has a native system role.
+  // Ref: https://ai.google.dev/gemma/docs/core/prompt-formatting-gemma4
+  // Must run before the generic gemma branch below.
+  if (modelLower.includes('gemma-4') || modelLower.includes('gemma4')) {
+    let prompt = '';
+    for (const msg of messages) {
+      const role = msg.role === 'assistant' ? 'model' : msg.role;
+      prompt += `<|turn>${role}\n${msg.content}<turn|>\n`;
+    }
+    prompt += '<|turn>model\n';
+    return prompt;
+  }
+
+  // Gemma / Gemma 2 / Gemma 3 / Gemma 3n format
   // No dedicated system role - merge system content into first user turn.
   if (modelLower.includes('gemma')) {
     const systemParts: string[] = [];

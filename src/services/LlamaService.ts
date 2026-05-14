@@ -713,6 +713,11 @@ export class LlamaService {
    * Uses configurable prompt variants for testing
    */
   private static getToolSystemPrompt(): string {
+    // 'none' prompt variant: bypass everything for raw base-model testing
+    if (this.currentPromptType === 'none') {
+      return '';
+    }
+
     // Get core memory
     let coreMemory = '';
     try {
@@ -1381,14 +1386,20 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         Logger.debug('First 500 chars:', systemPrompt.substring(0, 500));
       }
 
-      const systemMessage: Message = {
-        id: 'system-tools',
-        role: 'system',
-        content: systemPrompt,
-        timestamp: Date.now(),
-      };
-
-      const messagesWithTools = [systemMessage, ...messages];
+      // Skip system message injection when prompt is empty ('none' variant)
+      // so the model receives raw user turns only - useful for diagnosing
+      // whether garbage output stems from prompt or from model/quant.
+      const messagesWithTools: Message[] = systemPrompt
+        ? [
+            {
+              id: 'system-tools',
+              role: 'system',
+              content: systemPrompt,
+              timestamp: Date.now(),
+            },
+            ...messages,
+          ]
+        : [...messages];
 
       // First LLM call - check if it wants to use a tool
       // Use model-specific temperature and maxTokens
