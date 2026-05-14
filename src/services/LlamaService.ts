@@ -1730,12 +1730,26 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       }
 
       if (!toolCalls || toolCalls.length === 0) {
-        const rawContent = String(result.content ?? result.text ?? prevContent ?? '').trim();
+        // Prefer non-empty content; fall back to text or the streamed
+        // accumulator. Empty string is treated as absent.
+        const candidates = [result.content, result.text, prevContent];
+        const picked = candidates.find(c => typeof c === 'string' && c.length > 0) ?? '';
+        const rawContent = String(picked).trim();
         finalText = rawContent;
         if (!this.thinkingEnabled) {
           finalText = this.stripThinkingBlocks(finalText);
         }
         Logger.info(`✅ Native loop done (iter=${iter + 1}, usedTool=${usedTool}, len=${finalText.length})`);
+        if (!finalText) {
+          Logger.warn(`⚠️ Empty content on iter ${iter + 1}. Raw fields:`, {
+            contentLen: result.content?.length ?? 0,
+            textLen: result.text?.length ?? 0,
+            prevContentLen: prevContent.length,
+            stoppedWord: result.stopping_word,
+            stoppedEos: result.stopped_eos,
+            tokensPredicted: result.tokens_predicted,
+          });
+        }
         if (iter === 0 && !usedTool) {
           Logger.debug(`tool_calls field type: ${typeof result.tool_calls}, value: ${JSON.stringify(result.tool_calls)}`);
           Logger.debug(`Raw model content (first 500 chars): ${finalText.substring(0, 500)}`);
@@ -1777,14 +1791,22 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         prefill += `<|tool_call>call:${toolName}${argsBody}<tool_call|>`;
         const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
         prefill += this.gemma4ToolResponseBlock(toolName, payload);
+        // Newline separator before the final answer per Gemma 4 docs
+        // example. Without it the model often emits <turn|> immediately
+        // and closes the turn with no answer text.
+        prefill += '\n\n';
       }
 
       onToolUsage?.('generating');
     }
 
+    // Detect actual iter-cap hit vs clean break with empty text
     if (!finalText && usedTool) {
-      Logger.warn(`⚠️ Native loop hit MAX_ITERS=${MAX_ITERS} without final answer`);
-      finalText = `I ran tools but couldn't synthesize a final answer within ${MAX_ITERS} steps. Try a more specific question.`;
+      // Heuristic: prefill length grows by ~300 chars per tool round.
+      // If we ran fewer than MAX_ITERS and content is just missing, surface
+      // a friendlier message based on what tools we did use.
+      Logger.warn(`⚠️ Loop ended with usedTool=true but empty final text (prefill=${prefill.length} chars)`);
+      finalText = `I called ${firstToolName ?? 'a tool'} but the model produced no final answer. Try rephrasing or check the tool result in the logs.`;
     }
 
     return {response: finalText, usedTool, toolName: firstToolName};
