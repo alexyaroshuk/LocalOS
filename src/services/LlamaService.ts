@@ -10,7 +10,7 @@ import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
-import {SYSTEM_PROMPTS, SystemPromptType, getDefaultPromptType} from './SystemPrompts';
+import {SYSTEM_PROMPTS, SystemPromptType} from './SystemPrompts';
 
 export class LlamaService {
   // Chat/Agent model context (primary)
@@ -376,18 +376,31 @@ export class LlamaService {
       content: msg.content,
     }));
 
+    // Per-model stop words override the default array when present.
+    // Prevents leakage of next-turn markers like `<turn|>` for Gemma 4.
+    const stop = this.modelConfig?.stopWords ?? llamaConfig.stopSequences;
+
     const completionParams = {
       n_predict: llamaConfig.maxTokens,
       temperature: llamaConfig.temperature,
       top_p: llamaConfig.topP,
       top_k: llamaConfig.topK,
-      stop: llamaConfig.stopSequences,
+      stop,
+      // Let llama.rn split reasoning from answer server-side so we never
+      // see thinking markers in the streamed `content` field.
+      enable_thinking: this.thinkingEnabled,
+      ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
     };
 
     try {
       Logger.debug('Chat completion via embedded jinja template:', this.currentModelName);
 
-      let fullResponse = '';
+      // Stream from `data.content` (cumulative clean answer) instead of
+      // `data.token` (raw tokens that include special markers). This matches
+      // pocketpal-ai's approach and avoids regex stripping on the hot path.
+      let prevContent = '';
+      let prevReasoning = '';
+
       const result = await this.context.completion(
         {
           ...completionParams,
@@ -395,19 +408,41 @@ export class LlamaService {
           jinja: true,
         },
         data => {
-          if (data.token && onToken) {
-            onToken(data.token);
-            fullResponse += data.token;
+          if (!onToken) return;
+
+          const content = data.content ?? '';
+          if (content.length > prevContent.length) {
+            const delta = content.slice(prevContent.length);
+            prevContent = content;
+            if (delta) onToken(delta);
+          }
+
+          // Forward reasoning deltas only if thinking explicitly enabled.
+          // Otherwise discard - reasoning_content stays out of the chat UI.
+          if (this.thinkingEnabled) {
+            const reasoning = data.reasoning_content ?? '';
+            if (reasoning.length > prevReasoning.length) {
+              prevReasoning = reasoning;
+              // Reasoning surfaced via lastReasoning for diagnostic UI;
+              // intentionally not pushed to onToken to keep answer stream clean.
+              this.lastReasoning = reasoning;
+            }
           }
         },
       );
 
-      if (!fullResponse && result.text) {
-        fullResponse = result.text;
-      }
+      // Prefer `result.content` (post-filter answer) over `result.text` (raw).
+      // Fall back to accumulated stream content, then text.
+      const finalText = (
+        (result as any).content ??
+        prevContent ??
+        result.text ??
+        ''
+      ).trim();
 
-      const trimmed = fullResponse.trim();
-      return this.thinkingEnabled ? trimmed : this.stripThinkingBlocks(trimmed);
+      // Defensive strip: only kicks in if the GGUF lacked a chat template
+      // that declared reasoning blocks. Normally a no-op now.
+      return this.thinkingEnabled ? finalText : this.stripThinkingBlocks(finalText);
     } catch (jinjaError) {
       Logger.warn(
         'Jinja chat path failed, falling back to manual template:',

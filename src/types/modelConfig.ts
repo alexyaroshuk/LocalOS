@@ -29,6 +29,9 @@ export interface ModelConfig {
   /** Context window size */
   contextSize: number;
 
+  /** Stop sequences as plain strings. Forwarded to llama.rn `stop` param. */
+  stopWords?: string[];
+
   /** Model description */
   description: string;
 }
@@ -79,6 +82,13 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolDetectionMaxTokens: 256,
     useLangchainPrompt: true,
     contextSize: 4096,
+    stopWords: [
+      '<turn|>',
+      '<|turn>user',
+      '<|turn>system',
+      '<end_of_turn>',
+      '<start_of_turn>user',
+    ],
     description: 'Gemma 3n E4B (MatFormer + Per-Layer Embeddings). Requires llama.rn >=0.9 for full support. Avoid Q2_K - use Q4_K_M or higher.',
   },
   'gemma-3n-e2b': {
@@ -90,6 +100,13 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolDetectionMaxTokens: 256,
     useLangchainPrompt: true,
     contextSize: 4096,
+    stopWords: [
+      '<turn|>',
+      '<|turn>user',
+      '<|turn>system',
+      '<end_of_turn>',
+      '<start_of_turn>user',
+    ],
     description: 'Gemma 3n E2B - smaller variant, better fit for iOS memory constraints.',
   },
 };
