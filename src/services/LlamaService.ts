@@ -1669,6 +1669,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             top_p: llamaConfig.topP,
             top_k: llamaConfig.topK,
             stop,
+            // After we inject <|tool_response>...<tool_response|> the
+            // tokenizer treats the trailing token as end-of-generation and
+            // halts with tokensPredicted=0. Force past the natural EOS so
+            // the model emits the answer; our stop array on <turn|> still
+            // closes the turn correctly.
+            ...(prefill ? {ignore_eos: true} : {}),
             ...(chatFormat !== undefined ? {chat_format: chatFormat} : {}),
             ...(grammar ? {grammar} : {}),
             ...(grammarTriggers ? {grammar_triggers: grammarTriggers} : {}),
