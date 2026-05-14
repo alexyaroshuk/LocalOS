@@ -93,16 +93,40 @@ export function getChatTemplate(
     return prompt;
   }
 
-  // Gemma format
+  // Gemma / Gemma 3 / Gemma 3n format
+  // No dedicated system role - merge system content into first user turn.
   if (modelLower.includes('gemma')) {
-    let prompt = '<bos>';
+    const systemParts: string[] = [];
+    const turns: Array<{role: 'user' | 'assistant'; content: string}> = [];
     for (const msg of messages) {
-      if (msg.role === 'user') {
-        prompt += `<start_of_turn>user\n${msg.content}<end_of_turn>\n`;
-      } else if (msg.role === 'assistant') {
-        prompt += `<start_of_turn>model\n${msg.content}<end_of_turn>\n`;
+      if (msg.role === 'system') {
+        systemParts.push(msg.content);
+      } else if (msg.role === 'user' || msg.role === 'assistant') {
+        turns.push({role: msg.role, content: msg.content});
       }
     }
+
+    const systemBlock = systemParts.join('\n\n').trim();
+    let firstUserMerged = false;
+
+    let prompt = '<bos>';
+    for (const turn of turns) {
+      if (turn.role === 'user') {
+        const content = !firstUserMerged && systemBlock
+          ? `${systemBlock}\n\n${turn.content}`
+          : turn.content;
+        firstUserMerged = true;
+        prompt += `<start_of_turn>user\n${content}<end_of_turn>\n`;
+      } else {
+        prompt += `<start_of_turn>model\n${turn.content}<end_of_turn>\n`;
+      }
+    }
+
+    // Edge case: system only, no user turn yet - emit as user turn
+    if (!firstUserMerged && systemBlock) {
+      prompt += `<start_of_turn>user\n${systemBlock}<end_of_turn>\n`;
+    }
+
     prompt += '<start_of_turn>model\n';
     return prompt;
   }
