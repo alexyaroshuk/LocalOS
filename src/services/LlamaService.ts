@@ -349,7 +349,11 @@ export class LlamaService {
   }
 
   /**
-   * Generate chat completion with message history
+   * Generate chat completion with message history.
+   * Prefers the GGUF's embedded Jinja chat template (jinja=true) so special
+   * tokens, BOS/EOS, and system-role handling are correct per model.
+   * Falls back to the hand-rolled getChatTemplate if the native path rejects
+   * the messages (e.g. GGUF lacks chat_template metadata).
    */
   static async chatCompletion(
     messages: Message[],
@@ -360,21 +364,61 @@ export class LlamaService {
       throw new Error('Model not loaded');
     }
 
+    const llamaConfig = {
+      ...DEFAULT_LLAMA_CONFIG,
+      contextSize: this.modelConfig?.contextSize ?? DEFAULT_LLAMA_CONFIG.contextSize,
+      ...config,
+    };
+
+    const chatMessages = messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    const completionParams = {
+      n_predict: llamaConfig.maxTokens,
+      temperature: llamaConfig.temperature,
+      top_p: llamaConfig.topP,
+      top_k: llamaConfig.topK,
+      stop: llamaConfig.stopSequences,
+    };
+
     try {
-      // Convert messages to the appropriate chat template
-      const chatMessages = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      Logger.debug('Chat completion via embedded jinja template:', this.currentModelName);
 
-      const prompt = getChatTemplate(this.currentModelName, chatMessages);
-      Logger.debug('Generated prompt template for:', this.currentModelName);
+      let fullResponse = '';
+      const result = await this.context.completion(
+        {
+          ...completionParams,
+          messages: chatMessages,
+          jinja: true,
+        },
+        data => {
+          if (data.token && onToken) {
+            onToken(data.token);
+            fullResponse += data.token;
+          }
+        },
+      );
 
-      // Use the completion method with the formatted prompt
-      return await this.completion(prompt, config, onToken);
-    } catch (error) {
-      Logger.error('Chat completion error:', error);
-      throw error;
+      if (!fullResponse && result.text) {
+        fullResponse = result.text;
+      }
+
+      return fullResponse.trim();
+    } catch (jinjaError) {
+      Logger.warn(
+        'Jinja chat path failed, falling back to manual template:',
+        jinjaError instanceof Error ? jinjaError.message : String(jinjaError),
+      );
+
+      try {
+        const prompt = getChatTemplate(this.currentModelName, chatMessages);
+        return await this.completion(prompt, config, onToken);
+      } catch (error) {
+        Logger.error('Chat completion error:', error);
+        throw error;
+      }
     }
   }
 
