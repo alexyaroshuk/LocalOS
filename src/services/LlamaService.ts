@@ -122,6 +122,29 @@ export class LlamaService {
       Logger.info('✅ Model loaded successfully:', modelName);
       Logger.info(`   Using ${this.modelConfig.displayName} configuration`);
       Logger.info(`   Context window: ${llamaConfig.contextSize} tokens`);
+
+      // Diagnostic: report the GGUF's chat-template capabilities so we know
+      // whether the embedded jinja template can serialize OpenAI `tools`
+      // into Gemma 4 / Llama 3.1 native tool DSL.
+      try {
+        const m: any = (this.context as any)?.model;
+        const caps = m?.chatTemplates?.jinja?.defaultCaps;
+        Logger.info('📋 Chat template caps:', {
+          llamaChat: m?.chatTemplates?.llamaChat,
+          jinjaDefault: m?.chatTemplates?.jinja?.default,
+          toolUse: m?.chatTemplates?.jinja?.toolUse,
+          tools: caps?.tools,
+          toolCalls: caps?.toolCalls,
+          systemRole: caps?.systemRole,
+          parallelToolCalls: caps?.parallelToolCalls,
+          isChatTemplateSupported: m?.isChatTemplateSupported,
+        });
+        if (caps && !caps.tools) {
+          Logger.warn('⚠️ Loaded GGUF chat template does NOT declare tool support. Native agent loop will not receive tools — model may emit plain text instead of <|tool_call>.');
+        }
+      } catch (capErr) {
+        Logger.debug('Chat template caps inspection failed:', capErr);
+      }
     } catch (error) {
       Logger.error('Failed to load model:', error);
       this.isInitialized = false;
@@ -814,11 +837,18 @@ export class LlamaService {
     }
 
     const persona = `You are LocalOS Assistant, a private on-device AI.
-You help the user with daily tasks, recall past context, and act on their
-behalf using the tools available to you. Call tools when they let you
-give a better, more accurate answer; otherwise reply directly. Be
-concise and honest. Save important information about the user as it
-comes up.`;
+
+You have function-calling tools available. Use them whenever they give
+a better, more current, or more accurate answer than your own knowledge:
+- Time, date, "today", "now" -> call get_current_datetime
+- Latest news, "current", real-time facts -> call search_web
+- User's own preferences, history, facts -> call archival_memory_search
+- Saving info the user shares about themselves -> call archival_memory_insert
+- Vault files / notes -> call the vault tools
+
+Call the tool immediately, do not announce it. After the tool returns,
+answer in natural language using the result. If no tool fits, answer
+directly. Be concise and honest.`;
 
     return coreMemory ? `${coreMemory}\n\n${persona}` : persona;
   }
@@ -1509,11 +1539,53 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         | undefined;
 
       if (!toolCalls || toolCalls.length === 0) {
-        finalText = String(result.content ?? result.text ?? prevContent ?? '').trim();
+        const rawContent = String(result.content ?? result.text ?? prevContent ?? '').trim();
+
+        // RESCUE: model may have emitted a tool call as plain text (Pythonic
+        // `[fn(args)]` or XML `<fn />`) when the jinja template lacks a tools
+        // section or the quantized model failed to use the native channel.
+        // Parse with the legacy extractor and execute if found.
+        const rescued = this.extractToolCall(rawContent);
+        if (rescued && iter === 0) {
+          try {
+            const parsed = JSON.parse(rescued);
+            const rescueName = parsed.name || parsed.tool;
+            const rescueArgs = parsed.arguments || {};
+            if (rescueName && ToolService.getTool(rescueName)) {
+              Logger.warn(`⚙️ Native channel skipped — rescuing tool call from text: ${rescueName}`);
+              onToolUsage?.('tool_call', rescueName, rescueArgs);
+              const toolResult = await ToolService.executeTool({
+                id: generateId(),
+                name: rescueName,
+                arguments: rescueArgs,
+              });
+              onToolUsage?.('tool_result', rescueName, rescueArgs, toolResult);
+
+              convo.push({role: 'assistant', content: rawContent});
+              convo.push({
+                role: 'tool',
+                tool_call_id: '',
+                content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
+              });
+              usedTool = true;
+              firstToolName = firstToolName ?? rescueName;
+              onToolUsage?.('generating');
+              continue;
+            }
+          } catch (rescueErr) {
+            Logger.debug('Rescue parse failed:', rescueErr);
+          }
+        }
+
+        finalText = rawContent;
         if (!this.thinkingEnabled) {
           finalText = this.stripThinkingBlocks(finalText);
         }
         Logger.info(`✅ Native loop done (iter=${iter + 1}, usedTool=${usedTool}, len=${finalText.length})`);
+        if (iter === 0 && !usedTool) {
+          Logger.debug(`tool_calls field type: ${typeof result.tool_calls}, value: ${JSON.stringify(result.tool_calls)}`);
+          Logger.debug(`Raw model content (first 500 chars): ${finalText.substring(0, 500)}`);
+        }
         break;
       }
 
