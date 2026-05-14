@@ -1553,18 +1553,30 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             const rescueArgs = parsed.arguments || {};
             if (rescueName && ToolService.getTool(rescueName)) {
               Logger.warn(`⚙️ Native channel skipped — rescuing tool call from text: ${rescueName}`);
+              const rescueId = generateId();
               onToolUsage?.('tool_call', rescueName, rescueArgs);
               const toolResult = await ToolService.executeTool({
-                id: generateId(),
+                id: rescueId,
                 name: rescueName,
                 arguments: rescueArgs,
               });
               onToolUsage?.('tool_result', rescueName, rescueArgs, toolResult);
 
-              convo.push({role: 'assistant', content: rawContent});
+              convo.push({
+                role: 'assistant',
+                content: rawContent,
+                tool_calls: [{
+                  id: rescueId,
+                  type: 'function' as const,
+                  function: {
+                    name: rescueName,
+                    arguments: JSON.stringify(rescueArgs),
+                  },
+                }],
+              });
               convo.push({
                 role: 'tool',
-                tool_call_id: '',
+                tool_call_id: rescueId,
                 content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
               });
               usedTool = true;
@@ -1591,15 +1603,29 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       Logger.info(`🔧 Iter ${iter + 1}: model requested ${toolCalls.length} tool call(s)`);
 
+      // Stamp every tool call with a stable id so the assistant's tool_calls
+      // entry and the following tool result's tool_call_id pair up. Gemma 4's
+      // native channel often omits id, and llama.rn's native bridge rejects
+      // null fields when re-serializing the conversation ("type must be string").
+      const stampedCalls = toolCalls.map(tc => ({
+        ...tc,
+        id: tc.id || generateId(),
+        type: tc.type || ('function' as const),
+        function: {
+          name: tc.function?.name ?? '',
+          arguments: tc.function?.arguments ?? '{}',
+        },
+      }));
+
       // Append assistant turn with the tool calls so the next prompt
       // round-trips them through the chat template.
       convo.push({
         role: 'assistant',
         content: String(result.content ?? ''),
-        tool_calls: toolCalls,
+        tool_calls: stampedCalls,
       });
 
-      const execResults = await Promise.all(toolCalls.map(async tc => {
+      const execResults = await Promise.all(stampedCalls.map(async tc => {
         let args: Record<string, any> = {};
         try {
           args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
@@ -1610,7 +1636,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         onToolUsage?.('tool_call', tc.function.name, args);
 
         const toolResult = await ToolService.executeTool({
-          id: tc.id || generateId(),
+          id: tc.id,
           name: tc.function.name,
           arguments: args,
         });
@@ -1625,7 +1651,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       for (const {tc, toolResult} of execResults) {
         convo.push({
           role: 'tool',
-          tool_call_id: tc.id ?? '',
+          tool_call_id: tc.id,
           content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
         });
       }
