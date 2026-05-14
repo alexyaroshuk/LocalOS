@@ -1509,6 +1509,45 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
     Logger.info(`🤖 Native agent loop starting (${toolsSchema.length} tools available)`);
 
+    // Format the base prompt once using the GGUF's jinja template with tools.
+    // Subsequent iterations append the accumulated `prefill` (inline tool
+    // call + tool_response DSL) so the model keeps generating inside the
+    // same open `<|turn>model\n` block instead of starting a fresh turn.
+    // Capture chat_format / grammar so output parsing of `<|tool_call>`
+    // tokens still works when we drive completion via raw `prompt:`.
+    let basePrompt = '';
+    let chatFormat: number | undefined;
+    let grammar: string | undefined;
+    let grammarTriggers: any[] | undefined;
+    let preservedTokens: string[] | undefined;
+    try {
+      const ctx: any = this.context as any;
+      const formatted: any = await ctx.getFormattedChat(convo as any, null, {
+        jinja: true,
+        tools: toolsSchema,
+        tool_choice: 'auto',
+        parallel_tool_calls: {},
+        add_generation_prompt: true,
+        enable_thinking: this.thinkingEnabled,
+        ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
+      });
+      basePrompt = (formatted && formatted.prompt) || '';
+      chatFormat = formatted?.chat_format;
+      grammar = formatted?.grammar;
+      grammarTriggers = formatted?.grammar_triggers;
+      preservedTokens = formatted?.preserved_tokens;
+      Logger.debug(`Base prompt formatted (${basePrompt.length} chars, chat_format=${chatFormat})`);
+    } catch (fmtErr) {
+      Logger.warn('getFormattedChat failed, falling back to legacy loop:',
+        fmtErr instanceof Error ? fmtErr.message : String(fmtErr));
+      const legacy = await this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
+      return {
+        response: legacy.response,
+        usedTool: legacy.usedTool ?? false,
+        toolName: legacy.toolName,
+      };
+    }
+
     for (let iter = 0; iter < MAX_ITERS; iter++) {
       Logger.debug(`Iteration ${iter + 1}/${MAX_ITERS}, prefill length=${prefill.length}`);
 
@@ -1520,18 +1559,16 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       try {
         result = await this.context.completion(
           {
-            messages: convo as any,
-            jinja: true,
-            tools: toolsSchema,
-            tool_choice: 'auto',
-            parallel_tool_calls: {},
-            ...(prefill ? {prefill_text: prefill} : {}),
+            prompt: basePrompt + prefill,
             n_predict: llamaConfig.maxTokens,
             temperature: llamaConfig.temperature,
             top_p: llamaConfig.topP,
             top_k: llamaConfig.topK,
             stop,
-            enable_thinking: this.thinkingEnabled,
+            ...(chatFormat !== undefined ? {chat_format: chatFormat} : {}),
+            ...(grammar ? {grammar} : {}),
+            ...(grammarTriggers ? {grammar_triggers: grammarTriggers} : {}),
+            ...(preservedTokens ? {preserved_tokens: preservedTokens} : {}),
             ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
           },
           data => {
