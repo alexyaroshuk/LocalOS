@@ -673,16 +673,34 @@ export class LlamaService {
   /**
    * Remove chain-of-thought blocks from model output.
    * Covers Gemma 4 channel syntax plus common <think>/<thinking>/<thought> tags.
+   * Also handles cases where llama.rn de-tokenizes special tokens to literal
+   * text (drops the `<|` / `|>` brackets) and truncated/unclosed blocks.
    */
   private static stripThinkingBlocks(text: string): string {
     if (!text) return text;
     let out = text;
-    // Gemma 4: <|channel>thought ... <channel|>
-    out = out.replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '');
-    // <think>...</think>, <thinking>...</thinking>, <thought>...</thought>
+
+    // --- Gemma 4 channel blocks ---
+    // Properly bracketed: <|channel>thought ... <channel|>
+    out = out.replace(/<\|channel>[\s\S]*?<channel\|>/g, '');
+    // Unclosed block - strip from <|channel> up to next turn marker or end
+    out = out.replace(/<\|channel>[\s\S]*?(?=<\|turn>|<\|tool_call>|$)/g, '');
+    // Bracketless variant emitted when llama.rn loses special-token brackets:
+    //   channel\nthought\n...\nchannel
+    out = out.replace(/(?:^|\n)\s*channel\s*\n\s*thought\b[\s\S]*?\n\s*channel\b\s*/gi, '\n');
+    // Orphan closing marker
+    out = out.replace(/<channel\|>/g, '');
+
+    // --- Other Gemma 4 special tokens that may leak as text ---
+    out = out.replace(/<\|think\|>/g, '');
+    out = out.replace(/<\|turn>(?:system|user|model)?\s*/g, '');
+    out = out.replace(/<turn\|>/g, '');
+
+    // --- Generic thinking tags (DeepSeek, Claude-style debug, etc.) ---
     out = out.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
     out = out.replace(/<thought>[\s\S]*?<\/thought>/gi, '');
-    return out.trim();
+
+    return out.replace(/\n{3,}/g, '\n\n').trim();
   }
 
   /**
