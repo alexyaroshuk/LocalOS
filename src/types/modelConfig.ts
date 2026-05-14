@@ -2,7 +2,7 @@
  * Model-specific configurations for different LLMs
  */
 
-export type ModelType = 'llama-3.2-1b-function-calling' | 'llama-3.1-8b-instruct' | 'llama-8x3b-moe' | 'gemma-3n-e4b' | 'gemma-3n-e2b';
+export type ModelType = 'llama-3.2-1b-function-calling' | 'llama-3.1-8b-instruct' | 'llama-8x3b-moe' | 'gemma-4-e4b' | 'gemma-4-e2b';
 
 export interface ModelConfig {
   /** Model type identifier */
@@ -60,6 +60,12 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolDetectionMaxTokens: 512, // Increased from 200 - need room for complete XML tool calls
     useLangchainPrompt: false, // Use native transformers format
     contextSize: 8192, // 8K context - realistic for mobile (128K theoretical max, but memory intensive)
+    stopWords: [
+      '<|eot_id|>',
+      '<|end_of_text|>',
+      '<|start_header_id|>user',
+      '<|start_header_id|>system',
+    ],
     description: 'Official Meta model with native tool calling via transformers chat templates. Better tool calling accuracy.',
   },
   'llama-8x3b-moe': {
@@ -71,43 +77,44 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     toolDetectionMaxTokens: 250,
     useLangchainPrompt: true,
     contextSize: 2048, // Reduced context for large 18.4B model on mobile - mmap handles rest
+    stopWords: [
+      '<|eot_id|>',
+      '<|end_of_text|>',
+      '<|start_header_id|>user',
+    ],
     description: 'Large 18.4B Mixture of Experts model. Requires mmap (no mlock on iOS due to memory constraints). Good reasoning and tool calling.',
   },
-  'gemma-3n-e4b': {
-    type: 'gemma-3n-e4b',
-    displayName: 'Gemma 3n E4B',
-    toolFormat: 'langchain-pydantic',
-    needsToolExamples: true,
-    toolDetectionTemp: 0.4,
-    toolDetectionMaxTokens: 256,
-    useLangchainPrompt: true,
+  'gemma-4-e4b': {
+    type: 'gemma-4-e4b',
+    displayName: 'Gemma 4 E4B',
+    toolFormat: 'transformers-native',
+    needsToolExamples: false,
+    toolDetectionTemp: 0.3,
+    toolDetectionMaxTokens: 512,
+    useLangchainPrompt: false,
     contextSize: 4096,
     stopWords: [
       '<turn|>',
       '<|turn>user',
       '<|turn>system',
-      '<end_of_turn>',
-      '<start_of_turn>user',
     ],
-    description: 'Gemma 3n E4B (MatFormer + Per-Layer Embeddings). Requires llama.rn >=0.9 for full support. Avoid Q2_K - use Q4_K_M or higher.',
+    description: 'Gemma 4 E4B with native tool calling (<|tool_call> tokens). Uses jinja chat template + tools param. Avoid Q2_K - use Q4_K_M or higher.',
   },
-  'gemma-3n-e2b': {
-    type: 'gemma-3n-e2b',
-    displayName: 'Gemma 3n E2B',
-    toolFormat: 'langchain-pydantic',
-    needsToolExamples: true,
-    toolDetectionTemp: 0.4,
-    toolDetectionMaxTokens: 256,
-    useLangchainPrompt: true,
+  'gemma-4-e2b': {
+    type: 'gemma-4-e2b',
+    displayName: 'Gemma 4 E2B',
+    toolFormat: 'transformers-native',
+    needsToolExamples: false,
+    toolDetectionTemp: 0.3,
+    toolDetectionMaxTokens: 512,
+    useLangchainPrompt: false,
     contextSize: 4096,
     stopWords: [
       '<turn|>',
       '<|turn>user',
       '<|turn>system',
-      '<end_of_turn>',
-      '<start_of_turn>user',
     ],
-    description: 'Gemma 3n E2B - smaller variant, better fit for iOS memory constraints.',
+    description: 'Gemma 4 E2B - smaller variant, better fit for iOS memory constraints.',
   },
 };
 
@@ -117,18 +124,16 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
 export function detectModelType(modelName: string): ModelType {
   const lowerName = modelName.toLowerCase();
 
-  // Gemma 3n variants (uploaders sometimes mislabel as "gemma-4")
-  // E4B: 4B effective params via MatFormer
-  // E2B: 2B effective params - lighter
+  // Gemma 4 variants (native <|tool_call> tokens, jinja-aware chat template).
+  // E4B: 4B effective params. E2B: 2B effective params.
   if (lowerName.includes('gemma')) {
     if (lowerName.includes('e4b') || lowerName.includes('4b')) {
-      return 'gemma-3n-e4b';
+      return 'gemma-4-e4b';
     }
     if (lowerName.includes('e2b') || lowerName.includes('2b')) {
-      return 'gemma-3n-e2b';
+      return 'gemma-4-e2b';
     }
-    // Unknown Gemma variant - default to E4B config
-    return 'gemma-3n-e4b';
+    return 'gemma-4-e4b';
   }
 
   // Check for Llama 8x3B MOE (must check before 8B to avoid false matches)

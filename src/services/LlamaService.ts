@@ -794,6 +794,36 @@ export class LlamaService {
   }
 
   /**
+   * Slim system prompt for the native agent loop.
+   * Model receives real tool schemas via the `tools` completion param,
+   * so this skips the JSON dump, format examples, and tool-selection
+   * heuristics that the legacy path bakes into the prompt.
+   *
+   * Honors the 'none' prompt variant (returns empty string).
+   */
+  private static getSlimSystemPrompt(): string {
+    if (this.currentPromptType === 'none') {
+      return '';
+    }
+
+    let coreMemory = '';
+    try {
+      coreMemory = MemoryService.getFormattedCoreMemory();
+    } catch (error) {
+      Logger.warn('Core memory not available:', error);
+    }
+
+    const persona = `You are LocalOS Assistant, a private on-device AI.
+You help the user with daily tasks, recall past context, and act on their
+behalf using the tools available to you. Call tools when they let you
+give a better, more accurate answer; otherwise reply directly. Be
+concise and honest. Save important information about the user as it
+comes up.`;
+
+    return coreMemory ? `${coreMemory}\n\n${persona}` : persona;
+  }
+
+  /**
    * Get system prompt with tool definitions
    * Uses configurable prompt variants for testing
    */
@@ -1321,7 +1351,10 @@ User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
-   * Chat completion with tool support
+   * Chat completion with tool support.
+   *
+   * Dispatches between the native agent loop (single-pass, jinja+tools)
+   * and the legacy multi-pass detector based on the model's tool format.
    */
   static async chatCompletionWithTools(
     messages: Message[],
@@ -1339,11 +1372,222 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     }
 
     if (!this.toolsEnabled) {
-      // No tools enabled, use regular chat completion
       Logger.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
-      Logger.debug('Available tools:', this.availableTools.length);
       const response = await this.chatCompletion(messages, config, onToken);
       return {response, usedTool: false};
+    }
+
+    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName);
+    if (modelConfig.toolFormat === 'transformers-native') {
+      Logger.info('🧭 Native agent loop path (toolFormat=transformers-native)');
+      return this.runNativeAgentLoop(messages, config, onToken, onToolUsage);
+    }
+
+    Logger.info('🧭 Legacy tool loop path (toolFormat=' + modelConfig.toolFormat + ')');
+    return this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
+  }
+
+  /**
+   * Native agent loop using llama.rn's `tools` + `tool_choice` params.
+   *
+   * Single conversation context. Model emits `<|tool_call>` tokens that
+   * llama.rn parses into `result.tool_calls`. We execute tools, append
+   * tool result messages, and re-invoke until the model returns plain
+   * content. No regex parsing, no two-pass detection, no Layer 2/3
+   * trigger hacks.
+   *
+   * Streams `data.content` deltas (clean answer) only when no tool_calls
+   * are pending, matching the tools-off path. Reasoning lands in
+   * `lastReasoning` for the UI's decision row.
+   */
+  private static async runNativeAgentLoop(
+    messages: Message[],
+    config: Partial<LlamaConfig> = {},
+    onToken?: (token: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any
+    ) => void,
+  ): Promise<{response: string; usedTool: boolean; toolName?: string}> {
+    if (!this.context) {
+      throw new Error('Model not loaded');
+    }
+
+    const llamaConfig = {
+      ...DEFAULT_LLAMA_CONFIG,
+      contextSize: this.modelConfig?.contextSize ?? DEFAULT_LLAMA_CONFIG.contextSize,
+      ...config,
+    };
+
+    const toolsSchema = ToolService.getToolsSchema();
+    const stop = this.modelConfig?.stopWords ?? llamaConfig.stopSequences;
+    const slimSystem = this.getSlimSystemPrompt();
+
+    const convo: Array<{role: string; content: string; tool_calls?: any[]; tool_call_id?: string}> = [
+      ...(slimSystem ? [{role: 'system', content: slimSystem}] : []),
+      ...messages.map(m => ({role: m.role, content: m.content})),
+    ];
+
+    const MAX_ITERS = 5;
+    let usedTool = false;
+    let firstToolName: string | undefined;
+    let finalText = '';
+
+    Logger.info(`🤖 Native agent loop starting (${toolsSchema.length} tools available)`);
+
+    for (let iter = 0; iter < MAX_ITERS; iter++) {
+      Logger.debug(`Iteration ${iter + 1}/${MAX_ITERS}, convo length=${convo.length}`);
+
+      let prevContent = '';
+      let prevReasoning = '';
+      let sawToolCall = false;
+
+      let result: any;
+      try {
+        result = await this.context.completion(
+          {
+            messages: convo as any,
+            jinja: true,
+            tools: toolsSchema,
+            tool_choice: 'auto',
+            parallel_tool_calls: {},
+            n_predict: llamaConfig.maxTokens,
+            temperature: llamaConfig.temperature,
+            top_p: llamaConfig.topP,
+            top_k: llamaConfig.topK,
+            stop,
+            enable_thinking: this.thinkingEnabled,
+            ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
+          },
+          data => {
+            if (data.tool_calls && data.tool_calls.length > 0) {
+              sawToolCall = true;
+            }
+
+            const content = data.content ?? '';
+            if (content.length > prevContent.length) {
+              const delta = content.slice(prevContent.length);
+              prevContent = content;
+              // Suppress streaming while a tool call is being formed to avoid
+              // leaking pre-call commentary or partial JSON to the UI.
+              if (onToken && !sawToolCall) {
+                onToken(delta);
+              }
+            }
+
+            const reasoning = data.reasoning_content ?? '';
+            if (reasoning.length > prevReasoning.length) {
+              prevReasoning = reasoning;
+              this.lastReasoning = reasoning.substring(0, 300);
+            }
+          },
+        );
+      } catch (loopError) {
+        // If jinja path fails on first iteration (e.g. GGUF missing
+        // chat_template), fall back to legacy loop for this turn.
+        if (iter === 0) {
+          Logger.warn('Native loop failed on first iteration, falling back to legacy:',
+            loopError instanceof Error ? loopError.message : String(loopError));
+          const legacy = await this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
+          return {
+            response: legacy.response,
+            usedTool: legacy.usedTool ?? false,
+            toolName: legacy.toolName,
+          };
+        }
+        throw loopError;
+      }
+
+      if (!this.lastReasoning && result.reasoning_content) {
+        this.lastReasoning = String(result.reasoning_content).substring(0, 300);
+      }
+
+      const toolCalls = result.tool_calls as
+        | Array<{type: 'function'; id?: string; function: {name: string; arguments: string}}>
+        | undefined;
+
+      if (!toolCalls || toolCalls.length === 0) {
+        finalText = String(result.content ?? result.text ?? prevContent ?? '').trim();
+        if (!this.thinkingEnabled) {
+          finalText = this.stripThinkingBlocks(finalText);
+        }
+        Logger.info(`✅ Native loop done (iter=${iter + 1}, usedTool=${usedTool}, len=${finalText.length})`);
+        break;
+      }
+
+      Logger.info(`🔧 Iter ${iter + 1}: model requested ${toolCalls.length} tool call(s)`);
+
+      // Append assistant turn with the tool calls so the next prompt
+      // round-trips them through the chat template.
+      convo.push({
+        role: 'assistant',
+        content: String(result.content ?? ''),
+        tool_calls: toolCalls,
+      });
+
+      const execResults = await Promise.all(toolCalls.map(async tc => {
+        let args: Record<string, any> = {};
+        try {
+          args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+        } catch (parseErr) {
+          Logger.warn(`Tool args JSON parse failed for ${tc.function.name}:`, parseErr);
+        }
+
+        onToolUsage?.('tool_call', tc.function.name, args);
+
+        const toolResult = await ToolService.executeTool({
+          id: tc.id || generateId(),
+          name: tc.function.name,
+          arguments: args,
+        });
+
+        onToolUsage?.('tool_result', tc.function.name, args, toolResult);
+        return {tc, args, toolResult};
+      }));
+
+      usedTool = true;
+      firstToolName = firstToolName ?? execResults[0].tc.function.name;
+
+      for (const {tc, toolResult} of execResults) {
+        convo.push({
+          role: 'tool',
+          tool_call_id: tc.id ?? '',
+          content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
+        });
+      }
+
+      onToolUsage?.('generating');
+    }
+
+    if (!finalText && usedTool) {
+      Logger.warn(`⚠️ Native loop hit MAX_ITERS=${MAX_ITERS} without final answer`);
+      finalText = `I ran tools but couldn't synthesize a final answer within ${MAX_ITERS} steps. Try a more specific question.`;
+    }
+
+    return {response: finalText, usedTool, toolName: firstToolName};
+  }
+
+  /**
+   * LEGACY tool loop — multi-pass detector with regex parsing.
+   * Reached only when modelConfig.toolFormat !== 'transformers-native'.
+   * Kept for older fine-tunes (1B custom function-calling, etc.) that
+   * lack native tool token emission.
+   */
+  private static async runLegacyToolLoop(
+    messages: Message[],
+    config: Partial<LlamaConfig> = {},
+    onToken?: (token: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any
+    ) => void,
+  ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
+    if (!this.context || !this.currentModelName) {
+      throw new Error('Model not loaded');
     }
 
     Logger.info('✅ Tools are enabled. Available tools:', this.availableTools.map(t => t.name).join(', '));

@@ -579,78 +579,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     currentActionIdRef.current = null;
 
     try {
-      // Use orchestration for all requests when tools are enabled
-      // Let the LLM decide in the parse_intent step whether web search is needed
-      if (toolsEnabled && AIService.areToolsSupported()) {
-        Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        Logger.info('🌐 ORCHESTRATION INITIATED FROM CHATSCREEN');
-        Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        Logger.info(`Query detected: "${inputText.trim()}"`);
-        setToolUsageState({stage: 'thinking'});
+      // Tools-on path now runs through LlamaService.chatCompletionWithTools,
+      // which dispatches to the native agent loop (Gemma 4, Llama 3.1 8B)
+      // or the legacy multi-pass detector based on modelConfig.toolFormat.
+      // OrchestrationService remains callable via AIService.executeOrchestration
+      // for a future explicit "deep research" mode.
 
-        try {
-          const result = await AIService.executeOrchestration(
-            'web_search',
-            inputText.trim(),
-            {},
-            (step) => {
-              Logger.info(`📍 Orchestration Step Update: ${step.name}`);
-              Logger.info(`   Status: ${step.status}`);
-              if (step.duration) {
-                Logger.info(`   Duration: ${step.duration}ms`);
-              }
-              if (step.error) {
-                Logger.error(`   Error: ${step.error}`);
-              }
-
-              // Update UI state to show progress (NO messages created during orchestration)
-              if (step.status === 'running') {
-                setStreamingText(`⏳ ${step.name}...`);
-              } else if (step.status === 'completed') {
-                setStreamingText(`✓ ${step.name} (${step.duration}ms)`);
-              }
-            },
-          );
-
-          Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          Logger.info('✅ ORCHESTRATION COMPLETED SUCCESSFULLY');
-          Logger.info(`Duration: ${result.duration}ms`);
-          Logger.info(`Response length: ${result.response.length} chars`);
-          Logger.info(`Citations: ${result.citations?.length || 0}`);
-          Logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-          // NOW create the final assistant message with citations (only after orchestration is done)
-          let finalResponse = result.response;
-          if (result.citations && result.citations.length > 0) {
-            const citationText = '\n\n**Sources:**\n' +
-              result.citations
-                .map((c: any) => `- [${c.title}](${c.url})`)
-                .join('\n');
-            finalResponse = result.response + citationText;
-            Logger.info(`Added ${result.citations.length} citations to response`);
-          }
-
-          const assistantMessage: Message = {
-            id: generateId(),
-            role: 'assistant',
-            content: finalResponse,
-            timestamp: Date.now(),
-          };
-
-          setMessages(prev => [...prev, assistantMessage]);
-          setStreamingText('');
-          setToolUsageState({stage: null});
-          return;
-        } catch (orchError) {
-          Logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          Logger.error('❌ ORCHESTRATION FAILED - FALLING BACK TO REGULAR CHAT');
-          Logger.error('Error:', orchError instanceof Error ? orchError.message : String(orchError));
-          Logger.debug('Full error:', orchError);
-          Logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          setToolUsageState({stage: null});
-          // Fall through to regular chat handling below
-        }
-      }
       // Get recent messages for context (limit to avoid exceeding context window)
       // Filter out action messages - only send user/assistant/system messages to AI
       let contextMessages = [...messages, userMessage]
