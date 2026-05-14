@@ -1418,17 +1418,55 @@ User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
+   * Encode a value into Gemma 4's tool DSL.
+   * Strings wrapped in `<|"|>...<|"|>`, numbers/booleans literal, objects
+   * as `{k:v,...}`, arrays as `[v,...]`. Matches the chat template's
+   * format_argument macro.
+   */
+  private static gemma4Encode(v: any): string {
+    if (v === null || v === undefined) return 'null';
+    if (typeof v === 'string') return `<|"|>${v}<|"|>`;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    if (Array.isArray(v)) return `[${v.map(x => this.gemma4Encode(x)).join(',')}]`;
+    if (typeof v === 'object') {
+      const body = Object.entries(v)
+        .map(([k, vv]) => `${k}:${this.gemma4Encode(vv)}`)
+        .join(',');
+      return `{${body}}`;
+    }
+    return String(v);
+  }
+
+  /**
+   * Build the inline `<|tool_response>response:name{...}<tool_response|>`
+   * block for the result of one tool execution. Bare strings/numbers/etc.
+   * get wrapped as `{result:<|"|>value<|"|>}` so the template parser sees
+   * an object body.
+   */
+  private static gemma4ToolResponseBlock(name: string, result: any): string {
+    let body: string;
+    if (result === null || result === undefined) {
+      body = '{}';
+    } else if (typeof result === 'object' && !Array.isArray(result)) {
+      body = this.gemma4Encode(result);
+    } else {
+      body = this.gemma4Encode({result});
+    }
+    return `<|tool_response>response:${name}${body}<tool_response|>`;
+  }
+
+  /**
    * Native agent loop using llama.rn's `tools` + `tool_choice` params.
    *
-   * Single conversation context. Model emits `<|tool_call>` tokens that
-   * llama.rn parses into `result.tool_calls`. We execute tools, append
-   * tool result messages, and re-invoke until the model returns plain
-   * content. No regex parsing, no two-pass detection, no Layer 2/3
-   * trigger hacks.
+   * Gemma 4's chat template uses **inline injection** within a single
+   * `<|turn>model...<turn|>` block: model emits `<|tool_call>...<tool_call|>`,
+   * the app injects `<|tool_response>...<tool_response|>` after it, and the
+   * model continues with the final answer in the same turn.
    *
-   * Streams `data.content` deltas (clean answer) only when no tool_calls
-   * are pending, matching the tools-off path. Reasoning lands in
-   * `lastReasoning` for the UI's decision row.
+   * llama.rn's bridge only supports `{role, content}` messages — no
+   * `tool_calls` field, no `tool` role. So we accumulate the model's
+   * tool call + our tool response into a `prefill_text` string and re-call
+   * completion with that prefill until the model emits no more tool calls.
    */
   private static async runNativeAgentLoop(
     messages: Message[],
@@ -1455,7 +1493,10 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     const stop = this.modelConfig?.stopWords ?? llamaConfig.stopSequences;
     const slimSystem = this.getSlimSystemPrompt();
 
-    const convo: Array<{role: string; content: string; tool_calls?: any[]; tool_call_id?: string}> = [
+    // Conversation messages remain frozen at user input. Tool round-trips
+    // accumulate into `prefill` instead of new messages, because the llama.rn
+    // bridge type cannot represent `tool` role or `tool_calls` on assistant.
+    const convo = [
       ...(slimSystem ? [{role: 'system', content: slimSystem}] : []),
       ...messages.map(m => ({role: m.role, content: m.content})),
     ];
@@ -1464,11 +1505,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     let usedTool = false;
     let firstToolName: string | undefined;
     let finalText = '';
+    let prefill = '';
 
     Logger.info(`🤖 Native agent loop starting (${toolsSchema.length} tools available)`);
 
     for (let iter = 0; iter < MAX_ITERS; iter++) {
-      Logger.debug(`Iteration ${iter + 1}/${MAX_ITERS}, convo length=${convo.length}`);
+      Logger.debug(`Iteration ${iter + 1}/${MAX_ITERS}, prefill length=${prefill.length}`);
 
       let prevContent = '';
       let prevReasoning = '';
@@ -1483,6 +1525,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             tools: toolsSchema,
             tool_choice: 'auto',
             parallel_tool_calls: {},
+            ...(prefill ? {prefill_text: prefill} : {}),
             n_predict: llamaConfig.maxTokens,
             temperature: llamaConfig.temperature,
             top_p: llamaConfig.topP,
@@ -1500,8 +1543,6 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             if (content.length > prevContent.length) {
               const delta = content.slice(prevContent.length);
               prevContent = content;
-              // Suppress streaming while a tool call is being formed to avoid
-              // leaking pre-call commentary or partial JSON to the UI.
               if (onToken && !sawToolCall) {
                 onToken(delta);
               }
@@ -1515,8 +1556,6 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           },
         );
       } catch (loopError) {
-        // If jinja path fails on first iteration (e.g. GGUF missing
-        // chat_template), fall back to legacy loop for this turn.
         if (iter === 0) {
           Logger.warn('Native loop failed on first iteration, falling back to legacy:',
             loopError instanceof Error ? loopError.message : String(loopError));
@@ -1540,55 +1579,6 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       if (!toolCalls || toolCalls.length === 0) {
         const rawContent = String(result.content ?? result.text ?? prevContent ?? '').trim();
-
-        // RESCUE: model may have emitted a tool call as plain text (Pythonic
-        // `[fn(args)]` or XML `<fn />`) when the jinja template lacks a tools
-        // section or the quantized model failed to use the native channel.
-        // Parse with the legacy extractor and execute if found.
-        const rescued = this.extractToolCall(rawContent);
-        if (rescued && iter === 0) {
-          try {
-            const parsed = JSON.parse(rescued);
-            const rescueName = parsed.name || parsed.tool;
-            const rescueArgs = parsed.arguments || {};
-            if (rescueName && ToolService.getTool(rescueName)) {
-              Logger.warn(`⚙️ Native channel skipped — rescuing tool call from text: ${rescueName}`);
-              const rescueId = generateId();
-              onToolUsage?.('tool_call', rescueName, rescueArgs);
-              const toolResult = await ToolService.executeTool({
-                id: rescueId,
-                name: rescueName,
-                arguments: rescueArgs,
-              });
-              onToolUsage?.('tool_result', rescueName, rescueArgs, toolResult);
-
-              convo.push({
-                role: 'assistant',
-                content: rawContent,
-                tool_calls: [{
-                  id: rescueId,
-                  type: 'function' as const,
-                  function: {
-                    name: rescueName,
-                    arguments: JSON.stringify(rescueArgs),
-                  },
-                }],
-              });
-              convo.push({
-                role: 'tool',
-                tool_call_id: rescueId,
-                content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
-              });
-              usedTool = true;
-              firstToolName = firstToolName ?? rescueName;
-              onToolUsage?.('generating');
-              continue;
-            }
-          } catch (rescueErr) {
-            Logger.debug('Rescue parse failed:', rescueErr);
-          }
-        }
-
         finalText = rawContent;
         if (!this.thinkingEnabled) {
           finalText = this.stripThinkingBlocks(finalText);
@@ -1603,57 +1593,45 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       Logger.info(`🔧 Iter ${iter + 1}: model requested ${toolCalls.length} tool call(s)`);
 
-      // Stamp every tool call with a stable id so the assistant's tool_calls
-      // entry and the following tool result's tool_call_id pair up. Gemma 4's
-      // native channel often omits id, and llama.rn's native bridge rejects
-      // null fields when re-serializing the conversation ("type must be string").
-      const stampedCalls = toolCalls.map(tc => ({
-        ...tc,
-        id: tc.id || generateId(),
-        type: tc.type || ('function' as const),
-        function: {
-          name: tc.function?.name ?? '',
-          arguments: tc.function?.arguments ?? '{}',
-        },
-      }));
+      // Anything the model emitted as plain content before the tool call
+      // belongs at the start of the prefill so the model "sees" its own
+      // prior output when continuing.
+      if (result.content && iter === 0) {
+        prefill += String(result.content);
+      }
 
-      // Append assistant turn with the tool calls so the next prompt
-      // round-trips them through the chat template.
-      convo.push({
-        role: 'assistant',
-        content: String(result.content ?? ''),
-        tool_calls: stampedCalls,
-      });
-
-      const execResults = await Promise.all(stampedCalls.map(async tc => {
+      // Execute every requested tool, then append the inline
+      // `<|tool_call>call:name{args}<tool_call|><|tool_response>response:name{result}<tool_response|>`
+      // for each one to the prefill. This is Gemma 4's expected sequence.
+      const execResults = await Promise.all(toolCalls.map(async tc => {
+        const toolName = tc.function?.name ?? '';
         let args: Record<string, any> = {};
         try {
-          args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+          args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {};
         } catch (parseErr) {
-          Logger.warn(`Tool args JSON parse failed for ${tc.function.name}:`, parseErr);
+          Logger.warn(`Tool args JSON parse failed for ${toolName}:`, parseErr);
         }
 
-        onToolUsage?.('tool_call', tc.function.name, args);
+        onToolUsage?.('tool_call', toolName, args);
 
         const toolResult = await ToolService.executeTool({
-          id: tc.id,
-          name: tc.function.name,
+          id: tc.id || generateId(),
+          name: toolName,
           arguments: args,
         });
 
-        onToolUsage?.('tool_result', tc.function.name, args, toolResult);
-        return {tc, args, toolResult};
+        onToolUsage?.('tool_result', toolName, args, toolResult);
+        return {toolName, args, toolResult};
       }));
 
       usedTool = true;
-      firstToolName = firstToolName ?? execResults[0].tc.function.name;
+      firstToolName = firstToolName ?? execResults[0].toolName;
 
-      for (const {tc, toolResult} of execResults) {
-        convo.push({
-          role: 'tool',
-          tool_call_id: tc.id,
-          content: JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result),
-        });
+      for (const {toolName, args, toolResult} of execResults) {
+        const argsBody = Object.keys(args).length === 0 ? '{}' : this.gemma4Encode(args);
+        prefill += `<|tool_call>call:${toolName}${argsBody}<tool_call|>`;
+        const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
+        prefill += this.gemma4ToolResponseBlock(toolName, payload);
       }
 
       onToolUsage?.('generating');
