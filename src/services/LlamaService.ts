@@ -32,6 +32,7 @@ export class LlamaService {
   private static currentPromptType: SystemPromptType = 'letta'; // Current system prompt variant
   private static smartToolDetection: boolean = false; // Skip Layer 2 keyword triggers, let LLM decide
   private static lastReasoning: string = ''; // Store last model reasoning for UI display
+  private static thinkingEnabled: boolean = false; // When false, strip chain-of-thought blocks from output
 
   /**
    * Initialize and load a model
@@ -405,7 +406,8 @@ export class LlamaService {
         fullResponse = result.text;
       }
 
-      return fullResponse.trim();
+      const trimmed = fullResponse.trim();
+      return this.thinkingEnabled ? trimmed : this.stripThinkingBlocks(trimmed);
     } catch (jinjaError) {
       Logger.warn(
         'Jinja chat path failed, falling back to manual template:',
@@ -414,7 +416,8 @@ export class LlamaService {
 
       try {
         const prompt = getChatTemplate(this.currentModelName, chatMessages);
-        return await this.completion(prompt, config, onToken);
+        const fallback = await this.completion(prompt, config, onToken);
+        return this.thinkingEnabled ? fallback : this.stripThinkingBlocks(fallback);
       } catch (error) {
         Logger.error('Chat completion error:', error);
         throw error;
@@ -651,6 +654,35 @@ export class LlamaService {
 
   static isSmartToolDetection(): boolean {
     return this.smartToolDetection;
+  }
+
+  /**
+   * Enable or disable thinking mode. When disabled, chain-of-thought blocks
+   * emitted by the model (Gemma 4 `<|channel>thought...<channel|>`, DeepSeek
+   * `<think>...</think>`, etc.) are stripped from the final response.
+   */
+  static setThinkingEnabled(enabled: boolean): void {
+    this.thinkingEnabled = enabled;
+    Logger.info(`🧠 Thinking mode: ${enabled ? 'ON (pass-through)' : 'OFF (strip thoughts)'}`);
+  }
+
+  static isThinkingEnabled(): boolean {
+    return this.thinkingEnabled;
+  }
+
+  /**
+   * Remove chain-of-thought blocks from model output.
+   * Covers Gemma 4 channel syntax plus common <think>/<thinking>/<thought> tags.
+   */
+  private static stripThinkingBlocks(text: string): string {
+    if (!text) return text;
+    let out = text;
+    // Gemma 4: <|channel>thought ... <channel|>
+    out = out.replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '');
+    // <think>...</think>, <thinking>...</thinking>, <thought>...</thought>
+    out = out.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
+    out = out.replace(/<thought>[\s\S]*?<\/thought>/gi, '');
+    return out.trim();
   }
 
   /**

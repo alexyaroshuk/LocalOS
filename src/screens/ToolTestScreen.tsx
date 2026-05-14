@@ -50,6 +50,11 @@ export const ToolTestScreen: React.FC = () => {
   // Prompt viewer state
   const [showPromptViewer, setShowPromptViewer] = useState<boolean>(false);
 
+  // Thinking mode (off by default - strips chain-of-thought from output)
+  const [thinkingEnabled, setThinkingEnabledState] = useState<boolean>(
+    LlamaService.isThinkingEnabled(),
+  );
+
   // Embedding model debug state
   const [embeddingModelStatus, setEmbeddingModelStatus] = useState<{
     loaded: boolean;
@@ -801,6 +806,24 @@ export const ToolTestScreen: React.FC = () => {
             </View>
           </View>
 
+          <View style={styles.thinkingRow}>
+            <View style={styles.thinkingInfo}>
+              <Text style={styles.settingLabel}>Thinking Mode</Text>
+              <Text style={styles.thinkingHint}>
+                Off = strip {'<|channel>thought<channel|>'} / {'<think>'} blocks from output. On = pass through (useful for debugging reasoning models).
+              </Text>
+            </View>
+            <Switch
+              value={thinkingEnabled}
+              onValueChange={(val) => {
+                setThinkingEnabledState(val);
+                LlamaService.setThinkingEnabled(val);
+              }}
+              trackColor={{false: '#D1D1D6', true: '#9C27B0'}}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
           <Text style={styles.inferenceHint}>
             💡 Lower temperature (0.1-0.3) may help with tool calling accuracy. Higher values increase creativity but reduce reliability.
           </Text>
@@ -1184,6 +1207,26 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontStyle: 'italic',
     lineHeight: 16,
+  },
+  thinkingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    marginTop: 8,
+  },
+  thinkingInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  thinkingHint: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+    lineHeight: 15,
   },
   clearContextButton: {
     backgroundColor: '#FF3B30',
