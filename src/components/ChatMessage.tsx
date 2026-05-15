@@ -113,14 +113,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </Text>
           </View>
 
-          {/* Pocketpal-style inference timings under assistant bubbles. */}
-          {!isUser && message.id !== 'streaming' && message.timings && (
-            <Text style={styles.timingsFooter}>
-              {formatTimings(message.timings)}
-            </Text>
-          )}
-
-          {/* Action buttons for assistant messages (hide during streaming) */}
+          {/* Action buttons + pocketpal-style timings for assistant messages */}
           {!isUser && message.id !== 'streaming' && (
             <View style={styles.actionButtons}>
               <TouchableOpacity
@@ -128,6 +121,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 onPress={handleCopy}>
                 <Text style={styles.actionButtonIcon}>📋</Text>
               </TouchableOpacity>
+              {message.timings && (
+                <Text style={styles.timingsFooter}>
+                  {formatTimings(message.timings)}
+                </Text>
+              )}
             </View>
           )}
 
@@ -264,10 +262,9 @@ const styles = StyleSheet.create({
   },
   timingsFooter: {
     fontSize: 11,
-    marginTop: 4,
-    marginHorizontal: 6,
     color: '#6C757D',
     opacity: 0.7,
+    flexShrink: 1,
   },
   systemContainer: {
     marginVertical: 8,
@@ -284,6 +281,7 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 6,
     gap: 8,
   },
