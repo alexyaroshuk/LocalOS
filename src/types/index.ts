@@ -1,9 +1,22 @@
+// Pocketpal-style inference timing stats. Surfaced under assistant bubbles.
+// Native fields come from llama.rn's NativeCompletionResultTimings.
+// `time_to_first_token_ms` is measured client-side (not in native timings).
+export interface MessageTimings {
+  predicted_per_token_ms?: number;
+  predicted_per_second?: number;
+  time_to_first_token_ms?: number;
+  predicted_n?: number;
+  prompt_n?: number;
+  prompt_ms?: number;
+}
+
 // Message types for chat
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  timings?: MessageTimings;
 }
 
 // Action message type - actions are treated as messages in the chat

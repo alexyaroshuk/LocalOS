@@ -3,7 +3,7 @@
  */
 import {initLlama, LlamaContext} from 'llama.rn';
 import RNFS from 'react-native-fs';
-import {LlamaConfig, Message, Tool} from '../types';
+import {LlamaConfig, Message, MessageTimings, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId} from '../utils/helpers';
 import {ToolService} from './ToolService';
@@ -33,6 +33,27 @@ export class LlamaService {
   private static smartToolDetection: boolean = false; // Skip Layer 2 keyword triggers, let LLM decide
   private static lastReasoning: string = ''; // Store last model reasoning for UI display
   private static thinkingEnabled: boolean = false; // When false, strip chain-of-thought blocks from output
+  // Timings from the most recent context.completion() call. Read by
+  // chatCompletionWithTimings / chatCompletionWithTools to surface pocketpal-style
+  // stats (ms/token, tokens/sec, TTFT) under assistant bubbles.
+  private static lastTimings: MessageTimings | undefined;
+
+  // Build a MessageTimings object from llama.rn's native result + client-measured TTFT.
+  private static buildTimings(
+    nativeTimings: any,
+    ttftMs: number | undefined,
+  ): MessageTimings | undefined {
+    if (!nativeTimings && ttftMs == null) return undefined;
+    const t = nativeTimings ?? {};
+    return {
+      predicted_per_token_ms: t.predicted_per_token_ms,
+      predicted_per_second: t.predicted_per_second,
+      predicted_n: t.predicted_n,
+      prompt_n: t.prompt_n,
+      prompt_ms: t.prompt_ms,
+      time_to_first_token_ms: ttftMs,
+    };
+  }
 
   /**
    * Initialize and load a model
@@ -339,6 +360,8 @@ export class LlamaService {
       Logger.debug('Starting completion with config:', llamaConfig);
 
       let fullResponse = '';
+      const t0 = Date.now();
+      let ttftMs: number | undefined;
 
       // Use completion API with streaming
       const result = await this.context.completion(
@@ -352,8 +375,9 @@ export class LlamaService {
         },
         data => {
           // Token callback for streaming
-          if (data.token && onToken) {
-            onToken(data.token);
+          if (data.token) {
+            if (ttftMs === undefined) ttftMs = Date.now() - t0;
+            if (onToken) onToken(data.token);
             fullResponse += data.token;
           }
         },
@@ -363,6 +387,8 @@ export class LlamaService {
       if (!fullResponse && result.text) {
         fullResponse = result.text;
       }
+
+      this.lastTimings = this.buildTimings((result as any).timings, ttftMs);
 
       Logger.debug('Completion finished');
       return fullResponse.trim();
@@ -423,6 +449,8 @@ export class LlamaService {
       // pocketpal-ai's approach and avoids regex stripping on the hot path.
       let prevContent = '';
       let prevReasoning = '';
+      const t0 = Date.now();
+      let ttftMs: number | undefined;
 
       const result = await this.context.completion(
         {
@@ -431,13 +459,14 @@ export class LlamaService {
           jinja: true,
         },
         data => {
-          if (!onToken) return;
-
           const content = data.content ?? '';
           if (content.length > prevContent.length) {
             const delta = content.slice(prevContent.length);
             prevContent = content;
-            if (delta) onToken(delta);
+            if (delta) {
+              if (ttftMs === undefined) ttftMs = Date.now() - t0;
+              if (onToken) onToken(delta);
+            }
           }
 
           // Forward reasoning deltas only if thinking explicitly enabled.
@@ -453,6 +482,8 @@ export class LlamaService {
           }
         },
       );
+
+      this.lastTimings = this.buildTimings((result as any).timings, ttftMs);
 
       // Prefer `result.content` (post-filter answer) over `result.text` (raw).
       // Fall back to accumulated stream content, then text.
@@ -481,6 +512,20 @@ export class LlamaService {
         throw error;
       }
     }
+  }
+
+  /**
+   * Same as chatCompletion but also returns the latest inference timings.
+   * Used by the UI to render pocketpal-style stats under assistant bubbles.
+   */
+  static async chatCompletionWithTimings(
+    messages: Message[],
+    config: Partial<LlamaConfig> = {},
+    onToken?: (token: string) => void,
+  ): Promise<{text: string; timings?: MessageTimings}> {
+    this.lastTimings = undefined;
+    const text = await this.chatCompletion(messages, config, onToken);
+    return {text, timings: this.lastTimings};
   }
 
   /**
@@ -1431,25 +1476,31 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       toolArgs?: Record<string, any>,
       toolResult?: any
     ) => void,
-  ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
+  ): Promise<{response: string; usedTool?: boolean; toolName?: string; timings?: MessageTimings}> {
     if (!this.context || !this.currentModelName) {
       throw new Error('Model not loaded');
     }
 
+    // Reset so the returned timings reflect only this call's final generation
+    // (the last context.completion in the loop overwrites lastTimings).
+    this.lastTimings = undefined;
+
     if (!this.toolsEnabled) {
       Logger.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
       const response = await this.chatCompletion(messages, config, onToken);
-      return {response, usedTool: false};
+      return {response, usedTool: false, timings: this.lastTimings};
     }
 
     const modelConfig = this.modelConfig || getModelConfig(this.currentModelName);
+    let result: {response: string; usedTool?: boolean; toolName?: string};
     if (modelConfig.toolFormat === 'transformers-native') {
       Logger.info('🧭 Native agent loop path (toolFormat=transformers-native)');
-      return this.runNativeAgentLoop(messages, config, onToken, onToolUsage);
+      result = await this.runNativeAgentLoop(messages, config, onToken, onToolUsage);
+    } else {
+      Logger.info('🧭 Legacy tool loop path (toolFormat=' + modelConfig.toolFormat + ')');
+      result = await this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
     }
-
-    Logger.info('🧭 Legacy tool loop path (toolFormat=' + modelConfig.toolFormat + ')');
-    return this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
+    return {...result, timings: this.lastTimings};
   }
 
   /**

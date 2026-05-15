@@ -9,7 +9,7 @@ import {Platform} from 'react-native';
 import {LlamaService} from './LlamaService';
 import {AppleIntelligenceService} from './AppleIntelligenceService';
 import {LMStudioService} from './LMStudioService';
-import {Message, LlamaConfig} from '../types';
+import {Message, LlamaConfig, MessageTimings} from '../types';
 import {Logger, LogSection} from '../utils/Logger';
 
 type AIBackend = 'apple' | 'llama' | 'lmstudio' | 'none';
@@ -86,6 +86,26 @@ export class AIService {
   }
 
   /**
+   * Chat completion that also returns inference timings.
+   * Only the llama backend produces timings; others return undefined.
+   */
+  static async chatCompletionWithTimings(
+    messages: Message[],
+    config: Partial<LlamaConfig> = {},
+    onToken?: (token: string) => void,
+  ): Promise<{text: string; timings?: MessageTimings}> {
+    if (!this.initializationAttempted) {
+      await this.initialize();
+    }
+
+    if (this.currentBackend === 'llama') {
+      return await LlamaService.chatCompletionWithTimings(messages, config, onToken);
+    }
+    const text = await this.chatCompletion(messages, config, onToken);
+    return {text};
+  }
+
+  /**
    * Chat completion with tool support
    */
   static async chatCompletionWithTools(
@@ -99,7 +119,7 @@ export class AIService {
       toolArgs?: Record<string, any>,
       toolResult?: any
     ) => void,
-  ): Promise<{response: string; usedTool?: boolean; toolName?: string}> {
+  ): Promise<{response: string; usedTool?: boolean; toolName?: string; timings?: MessageTimings}> {
     if (!this.initializationAttempted) {
       await this.initialize();
     }

@@ -1,7 +1,21 @@
 import React, {useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Clipboard, Modal} from 'react-native';
-import {Message} from '../types';
+import {Message, MessageTimings} from '../types';
 import {formatTimestamp} from '../utils/helpers';
+
+function formatTimings(t: MessageTimings): string {
+  const parts: string[] = [];
+  if (t.predicted_per_token_ms != null) {
+    parts.push(`${t.predicted_per_token_ms.toFixed(0)} ms/token`);
+  }
+  if (t.predicted_per_second != null) {
+    parts.push(`${t.predicted_per_second.toFixed(1)} t/s`);
+  }
+  if (t.time_to_first_token_ms != null) {
+    parts.push(`${t.time_to_first_token_ms} ms TTFT`);
+  }
+  return parts.join(', ');
+}
 
 interface JournalProposal {
   title: string;
@@ -98,6 +112,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               {formatTimestamp(message.timestamp)}
             </Text>
           </View>
+
+          {/* Pocketpal-style inference timings under assistant bubbles. */}
+          {!isUser && message.id !== 'streaming' && message.timings && (
+            <Text style={styles.timingsFooter}>
+              {formatTimings(message.timings)}
+            </Text>
+          )}
 
           {/* Action buttons for assistant messages (hide during streaming) */}
           {!isUser && message.id !== 'streaming' && (
@@ -240,6 +261,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
     opacity: 0.6,
+  },
+  timingsFooter: {
+    fontSize: 11,
+    marginTop: 4,
+    marginHorizontal: 6,
+    color: '#6C757D',
+    opacity: 0.7,
   },
   systemContainer: {
     marginVertical: 8,

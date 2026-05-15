@@ -335,6 +335,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           role: 'assistant',
           content: result.response,
           timestamp: Date.now(),
+          timings: result.timings,
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -610,6 +611,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       let fullResponse = '';
       let usedTool = false;
       let toolName = '';
+      let responseTimings: import('../types').MessageTimings | undefined;
 
       if (toolsEnabled && AIService.areToolsSupported()) {
         // Show "Thinking..." state and create action message
@@ -757,6 +759,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         fullResponse = result.response;
         usedTool = result.usedTool || false;
         toolName = result.toolName || '';
+        responseTimings = result.timings;
 
         // Log tool usage for debugging
         if (usedTool) {
@@ -766,7 +769,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }
       } else {
         // Regular chat completion without tools
-        const response = await AIService.chatCompletion(
+        const completion = await AIService.chatCompletionWithTimings(
           contextMessages,
           {},
           token => {
@@ -775,7 +778,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             setStreamingText(fullResponse);
           },
         );
-        fullResponse = response;
+        fullResponse = completion.text;
+        responseTimings = completion.timings;
       }
 
       // Check if user stopped generation
@@ -815,6 +819,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         role: 'assistant',
         content: fullResponse,
         timestamp: Date.now(),
+        timings: responseTimings,
       };
 
       // Check if this is a tool confirmation question
