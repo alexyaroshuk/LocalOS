@@ -10,6 +10,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import {VaultService} from '../services/VaultService';
+import {VaultIndexService} from '../services/VaultIndexService';
+import {LlamaService} from '../services/LlamaService';
+import {DatabaseService} from '../services/DatabaseService';
 import {SampleVaultService} from '../services/SampleVaultService';
 import {FolderNavigator} from '../components/FolderNavigator';
 import {
@@ -40,9 +43,53 @@ export const VaultBrowserScreen: React.FC = () => {
   // Reader mode state
   const [selectedFile, setSelectedFile] = useState<MarkdownFile | null>(null);
 
+  // Index state
+  const [indexing, setIndexing] = useState<boolean>(false);
+  const [indexProgress, setIndexProgress] = useState<string>('');
+  const [indexStats, setIndexStats] = useState<{totalChunks: number; uniqueFiles: number; embeddingDim: number | null} | null>(null);
+
+  const refreshIndexStats = useCallback(async () => {
+    try {
+      const stats = await DatabaseService.getVaultChunkStats();
+      setIndexStats(stats);
+    } catch (err) {
+      Logger.warn('Failed to load index stats', err);
+    }
+  }, []);
+
+  const handleReindexVault = async () => {
+    if (indexing) return;
+    if (!LlamaService.isEmbeddingModelLoaded()) {
+      Alert.alert(
+        'Embedding Model Required',
+        'Load an embedding model from the Models screen before indexing the vault.',
+      );
+      return;
+    }
+    try {
+      setIndexing(true);
+      setIndexProgress('Starting…');
+      const result = await VaultIndexService.indexFullVault((done, total, path) => {
+        const name = path.split('/').pop() || path;
+        setIndexProgress(`Indexing ${done + 1}/${total}: ${name}`);
+      });
+      setIndexProgress(
+        `Indexed ${result.filesIndexed} files, ${result.chunksIndexed} chunks (${result.durationMs}ms, ${result.skipped} skipped)`,
+      );
+      await refreshIndexStats();
+    } catch (err) {
+      Logger.error('Reindex failed', err);
+      Alert.alert('Reindex failed', err instanceof Error ? err.message : String(err));
+      setIndexProgress('');
+    } finally {
+      setIndexing(false);
+    }
+  };
+
   useEffect(() => {
     initializeVaultBrowser();
-  }, []);
+    refreshIndexStats();
+  }, [refreshIndexStats]);
 
   const initializeVaultBrowser = async () => {
     try {
@@ -315,15 +362,31 @@ export const VaultBrowserScreen: React.FC = () => {
             <Text style={styles.headerTitle}>
               {vaultConfig?.vaultName || 'Vault'}
             </Text>
-            <TouchableOpacity
-              style={styles.changeButton}
-              onPress={handleChangeVault}>
-              <Text style={styles.changeButtonText}>Change</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={[styles.reindexButton, indexing && styles.reindexButtonDisabled]}
+                onPress={handleReindexVault}
+                disabled={indexing}>
+                {indexing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.reindexButtonText}>Reindex</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.changeButton}
+                onPress={handleChangeVault}>
+                <Text style={styles.changeButtonText}>Change</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.headerSubtitle}>
             {files.length} markdown files
+            {indexStats && ` • ${indexStats.totalChunks} chunks indexed${indexStats.embeddingDim ? ` (${indexStats.embeddingDim}D)` : ''}`}
           </Text>
+          {indexProgress ? (
+            <Text style={styles.indexProgress}>{indexProgress}</Text>
+          ) : null}
         </View>
 
         <ScrollView
@@ -689,6 +752,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reindexButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  reindexButtonDisabled: {
+    opacity: 0.6,
+  },
+  reindexButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  indexProgress: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#666',
   },
   backButton: {
     paddingRight: 12,
