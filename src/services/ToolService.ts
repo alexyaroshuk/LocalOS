@@ -6,6 +6,8 @@ import {generateId} from '../utils/helpers';
 import MemoryService from './MemoryService';
 import {LettaMemoryTools} from './LettaMemoryTools';
 import {VaultService} from './VaultService';
+import {VaultIndexService} from './VaultIndexService';
+import {LlamaService} from './LlamaService';
 import {AIService} from './AIService';
 
 export class ToolService {
@@ -33,6 +35,9 @@ export class ToolService {
     this.registerTool(this.getListVaultFilesTool());
     this.registerTool(this.getReadVaultFileTool());
     this.registerTool(this.getSearchVaultTool());
+    this.registerTool(this.getVaultLookupTool());
+    this.registerTool(this.getVaultWriteProposalTool());
+    this.registerTool(this.getVaultCommitWriteTool());
 
     // Register vault write tools
     this.registerTool(this.getSuggestJournalEntryTool());
@@ -794,64 +799,46 @@ export class ToolService {
         try {
           const config = await VaultService.getVaultConfig();
           if (!config) {
-            return {
-              success: false,
-              error: 'No vault configured',
-            };
+            return {success: false, error: 'No vault configured'};
           }
 
-          const query = (args.query as string).toLowerCase();
-          const scanResult = await VaultService.scanVault(config.vaultPath);
+          const query = String(args.query || '').trim();
+          if (!query) {
+            return {success: false, error: 'Empty query'};
+          }
 
-          // Search by file name or path
-          const nameMatches = scanResult.files.filter(f =>
-            f.basename.toLowerCase().includes(query) ||
-            f.relativePath.toLowerCase().includes(query)
-          );
-
-          // If no name matches, search content
-          if (nameMatches.length === 0) {
-            const contentMatches = [];
-            for (const file of scanResult.files.slice(0, 50)) { // Limit to first 50 files for performance
-              try {
-                const markdownFile = await VaultService.readMarkdownFile(file.path);
-                if (markdownFile.content.toLowerCase().includes(query)) {
-                  // Extract snippet around match
-                  const contentLower = markdownFile.content.toLowerCase();
-                  const matchIndex = contentLower.indexOf(query);
-                  const snippetStart = Math.max(0, matchIndex - 50);
-                  const snippetEnd = Math.min(markdownFile.content.length, matchIndex + query.length + 50);
-                  const snippet = markdownFile.content.substring(snippetStart, snippetEnd);
-
-                  contentMatches.push({
-                    name: file.basename,
-                    path: file.relativePath,
-                    folder: file.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
-                    snippet: `...${snippet}...`,
-                    tags: markdownFile.tags,
-                  });
-                }
-              } catch (readError) {
-                // Skip files that can't be read
-              }
-            }
-
+          // Tier 1: semantic top-k via VaultIndexService (uses keyword fallback
+          // internally when embedding model is not loaded).
+          const hits = await VaultIndexService.searchChunks(query, {topK: 3});
+          if (hits.length > 0) {
             return {
               success: true,
               query,
-              search_type: 'content',
-              total_matches: contentMatches.length,
-              matches: contentMatches,
+              search_type: LlamaService.isEmbeddingModelLoaded() ? 'semantic' : 'keyword_index',
+              total_matches: hits.length,
+              matches: hits.map(h => ({
+                path: h.path.replace(config.vaultPath, '').replace(/^\//, ''),
+                heading: h.heading,
+                snippet: h.snippet,
+                similarity: Number(h.similarity.toFixed(3)),
+                modified: new Date(h.mtime).toISOString(),
+              })),
             };
           }
 
-          // Return name matches
+          // Tier 2: filename-only grep fallback (index empty or vault unscanned).
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+          const q = query.toLowerCase();
+          const nameMatches = scanResult.files.filter(f =>
+            f.basename.toLowerCase().includes(q) ||
+            f.relativePath.toLowerCase().includes(q)
+          );
           return {
             success: true,
             query,
-            search_type: 'name',
+            search_type: 'filename_grep',
             total_matches: nameMatches.length,
-            matches: nameMatches.map(f => ({
+            matches: nameMatches.slice(0, 10).map(f => ({
               name: f.basename,
               path: f.relativePath,
               folder: f.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
@@ -864,6 +851,251 @@ export class ToolService {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to search vault',
           };
+        }
+      },
+    };
+  }
+
+  // ============== STRUCTURED VAULT TOOLS (lookup / propose / commit) ==============
+
+  /**
+   * Tool: vault_lookup
+   * Convenience semantic search returning the best single match. Used by the
+   * assistant to answer "do we have X?" before deciding whether to write.
+   */
+  private static getVaultLookupTool(): Tool {
+    return {
+      name: 'vault_lookup',
+      description:
+        'Look up a single best-match entry in the vault by topic. Use this BEFORE answering recall questions ("what\'s my X", "do I have Y saved") and BEFORE writing new facts. Returns the matching file path, heading, snippet, and a similarity score; or {found: false} if nothing matches.',
+      parameters: [
+        {
+          name: 'query',
+          type: 'string',
+          description: 'Topic or key to look up. Example: "bank password", "amazon login", "dark mode preference".',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {available: hasVault, reason: hasVault ? undefined : 'No vault configured'};
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {success: false, error: 'No vault configured'};
+          }
+          const query = String(args.query || '').trim();
+          if (!query) {
+            return {success: false, error: 'Empty query'};
+          }
+          const hits = await VaultIndexService.searchChunks(query, {topK: 1});
+          if (hits.length === 0) {
+            return {success: true, query, found: false};
+          }
+          const best = hits[0];
+          return {
+            success: true,
+            query,
+            found: true,
+            path: best.path.replace(config.vaultPath, '').replace(/^\//, ''),
+            heading: best.heading,
+            snippet: best.snippet,
+            similarity: Number(best.similarity.toFixed(3)),
+            modified: new Date(best.mtime).toISOString(),
+          };
+        } catch (err) {
+          return {success: false, error: err instanceof Error ? err.message : 'lookup failed'};
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: vault_write_proposal
+   * Build a write proposal — never writes to disk. Compares against existing
+   * content at the suggested path so the assistant can surface diffs to the
+   * user before any commit.
+   */
+  private static getVaultWriteProposalTool(): Tool {
+    return {
+      name: 'vault_write_proposal',
+      description:
+        'Propose writing a fact to the vault. Returns a proposal payload describing whether the file already exists, whether content matches, and any diff. NEVER writes to disk. The user must explicitly approve before vault_commit_write is called.',
+      parameters: [
+        {
+          name: 'suggested_path',
+          type: 'string',
+          description: 'Relative path under the vault root. Convention: category/subcategory/topic.md (e.g. "personal/passwords/bank.md").',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'Full markdown content to write or append.',
+          required: true,
+        },
+        {
+          name: 'mode',
+          type: 'string',
+          description: 'One of "create" (new file), "update" (overwrite), "append" (add to existing).',
+          required: false,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {available: hasVault, reason: hasVault ? undefined : 'No vault configured'};
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {success: false, error: 'No vault configured'};
+          }
+          const relPath = String(args.suggested_path || '').replace(/^\//, '').replace(/\.\.\//g, '');
+          if (!relPath || !relPath.endsWith('.md')) {
+            return {success: false, error: 'suggested_path must be a relative .md path'};
+          }
+          const content = String(args.content || '');
+          if (!content.trim()) {
+            return {success: false, error: 'content is empty'};
+          }
+          const requestedMode = String(args.mode || '').toLowerCase();
+          const absPath = `${config.vaultPath}/${relPath}`;
+
+          const RNFS = require('react-native-fs');
+          const exists = await RNFS.exists(absPath);
+          if (!exists) {
+            return {
+              success: true,
+              action: 'create',
+              suggested_path: relPath,
+              proposed_content: content,
+              note: 'File does not exist. Ask the user to approve creation, then call vault_commit_write with mode="create".',
+            };
+          }
+
+          const existing = await RNFS.readFile(absPath, 'utf8');
+          const sameContent = existing.trim() === content.trim();
+          if (sameContent) {
+            return {
+              success: true,
+              action: 'already_exists_same',
+              suggested_path: relPath,
+              existing_content: existing,
+              note: 'Identical content already saved. No write needed.',
+            };
+          }
+
+          const action = requestedMode === 'append' ? 'append' : 'diff';
+          return {
+            success: true,
+            action,
+            suggested_path: relPath,
+            existing_content: existing,
+            proposed_content: content,
+            note:
+              action === 'append'
+                ? 'Existing file present. Ask the user to approve appending, then call vault_commit_write with mode="append".'
+                : 'Existing file content differs from the proposed content. Surface the difference to the user and ask which to keep. On approval, call vault_commit_write with mode="update".',
+          };
+        } catch (err) {
+          return {success: false, error: err instanceof Error ? err.message : 'proposal failed'};
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: vault_commit_write
+   * Commits an approved write. Should only be called AFTER vault_write_proposal
+   * and explicit user approval. Re-indexes the affected file.
+   */
+  private static getVaultCommitWriteTool(): Tool {
+    return {
+      name: 'vault_commit_write',
+      description:
+        'Commit an approved write to the vault. Only call AFTER the user has explicitly approved a proposal returned by vault_write_proposal. The mode must match the proposal: create, update, or append.',
+      parameters: [
+        {
+          name: 'path',
+          type: 'string',
+          description: 'Relative vault path of the file to write (same as suggested_path from the proposal).',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'Final markdown content to write (or append).',
+          required: true,
+        },
+        {
+          name: 'mode',
+          type: 'string',
+          description: 'One of "create", "update", "append".',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {available: hasVault, reason: hasVault ? undefined : 'No vault configured'};
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {success: false, error: 'No vault configured'};
+          }
+          const relPath = String(args.path || '').replace(/^\//, '').replace(/\.\.\//g, '');
+          const content = String(args.content || '');
+          const mode = String(args.mode || '').toLowerCase();
+          if (!relPath || !relPath.endsWith('.md')) {
+            return {success: false, error: 'path must be a relative .md path'};
+          }
+          if (!['create', 'update', 'append'].includes(mode)) {
+            return {success: false, error: 'mode must be create | update | append'};
+          }
+          if (!content.trim()) {
+            return {success: false, error: 'content is empty'};
+          }
+
+          const RNFS = require('react-native-fs');
+          const absPath = `${config.vaultPath}/${relPath}`;
+          const folder = absPath.substring(0, absPath.lastIndexOf('/'));
+          await RNFS.mkdir(folder);
+
+          const exists = await RNFS.exists(absPath);
+          if (mode === 'create' && exists) {
+            return {success: false, error: 'File already exists — use mode="update" instead'};
+          }
+
+          let finalContent = content;
+          if (mode === 'append' && exists) {
+            const existing = await RNFS.readFile(absPath, 'utf8');
+            finalContent = existing.replace(/\s+$/, '') + '\n\n' + content + '\n';
+          } else if (!finalContent.endsWith('\n')) {
+            finalContent = finalContent + '\n';
+          }
+
+          await RNFS.writeFile(absPath, finalContent, 'utf8');
+
+          // Re-index this file so the new content is searchable immediately.
+          try {
+            await VaultIndexService.indexVaultFile(absPath);
+          } catch (idxErr) {
+            // Non-fatal — write succeeded.
+          }
+
+          return {
+            success: true,
+            path: relPath,
+            mode,
+            bytes_written: finalContent.length,
+            note: 'Write committed and re-indexed.',
+          };
+        } catch (err) {
+          return {success: false, error: err instanceof Error ? err.message : 'commit failed'};
         }
       },
     };

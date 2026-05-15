@@ -58,7 +58,12 @@
       "WebFetch(domain:react-native-documents.github.io)",
       "Bash(npx tsc:*)",
       "Bash(npm info:*)",
-      "WebFetch(domain:www.npmjs.com)"
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(gh api *)",
+      "Bash(python -c \"import sys,json; [print\\(f['name'],f['size']\\) for f in json.load\\(sys.stdin\\) if f['type']=='file']\")",
+      "Bash(xargs curl -s)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(xargs grep -l \"archival_memory_insert\\\\|archival_memory_search\")"
     ],
     "deny": [],
     "ask": []

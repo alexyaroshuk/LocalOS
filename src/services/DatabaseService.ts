@@ -204,6 +204,22 @@ export class DatabaseService {
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_user_facts_confidence ON user_facts(confidence DESC);');
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_user_facts_last_confirmed ON user_facts(last_confirmed DESC);');
 
+    // Vault chunks table — embedding index over user's vault markdown files.
+    // Vault files on disk are source-of-truth; this table is a derived search index.
+    this.db.executeSync(`
+      CREATE TABLE IF NOT EXISTS vault_chunks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vault_path TEXT NOT NULL,
+        heading TEXT,
+        chunk_text TEXT NOT NULL,
+        embedding TEXT NOT NULL,
+        mtime INTEGER NOT NULL,
+        chunk_hash TEXT NOT NULL UNIQUE
+      );
+    `);
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_path ON vault_chunks(vault_path);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_mtime ON vault_chunks(mtime DESC);');
+
     console.log('[Database] Tables created successfully');
   }
 
@@ -299,6 +315,31 @@ export class DatabaseService {
       }
     }
 
+    // Migration 3 -> 4: Add vault_chunks table for vault embedding index
+    if (currentVersion < 4) {
+      console.log('[Database] Running migration 3 -> 4: Adding vault_chunks table...');
+      try {
+        this.db.executeSync(`
+          CREATE TABLE IF NOT EXISTS vault_chunks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vault_path TEXT NOT NULL,
+            heading TEXT,
+            chunk_text TEXT NOT NULL,
+            embedding TEXT NOT NULL,
+            mtime INTEGER NOT NULL,
+            chunk_hash TEXT NOT NULL UNIQUE
+          );
+        `);
+        this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_path ON vault_chunks(vault_path);');
+        this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_mtime ON vault_chunks(mtime DESC);');
+        this.db.executeSync('UPDATE schema_version SET version = 4, applied_at = ?;', [Date.now()]);
+        console.log('[Database] Migration 3 -> 4 completed');
+      } catch (error) {
+        console.error('[Database] Migration 3 -> 4 failed:', error);
+        throw error;
+      }
+    }
+
     console.log('[Database] All migrations completed');
   }
 
@@ -378,7 +419,7 @@ export class DatabaseService {
    * Convert Float32Array or number[] to base64 TEXT for SQLite storage
    * NOTE: Using TEXT instead of BLOB due to op-sqlite BLOB bugs
    */
-  private static vectorToBase64(vector: number[] | Float32Array): string {
+  static vectorToBase64(vector: number[] | Float32Array): string {
     const float32Array = vector instanceof Float32Array ? vector : new Float32Array(vector);
     const uint8Array = new Uint8Array(float32Array.buffer);
 
@@ -394,7 +435,7 @@ export class DatabaseService {
   /**
    * Convert base64 TEXT from SQLite to number array
    */
-  private static base64ToVector(base64: string): number[] {
+  static base64ToVector(base64: string): number[] {
     if (!base64 || typeof base64 !== 'string') {
       return [];
     }
@@ -422,7 +463,7 @@ export class DatabaseService {
    * Calculate cosine similarity between two vectors
    * Returns value between -1 (opposite) and 1 (identical)
    */
-  private static cosineSimilarity(vecA: number[], vecB: number[]): number {
+  static cosineSimilarity(vecA: number[], vecB: number[]): number {
     if (vecA.length !== vecB.length) {
       console.error(
         `[Database] Vector dimension mismatch: ${vecA.length}D vs ${vecB.length}D. ` +
@@ -1020,7 +1061,164 @@ export class DatabaseService {
     this.db.executeSync('DELETE FROM tasks;');
     this.db.executeSync('DELETE FROM conversations;');
     this.db.executeSync('DELETE FROM user_facts;');
+    try {
+      this.db.executeSync('DELETE FROM vault_chunks;');
+    } catch (e) {
+      // table may not exist on older DBs prior to migration
+    }
     console.log('[Database] Database cleared');
+  }
+
+  // ============== VAULT CHUNK OPERATIONS ==============
+
+  /**
+   * Upsert a single vault chunk by chunk_hash. Idempotent — same content/path/heading
+   * never produces a duplicate row.
+   */
+  static async upsertVaultChunk(params: {
+    vaultPath: string;
+    heading: string | null;
+    chunkText: string;
+    embedding: number[] | Float32Array;
+    mtime: number;
+    chunkHash: string;
+  }): Promise<void> {
+    const embeddingBase64 = this.vectorToBase64(params.embedding);
+    this.db.executeSync(
+      `INSERT INTO vault_chunks (vault_path, heading, chunk_text, embedding, mtime, chunk_hash)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(chunk_hash) DO UPDATE SET
+         vault_path = excluded.vault_path,
+         heading = excluded.heading,
+         chunk_text = excluded.chunk_text,
+         embedding = excluded.embedding,
+         mtime = excluded.mtime;`,
+      [params.vaultPath, params.heading, params.chunkText, embeddingBase64, params.mtime, params.chunkHash]
+    );
+  }
+
+  /**
+   * Remove all chunks for a given vault file path. Use before re-indexing a changed
+   * file, or when the file is deleted from disk.
+   */
+  static async deleteVaultChunksForPath(vaultPath: string): Promise<number> {
+    const result = this.db.executeSync(
+      'DELETE FROM vault_chunks WHERE vault_path = ?;',
+      [vaultPath]
+    );
+    return result.rowsAffected || 0;
+  }
+
+  /**
+   * Get all chunk rows (without embeddings) for a given vault path. Used to check
+   * whether a file has been indexed and at what mtime.
+   */
+  static async getVaultChunkMetaForPath(vaultPath: string): Promise<Array<{
+    id: number; heading: string | null; chunk_text: string; mtime: number; chunk_hash: string;
+  }>> {
+    const result = this.db.executeSync(
+      'SELECT id, heading, chunk_text, mtime, chunk_hash FROM vault_chunks WHERE vault_path = ?;',
+      [vaultPath]
+    );
+    return (result.rows || []) as any;
+  }
+
+  /**
+   * Vector similarity search over vault_chunks. Returns top-k chunks ranked by
+   * cosine similarity, optionally with a recency boost from mtime.
+   */
+  static async searchVaultChunks(
+    queryEmbedding: number[] | Float32Array,
+    options: {topK?: number; minSimilarity?: number; recencyBoost?: boolean} = {}
+  ): Promise<Array<{
+    id: number;
+    vaultPath: string;
+    heading: string | null;
+    chunkText: string;
+    mtime: number;
+    similarity: number;
+  }>> {
+    const topK = options.topK ?? 3;
+    const minSim = options.minSimilarity ?? 0.0;
+    const recency = options.recencyBoost ?? true;
+
+    const queryVec = Array.isArray(queryEmbedding) ? queryEmbedding : Array.from(queryEmbedding);
+
+    const result = this.db.executeSync(
+      'SELECT id, vault_path, heading, chunk_text, mtime, embedding FROM vault_chunks;'
+    );
+    const rows = result.rows || [];
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const now = Date.now();
+    const scored = rows
+      .map((row: any) => {
+        const vec = this.base64ToVector(row.embedding);
+        if (vec.length === 0 || vec.length !== queryVec.length) {
+          return null;
+        }
+        let sim = this.cosineSimilarity(queryVec, vec);
+        if (recency) {
+          // Linear decay: fresh files (<7d) get up to +0.05 boost; older = no boost.
+          const ageDays = Math.max(0, (now - row.mtime) / (1000 * 60 * 60 * 24));
+          const boost = Math.max(0, 0.05 * (1 - ageDays / 7));
+          sim += boost;
+        }
+        return {
+          id: row.id as number,
+          vaultPath: row.vault_path as string,
+          heading: row.heading as string | null,
+          chunkText: row.chunk_text as string,
+          mtime: row.mtime as number,
+          similarity: sim,
+        };
+      })
+      .filter((r: any) => r !== null && r.similarity >= minSim) as Array<{
+        id: number; vaultPath: string; heading: string | null;
+        chunkText: string; mtime: number; similarity: number;
+      }>;
+
+    scored.sort((a, b) => b.similarity - a.similarity);
+    return scored.slice(0, topK);
+  }
+
+  /**
+   * FTS-less keyword fallback over vault_chunks.chunk_text. Used when no
+   * embedding model is loaded.
+   */
+  static async keywordSearchVaultChunks(query: string, topK: number = 3): Promise<Array<{
+    id: number; vaultPath: string; heading: string | null; chunkText: string; mtime: number;
+  }>> {
+    const result = this.db.executeSync(
+      `SELECT id, vault_path, heading, chunk_text, mtime FROM vault_chunks
+       WHERE chunk_text LIKE ? OR heading LIKE ? OR vault_path LIKE ?
+       ORDER BY mtime DESC LIMIT ?;`,
+      [`%${query}%`, `%${query}%`, `%${query}%`, topK]
+    );
+    return (result.rows || []).map((row: any) => ({
+      id: row.id,
+      vaultPath: row.vault_path,
+      heading: row.heading,
+      chunkText: row.chunk_text,
+      mtime: row.mtime,
+    }));
+  }
+
+  static async getVaultChunkStats(): Promise<{totalChunks: number; uniqueFiles: number; embeddingDim: number | null}> {
+    const totalRes = this.db.executeSync('SELECT COUNT(*) as count FROM vault_chunks;');
+    const filesRes = this.db.executeSync('SELECT COUNT(DISTINCT vault_path) as count FROM vault_chunks;');
+    const sampleRes = this.db.executeSync('SELECT embedding FROM vault_chunks LIMIT 1;');
+    let dim: number | null = null;
+    if (sampleRes.rows?.[0]?.embedding) {
+      dim = this.base64ToVector(sampleRes.rows[0].embedding).length;
+    }
+    return {
+      totalChunks: totalRes.rows?.[0]?.count || 0,
+      uniqueFiles: filesRes.rows?.[0]?.count || 0,
+      embeddingDim: dim,
+    };
   }
 
   /**

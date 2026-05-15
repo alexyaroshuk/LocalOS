@@ -11,6 +11,7 @@ import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
 import {SYSTEM_PROMPTS, SystemPromptType} from './SystemPrompts';
+import {PromptBuilder, TOKEN_BUDGETS} from './PromptBuilder';
 
 export class LlamaService {
   // Chat/Agent model context (primary)
@@ -915,8 +916,18 @@ Assistant: [get_current_datetime()]
 User: Search for AI news
 Assistant: [search_web(query="latest AI news")]
 
-User: Remember I like dark mode
-Assistant: [archival_memory_insert(content="User prefers dark mode")]`;
+User: What's my bank password?
+Assistant: [vault_lookup(query="bank password")]
+
+User: Remember my bank password is 123
+Assistant: [vault_lookup(query="bank password")]
+(then, based on the lookup result, either confirm "already saved",
+surface a diff if values differ, or call vault_write_proposal to
+suggest a new file at personal/passwords/bank.md — never write
+without an explicit user approval step)
+
+User: Do I have an Amazon password saved?
+Assistant: [vault_lookup(query="amazon password")]`;
     }
 
     const persona = `You are LocalOS Assistant, a private on-device AI.
@@ -1193,7 +1204,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     const toolResultMessage: Message = {
       id: 'tool-result',
       role: 'system',
-      content: `RESULT: ${JSON.stringify(toolResult.result)}\n\nRespond naturally using this data. NO tool syntax.`,
+      content: `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nRespond naturally using this data. NO tool syntax.`,
       timestamp: Date.now(),
     };
 
@@ -1932,7 +1943,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         // Non-Gemma path: rebuild base prompt with tool result in convo.
         for (const {toolName, toolResult} of execResults) {
           const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
-          const resultText = typeof payload === 'string' ? payload : JSON.stringify(payload);
+          const resultText = PromptBuilder.truncateToolResult(payload, TOKEN_BUDGETS.toolResult);
           convo.push({
             role: 'system',
             content: `Tool result for ${toolName}: ${resultText}\n\nUse this result to answer the user's question directly.`,
@@ -2107,6 +2118,58 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       if (hasVaultListTrigger && this.availableTools.some(t => t.name === 'list_vault_structure')) {
         Logger.info('📁 VAULT LIST TRIGGER DETECTED - Forcing list_vault_structure call');
         return await this.runTriggerTool('list_vault_structure', {}, messages, config, onToken, onToolUsage);
+      }
+
+      // RECALL/MEMORY TRIGGER: high-confidence intent to look something up in the user's vault.
+      // Prefers vault_lookup when present (Phase 2), falls back to search_vault.
+      // Patterns the user typed in feedback: "password", "did I tell", "do I have",
+      // "what's my", "remember when", "forgot", "where did I save".
+      const recallPatterns: RegExp[] = [
+        /\b(my|the)\s+\w+\s+password\b/i,
+        /\bwhat['']?s\s+my\b/i,
+        /\bdo\s+i\s+have\b/i,
+        /\bdid\s+i\s+(tell|say|mention|save|store|write)\b/i,
+        /\bremember\s+(when|that|the)\b/i,
+        /\bi\s+forgot\b/i,
+        /\bwhere\s+did\s+i\s+(save|store|put|write)\b/i,
+      ];
+      const hasRecallTrigger = recallPatterns.some(re => re.test(userMessage.content));
+      if (hasRecallTrigger) {
+        const lookupTool = this.availableTools.find(t => t.name === 'vault_lookup');
+        const searchTool = this.availableTools.find(t => t.name === 'search_vault');
+        const tool = lookupTool || searchTool;
+        if (tool) {
+          // Strip leading interrogatives so the embedding query reflects the topic.
+          const query = userMessage.content
+            .replace(/^(what['']?s|what is|do i have|did i|where did i|tell me)\s+/i, '')
+            .replace(/\?.*$/, '')
+            .trim();
+          Logger.info(`🧠 RECALL TRIGGER DETECTED - Forcing ${tool.name} with query: "${query}"`);
+          return await this.runTriggerTool(tool.name, {query}, messages, config, onToken, onToolUsage);
+        }
+      }
+
+      // SAVE/REMEMBER TRIGGER: user is volunteering a fact to remember.
+      // We do NOT auto-write — we route to a lookup first so the assistant can
+      // diff against existing values and propose a write via the system-prompt flow.
+      // Patterns: "remember that X", "save this", "note that X", "X = Y" (key/value form).
+      const savePatterns: RegExp[] = [
+        /\bremember\s+(that|this|I)\b/i,
+        /\b(save|store|note)\s+(this|that|the\s+following)\b/i,
+        /\bnote\s+that\b/i,
+        /^[\w\s]{2,40}\s*=\s*\S+/,  // "bank password = 123" style
+      ];
+      const hasSaveTrigger = savePatterns.some(re => re.test(userMessage.content));
+      if (hasSaveTrigger) {
+        const lookupTool = this.availableTools.find(t => t.name === 'vault_lookup');
+        const searchTool = this.availableTools.find(t => t.name === 'search_vault');
+        const tool = lookupTool || searchTool;
+        if (tool) {
+          // Use the whole utterance as the search query — embedding handles fuzziness.
+          const query = userMessage.content.replace(/\?.*$/, '').trim();
+          Logger.info(`💾 SAVE TRIGGER DETECTED - Pre-flight ${tool.name} for diff check: "${query}"`);
+          return await this.runTriggerTool(tool.name, {query}, messages, config, onToken, onToolUsage);
+        }
       }
     }
 

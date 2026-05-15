@@ -55,9 +55,9 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
     type: 'llama-3.1-8b-instruct',
     displayName: 'Llama 3.1 8B (Official Tool Support)',
     toolFormat: 'transformers-native',
-    needsToolExamples: false, // Native tool support, no examples needed
-    toolDetectionTemp: 0.3, // Lower temp for more precise tool calling
-    toolDetectionMaxTokens: 512, // Increased from 200 - need room for complete XML tool calls
+    needsToolExamples: true, // Q4_K_M quant + abliterated variant under-fires tools without examples
+    toolDetectionTemp: 0.1, // Determinism > creativity for routing
+    toolDetectionMaxTokens: 512,
     useLangchainPrompt: false, // Use native transformers format
     contextSize: 8192, // 8K context - realistic for mobile (128K theoretical max, but memory intensive)
     stopWords: [
