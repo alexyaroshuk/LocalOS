@@ -133,6 +133,26 @@ const TEST_PROMPTS = [
       'Today I interviewed at three companies: Google (went well), Meta (okay), and a startup called Acme (very exciting). Also read about LLMs and tried the new Llama 3.2 model.',
     ],
   },
+  {
+    category: 'Memory - Semantic Recall (Should Use archival_memory_search)',
+    prompts: [
+      'What beverages do I enjoy?',
+      'What programming languages do I use?',
+      'Where do I live?',
+      'What music do I like?',
+      'What do I build for work?',
+    ],
+  },
+  {
+    category: 'Vault - Semantic Search (Should Use search_vault or vault_lookup)',
+    prompts: [
+      'What notes do I have about AI and neural networks?',
+      'Do I have anything written about my coding setup?',
+      'Find notes related to learning or studying',
+      'What have I written about productivity?',
+      'Search vault for anything about local models',
+    ],
+  },
 ];
 
 export const DebugTestPrompts: React.FC<DebugTestPromptsProps> = ({

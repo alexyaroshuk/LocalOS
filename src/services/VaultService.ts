@@ -14,6 +14,7 @@ import {
   MarkdownFile,
 } from '../types/vault';
 import {Logger} from '../utils/Logger';
+import {VaultIndexService} from './VaultIndexService';
 
 const VAULT_CONFIG_KEY = '@vault_config';
 
@@ -559,6 +560,11 @@ export class VaultService {
       await RNFS.writeFile(finalPath, content, 'utf8');
       Logger.info(`Wrote file: ${finalPath}`);
 
+      // Index for semantic search (fire-and-forget, non-blocking)
+      VaultIndexService.indexVaultFile(finalPath).catch(err =>
+        Logger.warn('Failed to index vault file after write:', err),
+      );
+
       // Get file stats
       const stat = await RNFS.stat(finalPath);
       const fileName = finalPath.split('/').pop() || '';
@@ -607,6 +613,11 @@ export class VaultService {
       // Write file
       await RNFS.writeFile(fullPath, content, 'utf8');
       Logger.info(`Updated file: ${fullPath}`);
+
+      // Index for semantic search (fire-and-forget, non-blocking)
+      VaultIndexService.indexVaultFile(fullPath).catch(err =>
+        Logger.warn('Failed to index vault file after update:', err),
+      );
 
       // Get file stats
       const stat = await RNFS.stat(fullPath);

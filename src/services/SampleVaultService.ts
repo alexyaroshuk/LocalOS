@@ -5,6 +5,7 @@
 
 import RNFS from 'react-native-fs';
 import {VaultService} from './VaultService';
+import {VaultIndexService} from './VaultIndexService';
 import {Logger} from '../utils/Logger';
 
 const SAMPLE_VAULT_DIR = `${RNFS.DocumentDirectoryPath}/sample-vault`;
@@ -1381,6 +1382,9 @@ export class SampleVaultService {
 
       onProgress?.('Setting vault as active...');
       await VaultService.setActiveVault(SAMPLE_VAULT_DIR);
+
+      onProgress?.('Indexing vault for semantic search...');
+      await VaultIndexService.indexFullVault(msg => onProgress?.(msg));
 
       Logger.info(`Sample vault created with ${entries.length} files`);
     } catch (error) {
