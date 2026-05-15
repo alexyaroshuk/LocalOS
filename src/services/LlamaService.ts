@@ -1500,6 +1500,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       Logger.info('🧭 Legacy tool loop path (toolFormat=' + modelConfig.toolFormat + ')');
       result = await this.runLegacyToolLoop(messages, config, onToken, onToolUsage);
     }
+    Logger.debug('⏱️  Timings:', this.lastTimings);
     return {...result, timings: this.lastTimings};
   }
 
@@ -1746,6 +1747,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       let prevContent = '';
       let prevReasoning = '';
       let sawToolCall = false;
+      const t0 = Date.now();
+      let ttftMs: number | undefined;
 
       let result: any;
       try {
@@ -1778,6 +1781,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             if (content.length > prevContent.length) {
               const delta = content.slice(prevContent.length);
               prevContent = content;
+              if (delta && ttftMs === undefined) ttftMs = Date.now() - t0;
               if (onToken && !sawToolCall) {
                 onToken(delta);
               }
@@ -1790,6 +1794,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             }
           },
         );
+        // Overwrite on every iter; final iter (after tool exec) wins,
+        // which is the generation that produced the user-visible answer.
+        this.lastTimings = this.buildTimings((result as any)?.timings, ttftMs);
       } catch (loopError) {
         if (iter === 0) {
           Logger.warn('Native loop failed on first iteration, falling back to legacy:',
