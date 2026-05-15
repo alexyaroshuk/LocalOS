@@ -811,15 +811,29 @@ export class ToolService {
           // internally when embedding model is not loaded).
           const hits = await VaultIndexService.searchChunks(query, {topK: 3});
           if (hits.length > 0) {
+            // Enrich top-1 with full file content so the agent can answer
+            // directly when the best match is sufficient. Lower-ranked hits
+            // stay as snippets to keep token cost bounded.
+            let topFullContent: string | undefined;
+            try {
+              const md = await VaultService.readMarkdownFile(hits[0].path);
+              topFullContent = md.content;
+              const MAX = 4000;
+              if (topFullContent.length > MAX) {
+                topFullContent = topFullContent.substring(0, MAX) + '\n…[truncated]';
+              }
+            } catch {}
+
             return {
               success: true,
               query,
               search_type: LlamaService.isEmbeddingModelLoaded() ? 'semantic' : 'keyword_index',
               total_matches: hits.length,
-              matches: hits.map(h => ({
+              matches: hits.map((h, i) => ({
                 path: h.path.replace(config.vaultPath, '').replace(/^\//, ''),
                 heading: h.heading,
                 snippet: h.snippet,
+                full_content: i === 0 ? topFullContent : undefined,
                 similarity: Number(h.similarity.toFixed(3)),
                 modified: new Date(h.mtime).toISOString(),
               })),
@@ -895,6 +909,24 @@ export class ToolService {
             return {success: true, query, found: false};
           }
           const best = hits[0];
+
+          // Load full file content so the agent has the surrounding context
+          // for the matched chunk, not just a 200-char snippet. Critical for
+          // accurate narration — snippets alone often miss the exact answer.
+          let fullContent: string | undefined;
+          try {
+            const md = await VaultService.readMarkdownFile(best.path);
+            fullContent = md.content;
+            // Hard cap to keep tool result under the result-truncation budget.
+            // Chunks are 256 tokens (~1000 chars); files are usually a few KB.
+            const MAX = 4000;
+            if (fullContent.length > MAX) {
+              fullContent = fullContent.substring(0, MAX) + '\n…[truncated]';
+            }
+          } catch (readErr) {
+            // Best-effort — if read fails, still return the snippet
+          }
+
           return {
             success: true,
             query,
@@ -902,6 +934,7 @@ export class ToolService {
             path: best.path.replace(config.vaultPath, '').replace(/^\//, ''),
             heading: best.heading,
             snippet: best.snippet,
+            full_content: fullContent,
             similarity: Number(best.similarity.toFixed(3)),
             modified: new Date(best.mtime).toISOString(),
           };

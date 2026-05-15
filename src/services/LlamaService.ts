@@ -1285,10 +1285,21 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return await this.runTriggerTool('get_current_datetime', {}, messages, config, onToken, onToolUsage);
     }
 
-    // VAULT FILE SEARCH — explicit .md filename or "where is" query.
+    // VAULT FILE READ vs SEARCH — disambiguate by intent verb.
+    //  - "read/show/open/display/print/contents of X.md"  → read_vault_file (full content)
+    //  - "where is/find/locate X.md"                      → search_vault (path lookup)
     const hasMdFile = /\b[\w\s-]+\.md\b/i.test(content);
-    if ((hasMdFile || lower.includes('where is') || lower.includes('where can i find')) && hasTool('search_vault')) {
-      const mdMatch = content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) || content.match(/\b([\w-]+\.md)\b/i);
+    const mdMatch = content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) || content.match(/\b([\w-]+\.md)\b/i);
+    const readVerbs = /\b(read|show|open|display|print|view|content|contents|what does|what['']?s in|what is in)\b/i;
+    const findVerbs = /\b(where is|where can i find|find|locate|which folder)\b/i;
+
+    if (hasMdFile && readVerbs.test(content) && hasTool('read_vault_file')) {
+      const filePath = mdMatch ? mdMatch[1].trim() : content;
+      Logger.info(`📖 PREFLIGHT: read_vault_file "${filePath}"`);
+      return await this.runTriggerTool('read_vault_file', {file_path: filePath}, messages, config, onToken, onToolUsage);
+    }
+
+    if ((hasMdFile || findVerbs.test(content)) && hasTool('search_vault')) {
       const q = mdMatch ? mdMatch[1].trim() : content.replace(/^(where is|where can i find|find|locate)\s+/i, '').replace(/\?.*$/, '').trim();
       Logger.info(`🔍 PREFLIGHT: search_vault "${q}"`);
       return await this.runTriggerTool('search_vault', {query: q}, messages, config, onToken, onToolUsage);
@@ -2464,17 +2475,24 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     if (userMessage && !this.smartToolDetection) {
       const lowerContent = userMessage.content.toLowerCase();
 
-      // VAULT FILE SEARCH TRIGGER (must run before web search to prevent false positives)
-      // Handles: "where is X.md", "find X.md", queries containing a .md filename
+      // VAULT FILE READ vs SEARCH — disambiguate by intent verb.
+      //  - "read/show/open/contents of X.md"  → read_vault_file (full content)
+      //  - "where is/find/locate X.md"        → search_vault (path lookup)
       const hasMdFile = /\b[\w\s-]+\.md\b/i.test(userMessage.content);
-      const isWhereQuery = lowerContent.includes('where is') || lowerContent.includes('where can i find');
+      const readVerbs = /\b(read|show|open|display|print|view|content|contents|what does|what['']?s in|what is in)\b/i;
+      const findVerbs = /\b(where is|where can i find|find|locate|which folder)\b/i;
+      const mdMatch = userMessage.content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) ||
+                      userMessage.content.match(/\b([\w-]+\.md)\b/i);
+
+      if (hasMdFile && readVerbs.test(userMessage.content) && this.availableTools.some(t => t.name === 'read_vault_file')) {
+        const filePath = mdMatch ? mdMatch[1].trim() : userMessage.content;
+        Logger.info(`📖 VAULT FILE READ TRIGGER - Reading: "${filePath}"`);
+        return await this.runTriggerTool('read_vault_file', {file_path: filePath}, messages, config, onToken, onToolUsage);
+      }
+
+      const isWhereQuery = findVerbs.test(userMessage.content);
       if ((hasMdFile || isWhereQuery) && this.availableTools.some(t => t.name === 'search_vault')) {
-        // Extract the filename/search term
         let searchQuery = userMessage.content;
-        // Match Title Case filename (e.g. "Vector Search.md") — uppercase words only, avoids sentence prefixes
-        // Fallback to single lowercase word filename (e.g. "readme.md")
-        const mdMatch = userMessage.content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) ||
-                        userMessage.content.match(/\b([\w-]+\.md)\b/i);
         if (mdMatch) {
           searchQuery = mdMatch[1].trim();
         } else {
