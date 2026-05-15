@@ -156,7 +156,7 @@ export class ToolService {
     return {
       name: 'get_current_datetime',
       description:
-        'Get the current date and time. Use this when the user asks about the current date, time, day of the week, or any time-related queries.',
+        'READ. Get the current real-world date and time. Examples: "what time is it", "what day is today", "what\'s the date", "what year is it", "is it morning", "what day of the week is it". Always use this — never guess time.',
       parameters: [],
       execute: async () => {
         const now = new Date();
@@ -251,7 +251,7 @@ export class ToolService {
     return {
       name: 'search_web',
       description:
-        'Search the web and get URLs for top 5 results. Returns structured data with title and URL for each result. Use this to find current events, news, headlines, tutorials, documentation, "what\'s happening", "find X", "search X", or any topic the user asks about. After getting results, fetch content from URLs using webFetch tool.',
+        'READ. Search the public web for current events, news, headlines, public facts, tutorials, or documentation. Examples: "latest AI news", "what\'s trending on Twitter", "search for React Native tutorials", "current weather in NYC", "who won the game". Do NOT use this for info about the user themselves — that\'s vault_lookup.',
       parameters: [
         {
           name: 'query',
@@ -568,7 +568,7 @@ export class ToolService {
     return {
       name: 'list_vault_structure',
       description:
-        'Get the folder structure of the Obsidian vault. Shows all folders and subfolders. Use this to understand the organization of notes.',
+        'READ. List all folders and subfolders in the vault (structure only, no file contents). Examples: "what folders do I have", "show me my vault structure", "list folders in my vault". Use vault_lookup or search_vault for actual content.',
       parameters: [],
       checkAvailability: async () => {
         const hasVault = await VaultService.hasVault();
@@ -630,7 +630,7 @@ export class ToolService {
     return {
       name: 'list_vault_files',
       description:
-        'List all markdown files in the vault with their folder locations. Use this to see what notes are available and where they are located.',
+        'READ. List all markdown files in the vault with their folder locations. Examples: "list all my notes", "show me every file in my vault", "what files do I have in Learning folder". Optional folder filter. For finding specific content, use vault_lookup or search_vault instead.',
       parameters: [
         {
           name: 'folder',
@@ -697,7 +697,7 @@ export class ToolService {
     return {
       name: 'read_vault_file',
       description:
-        'Read the content of a specific markdown file from the vault. Provide the file name or relative path. Returns the file content, frontmatter metadata, tags, and links.',
+        'READ. Open and return the full contents of a specific markdown file when you already know its name or path. Examples: "read Vector Search.md", "open Learning/LocalOS.md", "show me the content of Preferences.md". Returns content, frontmatter, tags, and links. Use search_vault or vault_lookup if you don\'t know the exact filename.',
       parameters: [
         {
           name: 'file_path',
@@ -779,7 +779,7 @@ export class ToolService {
     return {
       name: 'search_vault',
       description:
-        'Search for files in the vault by name, folder, or content keywords. Returns matching files with snippets.',
+        'READ. Search the vault for multiple matching notes by topic or keyword. Use when you need several results, not just one best match. Examples: "find notes about React Native", "search for productivity notes", "what have I written about embeddings", "show me journal entries about fitness". Returns top-K matching files with snippets and similarity scores. For a single best match, use vault_lookup instead.',
       parameters: [
         {
           name: 'query',
@@ -867,7 +867,7 @@ export class ToolService {
     return {
       name: 'vault_lookup',
       description:
-        'Look up a single best-match entry in the vault by topic. Use this BEFORE answering recall questions ("what\'s my X", "do I have Y saved") and BEFORE writing new facts. Returns the matching file path, heading, snippet, and a similarity score; or {found: false} if nothing matches.',
+        'READ. Find one piece of info the user previously stored. Use whenever the user asks about themselves, their preferences, habits, beliefs, possessions, locations, passwords, or recalls anything they told you before. Examples: "what beverages do I enjoy", "what languages do I use", "where do I live", "what music do I like", "what\'s my Amazon password", "do I have a dentist", "am I vegetarian". Returns the best single match (path, heading, snippet, similarity) or {found: false}.',
       parameters: [
         {
           name: 'query',
@@ -922,7 +922,7 @@ export class ToolService {
     return {
       name: 'vault_write_proposal',
       description:
-        'Propose writing a fact to the vault. Returns a proposal payload describing whether the file already exists, whether content matches, and any diff. NEVER writes to disk. The user must explicitly approve before vault_commit_write is called.',
+        'CREATE/UPDATE. Propose saving new info to the vault. Use when the user volunteers a new fact, preference, password, or note. Examples: "remember my X is Y", "save this note", "store my preference for Z", "I prefer dark mode". Returns a diff against existing content. NEVER writes to disk — user must approve via vault_commit_write next.',
       parameters: [
         {
           name: 'suggested_path',

@@ -7,6 +7,7 @@ import {LlamaConfig, Message, MessageTimings, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId} from '../utils/helpers';
 import {ToolService} from './ToolService';
+import {ToolRouterService} from './ToolRouterService';
 import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
@@ -914,25 +915,83 @@ Do not announce, explain, or describe the call. Just emit the bracket
 expression alone on its own line. The tool will run and the result
 will be returned. Then write the final natural-language answer.
 
-Examples:
+# TOOL POLICY (CRUD framing)
+
+Think of each user message as one of four operations. Pick a tool by
+matching the operation.
+
+READ — user asks for info, recalls something, looks something up.
+  ▸ Info about THE USER (preferences, habits, facts, passwords,
+    locations, possessions, anything they previously told you)
+    → vault_lookup (best single match) or search_vault (multiple).
+  ▸ Vault structure ("what folders / files do I have")
+    → list_vault_structure or list_vault_files.
+  ▸ Specific file you already know by name
+    → read_vault_file.
+  ▸ Public world info, news, current events
+    → search_web.
+  ▸ Current time, date, day of week
+    → get_current_datetime.
+
+CREATE — user volunteers a new fact, preference, password, or note.
+  ▸ vault_write_proposal (proposes, does not write).
+  ▸ Then wait for user approval; on "yes", vault_commit_write fires.
+
+UPDATE — user wants to change existing info.
+  ▸ vault_write_proposal with mode that reflects the change.
+  ▸ update_core_memory for in-context memory blocks
+    (user_profile, conversation_style, current_focus,
+    relationship_context).
+
+DELETE — currently not supported; tell the user you cannot delete.
+
+# RULES
+1. Always READ before CREATE — call vault_lookup first to avoid
+   duplicates and to surface diffs.
+2. Never invent tool names. Only call tools listed above. Tool names
+   never start with "suggest_" (except suggest_journal_entry).
+3. When in doubt about USER info, call vault_lookup. Embedding search
+   handles fuzzy queries — "beverages" matches "coffee", "languages"
+   matches "TypeScript", etc.
+4. If no tool fits, answer directly and concisely.
+
+# EXAMPLES
+
+User: What beverages do I enjoy?
+Assistant: [vault_lookup(query="beverages I enjoy")]
+
+User: What programming languages do I use?
+Assistant: [vault_lookup(query="programming languages")]
+
+User: Where do I live?
+Assistant: [vault_lookup(query="where I live")]
+
+User: What music do I like?
+Assistant: [vault_lookup(query="music I like")]
+
 User: What time is it?
 Assistant: [get_current_datetime()]
 
-User: Search for AI news
+User: Latest AI news
 Assistant: [search_web(query="latest AI news")]
 
-User: What's my bank password?
-Assistant: [vault_lookup(query="bank password")]
+User: Find notes about React Native
+Assistant: [search_vault(query="React Native")]
 
-User: Remember my bank password is 123
-Assistant: [vault_lookup(query="bank password")]
-(then, based on the lookup result, either confirm "already saved",
-surface a diff if values differ, or call vault_write_proposal to
-suggest a new file at personal/passwords/bank.md — never write
-without an explicit user approval step)
+User: What folders do I have?
+Assistant: [list_vault_structure()]
 
-User: Do I have an Amazon password saved?
-Assistant: [vault_lookup(query="amazon password")]`;
+User: Read Vector Search.md
+Assistant: [read_vault_file(file_path="Vector Search.md")]
+
+User: I prefer dark mode
+Assistant: [vault_lookup(query="dark mode preference")]
+(then, based on lookup result, propose a write via
+vault_write_proposal — never write without explicit user approval)
+
+User: My bank password is 123
+Assistant: [vault_lookup(query="bank password")]
+(then propose write at personal/passwords/bank.md)`;
     }
 
     const persona = `You are LocalOS Assistant, a private on-device AI.
@@ -1259,10 +1318,17 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       /\bdid\s+i\s+(tell|say|mention|save|store|write)\b/i,
       /\bi\s+forgot\b/i,
       /\bwhere\s+did\s+i\s+(save|store|put|write)\b/i,
+      // Preference/fact recall — natural language style
+      /\bwhat\s+[\w\s]{0,40}\s+do\s+i\b/i,  // "what beverages do I enjoy", "what languages do I use"
+      /\bwhat\s+do\s+i\s+\w+\b/i,            // "what do I build", "what do I prefer"
+      /\bwhere\s+do\s+i\s+\w+\b/i,           // "where do I live", "where do I work"
+      /\bwhich\s+[\w\s]{0,40}\s+do\s+i\b/i,  // "which languages do I use"
+      /\btell\s+me\s+(about\s+)?my\b/i,      // "tell me my preferences"
+      /\bam\s+i\s+\w+\b/i,                   // "am I vegetarian"
     ];
     if (recallPatterns.some(re => re.test(content)) && hasTool('vault_lookup')) {
       const q = content
-        .replace(/^(what['']?s|what is|do i have|did i|where did i|tell me)\s+/i, '')
+        .replace(/^(what['']?s|what is|what|do i have|did i|where did i|where do i|which|tell me)\s+/i, '')
         .replace(/\?.*$/, '')
         .trim();
       Logger.info(`🧠 PREFLIGHT: vault_lookup (recall) "${q}"`);
@@ -2193,6 +2259,35 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         }
       }
 
+      // TIER-2 FALLBACK: embedding-based intent router.
+      // Model emitted no tool call. Before giving up, ask the router whether
+      // the query semantically matches a tool's description. Deterministic
+      // and reusable across all tools — no per-intent regex needed.
+      if ((!toolCalls || toolCalls.length === 0) && iter === 0 && this.availableTools.length > 0) {
+        const lastUser = [...messages].reverse().find(m => m.role === 'user');
+        const userQuery = lastUser?.content?.trim() ?? '';
+        if (userQuery) {
+          try {
+            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.45);
+            if (routed) {
+              Logger.info(
+                `🧭 ToolRouter: forcing "${routed.tool.name}" (sim=${routed.similarity.toFixed(3)}) for query "${userQuery.substring(0, 60)}"`,
+              );
+              toolCalls = [{
+                type: 'function',
+                id: generateId(),
+                function: {
+                  name: routed.tool.name,
+                  arguments: JSON.stringify(routed.args),
+                },
+              }];
+            }
+          } catch (routerErr) {
+            Logger.warn('[ToolRouter] route() failed:', routerErr);
+          }
+        }
+      }
+
       if (!toolCalls || toolCalls.length === 0) {
         // Prefer non-empty content; fall back to text or the streamed
         // accumulator. Empty string is treated as absent.
@@ -2458,6 +2553,13 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         /\bremember\s+(when|that|the)\b/i,
         /\bi\s+forgot\b/i,
         /\bwhere\s+did\s+i\s+(save|store|put|write)\b/i,
+        // Preference/fact recall — natural language style
+        /\bwhat\s+[\w\s]{0,40}\s+do\s+i\b/i,
+        /\bwhat\s+do\s+i\s+\w+\b/i,
+        /\bwhere\s+do\s+i\s+\w+\b/i,
+        /\bwhich\s+[\w\s]{0,40}\s+do\s+i\b/i,
+        /\btell\s+me\s+(about\s+)?my\b/i,
+        /\bam\s+i\s+\w+\b/i,
       ];
       const hasRecallTrigger = recallPatterns.some(re => re.test(userMessage.content));
       if (hasRecallTrigger) {
@@ -2467,7 +2569,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         if (tool) {
           // Strip leading interrogatives so the embedding query reflects the topic.
           const query = userMessage.content
-            .replace(/^(what['']?s|what is|do i have|did i|where did i|tell me)\s+/i, '')
+            .replace(/^(what['']?s|what is|what|do i have|did i|where did i|where do i|which|tell me)\s+/i, '')
             .replace(/\?.*$/, '')
             .trim();
           Logger.info(`🧠 RECALL TRIGGER DETECTED - Forcing ${tool.name} with query: "${query}"`);

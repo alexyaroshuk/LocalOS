@@ -1384,7 +1384,10 @@ export class SampleVaultService {
       await VaultService.setActiveVault(SAMPLE_VAULT_DIR);
 
       onProgress?.('Indexing vault for semantic search...');
-      await VaultIndexService.indexFullVault(msg => onProgress?.(msg));
+      await VaultIndexService.indexFullVault((done, total, currentPath) => {
+        const name = currentPath.split('/').pop() || currentPath;
+        onProgress?.(`Indexing ${done + 1}/${total}: ${name}`);
+      });
 
       Logger.info(`Sample vault created with ${entries.length} files`);
     } catch (error) {
