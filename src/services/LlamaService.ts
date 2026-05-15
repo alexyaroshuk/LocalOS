@@ -836,19 +836,54 @@ export class LlamaService {
       Logger.warn('Core memory not available:', error);
     }
 
+    // Inject tool schemas directly. The jinja template in many GGUFs
+    // (abliterated fine-tunes especially) silently drops the `tools` param,
+    // so we never rely on the template to expose the tool list. We also
+    // pin the call format to Pythonic `[fn(arg="value")]`, which our
+    // extractToolCall rescue parses for every model.
+    let toolsBlock = '';
+    if (this.toolsEnabled && this.availableTools.length > 0) {
+      const schemas = this.availableTools.map(tool => {
+        const params = tool.parameters.map(p => {
+          const req = p.required ? ' (required)' : '';
+          return `    - ${p.name}: ${p.type}${req} — ${p.description}`;
+        }).join('\n');
+        return `- ${tool.name}: ${tool.description}\n  Parameters:\n${params || '    (none)'}`;
+      }).join('\n\n');
+
+      toolsBlock = `
+
+# AVAILABLE TOOLS
+${schemas}
+
+# HOW TO CALL A TOOL
+Respond with exactly: [tool_name(param1="value1", param2="value2")]
+For tools with no parameters: [tool_name()]
+Do not announce, explain, or describe the call. Just emit the bracket
+expression alone on its own line. The tool will run and the result
+will be returned. Then write the final natural-language answer.
+
+Examples:
+User: What time is it?
+Assistant: [get_current_datetime()]
+
+User: Search for AI news
+Assistant: [search_web(query="latest AI news")]
+
+User: Remember I like dark mode
+Assistant: [archival_memory_insert(content="User prefers dark mode")]`;
+    }
+
     const persona = `You are LocalOS Assistant, a private on-device AI.
 
-You have function-calling tools available. Use them whenever they give
-a better, more current, or more accurate answer than your own knowledge:
-- Time, date, "today", "now" -> call get_current_datetime
-- Latest news, "current", real-time facts -> call search_web
-- User's own preferences, history, facts -> call archival_memory_search
-- Saving info the user shares about themselves -> call archival_memory_insert
-- Vault files / notes -> call the vault tools
+Use tools whenever they give a better, more current, or more accurate
+answer than your own knowledge — especially for current time/date,
+real-time facts, web search, and the user's own stored preferences.
+Never claim you cannot access information that one of your tools
+provides. Never tell the user to check their device clock or the web
+themselves. Call the tool.
 
-Call the tool immediately, do not announce it. After the tool returns,
-answer in natural language using the result. If no tool fits, answer
-directly. Be concise and honest.`;
+If no tool fits, answer directly. Be concise and honest.${toolsBlock}`;
 
     return coreMemory ? `${coreMemory}\n\n${persona}` : persona;
   }
