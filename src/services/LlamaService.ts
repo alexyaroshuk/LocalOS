@@ -33,6 +33,11 @@ export class LlamaService {
   private static currentPromptType: SystemPromptType = 'letta'; // Current system prompt variant
   private static smartToolDetection: boolean = false; // Skip Layer 2 keyword triggers, let LLM decide
   private static lastReasoning: string = ''; // Store last model reasoning for UI display
+
+  /** Pending vault write awaiting user confirmation. The preflight write-intent
+   * flow stores a proposal here; the next user message of the form "yes/save it"
+   * commits it. Cleared after commit or after a non-confirm message. */
+  private static pendingProposal: {path: string; content: string; mode: 'create' | 'update' | 'append'} | null = null;
   private static thinkingEnabled: boolean = false; // When false, strip chain-of-thought blocks from output
   // Timings from the most recent context.completion() call. Read by
   // chatCompletionWithTimings / chatCompletionWithTools to surface pocketpal-style
@@ -1163,6 +1168,305 @@ User: "What's trending" → [search_web(query="trending topics")]`;
   }
 
   /**
+   * Layer-2 keyword triggers that run BEFORE the native/legacy agent loop.
+   * Returns a final response when a trigger fires, or null to fall through
+   * to the regular agent loop.
+   *
+   * Rationale: abliterated Q4_K_M 8B frequently narrates "I've updated my
+   * knowledge" without emitting any tool call. Regex-detected high-confidence
+   * intents (passwords, recall, save) deterministically route to the right
+   * tool so the assistant never silently drops a user-stated fact.
+   */
+  private static async runPreflightTriggers(
+    messages: Message[],
+    config: Partial<LlamaConfig>,
+    onToken?: (token: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any,
+    ) => void,
+  ): Promise<{response: string; usedTool: boolean; toolName: string} | null> {
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUser || !lastUser.content) return null;
+    const content = lastUser.content;
+    const lower = content.toLowerCase();
+
+    const hasTool = (name: string) => this.availableTools.some(t => t.name === name);
+
+    // CONFIRM PENDING WRITE — if the assistant proposed a save last turn and the
+    // user replies affirmatively, commit it now. Cleared in all other cases.
+    if (this.pendingProposal) {
+      const isYes = /^(yes|y|yep|yeah|sure|ok|okay|do it|save it|commit|proceed|go ahead|approve|confirm)\b/i.test(content.trim());
+      if (isYes && hasTool('vault_commit_write')) {
+        const p = this.pendingProposal;
+        this.pendingProposal = null;
+        Logger.info(`✍️  PREFLIGHT: vault_commit_write (user confirmed) ${p.path}`);
+        return await this.runTriggerTool(
+          'vault_commit_write',
+          {path: p.path, content: p.content, mode: p.mode},
+          messages, config, onToken, onToolUsage,
+        );
+      }
+      const isNo = /^(no|n|nope|cancel|don't|do not|skip|stop)\b/i.test(content.trim());
+      if (isNo) {
+        this.pendingProposal = null;
+        // fall through — let the model respond naturally
+      } else if (!isYes) {
+        // Different topic entirely — discard the stale proposal.
+        this.pendingProposal = null;
+      }
+    }
+
+    // DATETIME — already proven to work, kept here for both paths.
+    const datetimeTriggers = ['what time', 'what date', 'current time', 'current date', "what's the time", "what's today", 'time is it', 'date is it', 'date today'];
+    if (datetimeTriggers.some(w => lower.includes(w)) && hasTool('get_current_datetime')) {
+      Logger.info('🕐 PREFLIGHT: get_current_datetime');
+      return await this.runTriggerTool('get_current_datetime', {}, messages, config, onToken, onToolUsage);
+    }
+
+    // VAULT FILE SEARCH — explicit .md filename or "where is" query.
+    const hasMdFile = /\b[\w\s-]+\.md\b/i.test(content);
+    if ((hasMdFile || lower.includes('where is') || lower.includes('where can i find')) && hasTool('search_vault')) {
+      const mdMatch = content.match(/\b([A-Z][\w-]*(?:\s+[A-Z][\w-]*)*\.md)\b/) || content.match(/\b([\w-]+\.md)\b/i);
+      const q = mdMatch ? mdMatch[1].trim() : content.replace(/^(where is|where can i find|find|locate)\s+/i, '').replace(/\?.*$/, '').trim();
+      Logger.info(`🔍 PREFLIGHT: search_vault "${q}"`);
+      return await this.runTriggerTool('search_vault', {query: q}, messages, config, onToken, onToolUsage);
+    }
+
+    // WRITE INTENT — explicit save/remember commands AND statements like
+    // "X password is Y" / "X = Y". Run lookup first so the assistant can
+    // diff before calling vault_write_proposal.
+    const writePatterns: RegExp[] = [
+      /\b(my|the)\s+([\w\s]+?)\s+password\s+is\s+/i,
+      /\bsave\s+my\s+([\w\s]+?)\s+(password|key|token|note|address|phone|email)/i,
+      /\b(save|store|note)\s+(this|that|the\s+following)\b/i,
+      /\bnote\s+that\b/i,
+      /\bremember\s+(that|this|I)\b/i,
+      /^[\w][\w\s-]{0,40}\s*=\s*\S+/,
+    ];
+    if (writePatterns.some(re => re.test(content)) && hasTool('vault_lookup')) {
+      const writeFlow = await this.runWriteIntentFlow(content, messages, config, onToken, onToolUsage);
+      if (writeFlow) return writeFlow;
+    }
+
+    // RECALL INTENT — questions about stored values.
+    const recallPatterns: RegExp[] = [
+      /\b(my|the)\s+[\w\s]+\s+password\b/i,
+      /\bwhat['']?s\s+my\b/i,
+      /\bdo\s+i\s+have\b/i,
+      /\bdid\s+i\s+(tell|say|mention|save|store|write)\b/i,
+      /\bi\s+forgot\b/i,
+      /\bwhere\s+did\s+i\s+(save|store|put|write)\b/i,
+    ];
+    if (recallPatterns.some(re => re.test(content)) && hasTool('vault_lookup')) {
+      const q = content
+        .replace(/^(what['']?s|what is|do i have|did i|where did i|tell me)\s+/i, '')
+        .replace(/\?.*$/, '')
+        .trim();
+      Logger.info(`🧠 PREFLIGHT: vault_lookup (recall) "${q}"`);
+      return await this.runTriggerTool('vault_lookup', {query: q}, messages, config, onToken, onToolUsage);
+    }
+
+    // VAULT KNOWLEDGE RECALL — "tell me about my X project / vault / notes".
+    if (/\btell me about my\b/i.test(content) && hasTool('search_vault')) {
+      const q = content.replace(/^.*\btell me about my\b\s*/i, '').replace(/\?.*$/, '').trim();
+      if (q) {
+        Logger.info(`📖 PREFLIGHT: search_vault (project recall) "${q}"`);
+        return await this.runTriggerTool('search_vault', {query: q}, messages, config, onToken, onToolUsage);
+      }
+    }
+
+    // VAULT STRUCTURE
+    const vaultListTriggers = ['what folders', 'list folders', 'vault structure', 'folders in my vault'];
+    if (vaultListTriggers.some(w => lower.includes(w)) && hasTool('list_vault_structure')) {
+      Logger.info('📁 PREFLIGHT: list_vault_structure');
+      return await this.runTriggerTool('list_vault_structure', {}, messages, config, onToken, onToolUsage);
+    }
+
+    return null;
+  }
+
+  /**
+   * Chained vault write flow: lookup → branch on result → either confirm
+   * "already saved", surface a diff, or build a proposal and store it for
+   * confirmation. The model is then asked to narrate the outcome so the
+   * user sees a natural reply with a clear yes/no question.
+   */
+  private static async runWriteIntentFlow(
+    userText: string,
+    messages: Message[],
+    config: Partial<LlamaConfig>,
+    onToken?: (token: string) => void,
+    onToolUsage?: (
+      stage: 'tool_call' | 'tool_result' | 'generating',
+      toolName?: string,
+      toolArgs?: Record<string, any>,
+      toolResult?: any,
+    ) => void,
+  ): Promise<{response: string; usedTool: boolean; toolName: string} | null> {
+    const parsed = this.parseWriteIntent(userText);
+    if (!parsed) return null;
+    const {topic, content, suggestedPath} = parsed;
+
+    Logger.info(`💾 PREFLIGHT (write-intent): topic="${topic}" path="${suggestedPath}"`);
+
+    // Step 1: lookup
+    onToolUsage?.('tool_call', 'vault_lookup', {query: topic});
+    const lookupRes = await ToolService.executeTool({
+      id: generateId(),
+      name: 'vault_lookup',
+      arguments: {query: topic},
+    });
+    onToolUsage?.('tool_result', 'vault_lookup', {query: topic}, lookupRes);
+
+    const lookup: any = lookupRes.result || {};
+    let summary = '';
+    let mode: 'create' | 'update' | 'append' = 'create';
+    let storePending = false;
+
+    if (lookup.found) {
+      // Has an existing entry — propose update with diff awareness.
+      const existingSnippet = String(lookup.snippet || '').trim();
+      if (existingSnippet && existingSnippet.includes(content.trim())) {
+        summary = `That value is already saved at \`${lookup.path}\`. Nothing to do.`;
+      } else {
+        mode = 'update';
+        // Step 2: propose update
+        const proposeArgs = {suggested_path: lookup.path, content, mode: 'update'};
+        onToolUsage?.('tool_call', 'vault_write_proposal', proposeArgs);
+        const proposeRes = await ToolService.executeTool({
+          id: generateId(),
+          name: 'vault_write_proposal',
+          arguments: proposeArgs,
+        });
+        onToolUsage?.('tool_result', 'vault_write_proposal', proposeArgs, proposeRes);
+        const p: any = proposeRes.result || {};
+        summary = `I already have something for "${topic}" at \`${lookup.path}\` (existing: ${existingSnippet || '(empty)'}). Proposed update: \`${content}\`. Reply "yes" to overwrite, or tell me what to keep.`;
+        this.pendingProposal = {path: p.suggested_path || lookup.path, content, mode: 'update'};
+        storePending = true;
+      }
+    } else {
+      // No existing entry — propose create at suggestedPath.
+      mode = 'create';
+      const proposeArgs = {suggested_path: suggestedPath, content, mode: 'create'};
+      onToolUsage?.('tool_call', 'vault_write_proposal', proposeArgs);
+      const proposeRes = await ToolService.executeTool({
+        id: generateId(),
+        name: 'vault_write_proposal',
+        arguments: proposeArgs,
+      });
+      onToolUsage?.('tool_result', 'vault_write_proposal', proposeArgs, proposeRes);
+      const p: any = proposeRes.result || {};
+      const action = p.action || 'create';
+      if (action === 'already_exists_same') {
+        summary = `That value is already saved at \`${p.suggested_path}\`. Nothing to do.`;
+      } else if (action === 'diff') {
+        summary = `\`${p.suggested_path}\` already exists with different content. Existing: ${String(p.existing_content || '').slice(0, 200)}. Proposed: ${content}. Reply "yes" to overwrite.`;
+        this.pendingProposal = {path: p.suggested_path, content, mode: 'update'};
+        storePending = true;
+      } else {
+        summary = `I'll save this to \`${p.suggested_path}\` as:\n\n\`${content}\`\n\nReply "yes" to confirm, or tell me a different path.`;
+        this.pendingProposal = {path: p.suggested_path, content, mode: 'create'};
+        storePending = true;
+      }
+    }
+
+    onToolUsage?.('generating');
+    Logger.info(`💾 PREFLIGHT write-flow result: pending=${storePending} mode=${mode}`);
+
+    return {
+      response: summary,
+      usedTool: true,
+      toolName: 'vault_write_proposal',
+    };
+  }
+
+  /**
+   * Extract topic + content + suggested vault path from a write-intent user message.
+   * Returns null if the message is not actually a save instruction.
+   */
+  private static parseWriteIntent(userText: string): {
+    topic: string;
+    content: string;
+    suggestedPath: string;
+  } | null {
+    const text = userText.trim();
+
+    // "My X password is Y" / "The X password is Y"
+    const pwIs = text.match(/^(?:my|the)\s+([\w\s-]+?)\s+password\s+is\s+(.+)$/i);
+    if (pwIs) {
+      const topic = `${pwIs[1].trim().toLowerCase()} password`;
+      const value = pwIs[2].trim().replace(/[.!?]+$/, '');
+      const slug = pwIs[1].trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      return {
+        topic,
+        content: `# ${pwIs[1].trim()} password\n\n${topic} = ${value}\n`,
+        suggestedPath: `personal/passwords/${slug}.md`,
+      };
+    }
+
+    // "Save my X password as Y" / "Save my X token as Y"
+    const saveAs = text.match(/^save\s+my\s+([\w\s-]+?)\s+(password|key|token|note)\s+(?:as|to)\s+(.+)$/i);
+    if (saveAs) {
+      const topicWord = saveAs[1].trim().toLowerCase();
+      const kind = saveAs[2].toLowerCase();
+      const value = saveAs[3].trim().replace(/[.!?]+$/, '');
+      const slug = topicWord.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const folder = kind === 'password' || kind === 'key' || kind === 'token' ? 'passwords' : 'notes';
+      return {
+        topic: `${topicWord} ${kind}`,
+        content: `# ${topicWord} ${kind}\n\n${topicWord} ${kind} = ${value}\n`,
+        suggestedPath: `personal/${folder}/${slug}.md`,
+      };
+    }
+
+    // "Remember that I prefer dark mode" / "Remember I prefer X"
+    const remember = text.match(/^remember(?:\s+that)?\s+(?:i\s+)?(.+)$/i);
+    if (remember) {
+      const body = remember[1].trim().replace(/[.!?]+$/, '');
+      // Try to derive a topic word (first 2-3 noun-ish words).
+      const tokens = body.split(/\s+/).filter(w => !/^(prefer|like|want|use|need|enjoy|am|the|a|an|to)$/i.test(w));
+      const slugWords = tokens.slice(0, 3).join('-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const slug = slugWords || 'note';
+      return {
+        topic: body,
+        content: `# Preference\n\n${body}\n`,
+        suggestedPath: `personal/preferences/${slug}.md`,
+      };
+    }
+
+    // "Note that X" / "Save this: X"
+    const note = text.match(/^(?:note\s+that|save\s+this[:\s]|store\s+this[:\s])\s*(.+)$/i);
+    if (note) {
+      const body = note[1].trim();
+      const slug = body.split(/\s+/).slice(0, 3).join('-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'note';
+      return {
+        topic: body,
+        content: `# Note\n\n${body}\n`,
+        suggestedPath: `personal/notes/${slug}.md`,
+      };
+    }
+
+    // Generic "key = value"
+    const kv = text.match(/^([\w][\w\s-]{0,40})\s*=\s*(.+)$/);
+    if (kv) {
+      const key = kv[1].trim();
+      const value = kv[2].trim();
+      const slug = key.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const folder = /password|secret|token|key/i.test(key) ? 'passwords' : 'notes';
+      return {
+        topic: key,
+        content: `# ${key}\n\n${key} = ${value}\n`,
+        suggestedPath: `personal/${folder}/${slug}.md`,
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Execute a tool directly (triggered without model) and generate a natural language response.
    * Used by trigger-word handlers so the model narrates the result instead of returning raw JSON.
    */
@@ -1500,6 +1804,17 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       Logger.warn('⚠️  Tools are NOT enabled. Call LlamaService.enableTools() first.');
       const response = await this.chatCompletion(messages, config, onToken);
       return {response, usedTool: false, timings: this.lastTimings};
+    }
+
+    // PRE-FLIGHT LAYER 2: keyword-driven tool forcing. Runs before BOTH the
+    // native and legacy loops so the abliterated 8B (which often ignores
+    // tool examples and just narrates) still does the right thing on
+    // high-confidence intents like passwords, recall, save-this.
+    if (!this.smartToolDetection) {
+      const preflight = await this.runPreflightTriggers(messages, config, onToken, onToolUsage);
+      if (preflight) {
+        return {...preflight, timings: this.lastTimings};
+      }
     }
 
     const modelConfig = this.modelConfig || getModelConfig(this.currentModelName);
