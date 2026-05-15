@@ -1641,6 +1641,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       grammarTriggers = formatted?.grammar_triggers;
       preservedTokens = formatted?.preserved_tokens;
       Logger.debug(`Base prompt formatted (${basePrompt.length} chars, chat_format=${chatFormat})`);
+      Logger.debug(`Base prompt head (first 1200 chars):\n${basePrompt.substring(0, 1200)}`);
+      Logger.debug(`Base prompt tail (last 600 chars):\n${basePrompt.substring(Math.max(0, basePrompt.length - 600))}`);
     } catch (fmtErr) {
       Logger.warn('getFormattedChat failed, falling back to legacy loop:',
         fmtErr instanceof Error ? fmtErr.message : String(fmtErr));
@@ -1724,14 +1726,40 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         | Array<{type: 'function'; id?: string; function: {name: string; arguments: string}}>
         | undefined;
 
-      // FALLBACK: llama.cpp's response parser sometimes leaves `tool_calls`
-      // empty when we drive completion via raw `prompt:`. The Gemma 4 tokens
-      // are present in `content` as text — parse them ourselves.
+      // FALLBACK 1: Gemma 4 native `<|tool_call>call:fn{...}<tool_call|>` tokens.
       if ((!toolCalls || toolCalls.length === 0) && result.content) {
         const parsed = this.parseGemma4ToolCallFromText(String(result.content));
         if (parsed && parsed.length > 0) {
-          Logger.info(`🔄 Parsed ${parsed.length} tool call(s) from text (llama.cpp missed native channel)`);
+          Logger.info(`🔄 Parsed ${parsed.length} tool call(s) from Gemma 4 text`);
           toolCalls = parsed;
+        }
+      }
+
+      // FALLBACK 2: Pythonic `[fn(arg=...)]`, no-arg `[fn]`, or XML `<fn />`.
+      // Llama 3.1 / abliterated fine-tunes often regress to this even when
+      // their template should produce native `<|python_tag|>`. Reuse the
+      // legacy regex extractor; normalize to OpenAI tool_calls shape.
+      if ((!toolCalls || toolCalls.length === 0) && result.content) {
+        const rescued = this.extractToolCall(String(result.content));
+        if (rescued) {
+          try {
+            const obj = JSON.parse(rescued) as {name: string; arguments: Record<string, any>};
+            const knownTools = ToolService.getToolsSchema()
+              .map((t: any) => t.function?.name)
+              .filter(Boolean);
+            if (knownTools.includes(obj.name)) {
+              Logger.info(`🔄 Rescued Pythonic/XML tool call: ${obj.name}`);
+              toolCalls = [{
+                type: 'function',
+                id: generateId(),
+                function: {name: obj.name, arguments: JSON.stringify(obj.arguments || {})},
+              }];
+            } else {
+              Logger.debug(`Rescue ignored — '${obj.name}' not in tool registry`);
+            }
+          } catch (rescueErr) {
+            Logger.debug('Pythonic rescue parse failed:', rescueErr);
+          }
         }
       }
 
@@ -1792,15 +1820,53 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       usedTool = true;
       firstToolName = firstToolName ?? execResults[0].toolName;
 
-      for (const {toolName, args, toolResult} of execResults) {
-        const argsBody = Object.keys(args).length === 0 ? '{}' : this.gemma4Encode(args);
-        prefill += `<|tool_call>call:${toolName}${argsBody}<tool_call|>`;
-        const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
-        prefill += this.gemma4ToolResponseBlock(toolName, payload);
-        // Newline separator before the final answer per Gemma 4 docs
-        // example. Without it the model often emits <turn|> immediately
-        // and closes the turn with no answer text.
-        prefill += '\n\n';
+      // Pick prefill format. Gemma 4 uses its inline DSL. Everything else
+      // (Llama 3.1, Llama 3.2, abliterated fine-tunes, etc.) gets tool
+      // results injected back into the conversation as system notes, then
+      // basePrompt is re-rendered via getFormattedChat so the model's own
+      // chat template formats things correctly.
+      const isGemma = (this.currentModelName || '').toLowerCase().includes('gemma');
+
+      if (isGemma) {
+        for (const {toolName, args, toolResult} of execResults) {
+          const argsBody = Object.keys(args).length === 0 ? '{}' : this.gemma4Encode(args);
+          prefill += `<|tool_call>call:${toolName}${argsBody}<tool_call|>`;
+          const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
+          prefill += this.gemma4ToolResponseBlock(toolName, payload);
+          prefill += '\n\n';
+        }
+      } else {
+        // Non-Gemma path: rebuild base prompt with tool result in convo.
+        for (const {toolName, toolResult} of execResults) {
+          const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
+          const resultText = typeof payload === 'string' ? payload : JSON.stringify(payload);
+          convo.push({
+            role: 'system',
+            content: `Tool result for ${toolName}: ${resultText}\n\nUse this result to answer the user's question directly.`,
+          });
+        }
+        try {
+          const ctx: any = this.context as any;
+          const reformatted: any = await ctx.getFormattedChat(convo as any, null, {
+            jinja: true,
+            tools: toolsSchema,
+            tool_choice: 'auto',
+            parallel_tool_calls: {},
+            add_generation_prompt: true,
+            enable_thinking: this.thinkingEnabled,
+            ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
+          });
+          basePrompt = (reformatted && reformatted.prompt) || basePrompt;
+          chatFormat = reformatted?.chat_format ?? chatFormat;
+          grammar = reformatted?.grammar ?? grammar;
+          grammarTriggers = reformatted?.grammar_triggers ?? grammarTriggers;
+          preservedTokens = reformatted?.preserved_tokens ?? preservedTokens;
+          prefill = '';
+          Logger.debug(`Rebuilt base prompt after tool result (${basePrompt.length} chars)`);
+        } catch (reformatErr) {
+          Logger.warn('Reformat after tool result failed:',
+            reformatErr instanceof Error ? reformatErr.message : String(reformatErr));
+        }
       }
 
       onToolUsage?.('generating');
