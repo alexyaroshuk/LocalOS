@@ -2163,6 +2163,17 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         if (rescued) {
           try {
             const obj = JSON.parse(rescued) as {name: string; arguments: Record<string, any>};
+            // Normalize model hallucinations of tool names (e.g. suggest_vault_lookup → vault_lookup)
+            const TOOL_ALIASES: Record<string, string> = {
+              suggest_vault_lookup: 'vault_lookup',
+              suggest_vault_search: 'search_vault',
+              suggest_archival_memory_search: 'archival_memory_search',
+              suggest_archival_memory_insert: 'archival_memory_insert',
+            };
+            if (TOOL_ALIASES[obj.name]) {
+              Logger.debug(`Tool alias: '${obj.name}' → '${TOOL_ALIASES[obj.name]}'`);
+              obj.name = TOOL_ALIASES[obj.name];
+            }
             const knownTools = ToolService.getToolsSchema()
               .map((t: any) => t.function?.name)
               .filter(Boolean);

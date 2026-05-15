@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import {EmbeddingService} from '../services/EmbeddingService';
 import {DatabaseService} from '../services/DatabaseService';
+import {VaultService} from '../services/VaultService';
+import {VaultIndexService} from '../services/VaultIndexService';
 import {Logger} from '../utils/Logger';
 
 interface SearchResult {
@@ -45,7 +47,7 @@ export const VectorSearchTestScreen: React.FC = () => {
   const [embeddingStats, setEmbeddingStats] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchType, setSearchType] = useState<'vector' | 'keyword' | 'hybrid'>('hybrid');
+  const [searchType, setSearchType] = useState<'vector' | 'keyword' | 'hybrid' | 'vault'>('vault');
   const [searchTime, setSearchTime] = useState<number>(0);
 
   // Pre-defined test queries
@@ -71,24 +73,21 @@ export const VectorSearchTestScreen: React.FC = () => {
   };
 
   const loadTestData = async () => {
-    if (!EmbeddingService.isModelLoaded()) {
-      Alert.alert('Error', 'Please load an embedding model first');
-      return;
-    }
-
     setLoading(true);
     try {
-      Logger.info('[VectorTest] Loading test memories with embeddings...');
+      Logger.info('[VectorTest] Writing test memories to vault...');
 
-      for (const memory of TEST_MEMORIES) {
-        await EmbeddingService.saveMemoryWithEmbedding(
-          memory.content,
-          memory.category as any,
-          memory.importance
-        );
-      }
+      const preferences = TEST_MEMORIES.filter(m => m.category === 'preference');
+      const facts = TEST_MEMORIES.filter(m => m.category === 'fact');
 
-      Alert.alert('Success', `Loaded ${TEST_MEMORIES.length} test memories with embeddings`);
+      const prefsContent = `# Preferences\n\n${preferences.map(m => `- ${m.content}`).join('\n')}`;
+      const factsContent = `# Personal Facts\n\n${facts.map(m => `- ${m.content}`).join('\n')}`;
+
+      await VaultService.writeFile('Test/Preferences.md', prefsContent);
+      await VaultService.writeFile('Test/Facts.md', factsContent);
+
+      Logger.info('[VectorTest] Vault files written — indexing triggered automatically');
+      Alert.alert('Success', 'Wrote test memories to vault (Test/Preferences.md, Test/Facts.md). Indexing in background.');
       await loadStats();
     } catch (error) {
       Logger.error('Failed to load test data:', error);
@@ -116,7 +115,16 @@ export const VectorSearchTestScreen: React.FC = () => {
       const startTime = Date.now();
       let results: any[] = [];
 
-      if (searchType === 'vector') {
+      if (searchType === 'vault') {
+        const hits = await VaultIndexService.searchChunks(query, {topK: 5, minSimilarity: 0.0});
+        results = hits.map((h, i) => ({
+          id: i,
+          content: h.snippet,
+          category: h.path,
+          similarity: h.similarity,
+          source: 'vector' as const,
+        }));
+      } else if (searchType === 'vector') {
         results = await EmbeddingService.semanticSearch(query, 5, 0.0);
       } else if (searchType === 'keyword') {
         results = await DatabaseService.searchArchive(query, 5);
@@ -299,7 +307,7 @@ export const VectorSearchTestScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Search Type</Text>
         <View style={styles.searchTypeContainer}>
-          {(['vector', 'keyword', 'hybrid'] as const).map(type => (
+          {(['vault', 'vector', 'keyword', 'hybrid'] as const).map(type => (
             <TouchableOpacity
               key={type}
               style={[
