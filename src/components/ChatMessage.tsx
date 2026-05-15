@@ -37,6 +37,7 @@ interface ChatMessageProps {
   onToolSelection?: (messageId: string, toolName: string) => void;
   journalProposal?: JournalProposal;
   onProposalReview?: (proposal: JournalProposal) => void;
+  onOpenSource?: (relativePath: string) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -47,6 +48,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onToolSelection,
   journalProposal,
   onProposalReview,
+  onOpenSource,
 }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
@@ -112,6 +114,27 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               {formatTimestamp(message.timestamp)}
             </Text>
           </View>
+
+          {/* Sources — vault files referenced by tool calls in this turn */}
+          {!isUser && message.sources && message.sources.length > 0 && (
+            <View style={styles.sourcesContainer}>
+              <Text style={styles.sourcesLabel}>Sources:</Text>
+              <View style={styles.sourcesChips}>
+                {message.sources.map(src => (
+                  <TouchableOpacity
+                    key={src.path}
+                    style={styles.sourceChip}
+                    onPress={() => onOpenSource?.(src.path)}
+                    disabled={!onOpenSource}>
+                    <Text style={styles.sourceChipIcon}>📄</Text>
+                    <Text style={styles.sourceChipText} numberOfLines={1}>
+                      {src.label || src.path}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Action buttons + pocketpal-style timings for assistant messages */}
           {!isUser && message.id !== 'streaming' && (
@@ -219,6 +242,44 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 };
 
 const styles = StyleSheet.create({
+  sourcesContainer: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  sourcesLabel: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sourcesChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  sourceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
+    borderColor: '#007AFF',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 240,
+  },
+  sourceChipIcon: {
+    fontSize: 11,
+    marginRight: 4,
+  },
+  sourceChipText: {
+    fontSize: 11,
+    color: '#007AFF',
+    fontWeight: '500',
+    flexShrink: 1,
+  },
   messageContainer: {
     marginVertical: 4,
     marginHorizontal: 12,

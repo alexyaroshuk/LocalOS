@@ -18,13 +18,13 @@ import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Toast} from '../components/Toast';
 import {NoteProposalModal} from '../components/NoteProposalModal';
-import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage} from '../types';
+import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage, MessageSource} from '../types';
 import {AIService} from '../services/AIService';
 import {LMStudioService} from '../services/LMStudioService';
 import {LlamaService} from '../services/LlamaService';
 import {StorageService} from '../services/StorageService';
 import {VaultService} from '../services/VaultService';
-import {generateId} from '../utils/helpers';
+import {generateId, extractVaultSources} from '../utils/helpers';
 import {
   MAX_MESSAGE_LENGTH,
   MAX_CONTEXT_MESSAGES,
@@ -35,11 +35,13 @@ import {Logger} from '../utils/Logger';
 interface ChatScreenProps {
   currentModel: ModelInfo | null;
   onModelSelect: () => void;
+  onOpenVaultFile?: (relativePath: string) => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
   currentModel,
   onModelSelect,
+  onOpenVaultFile,
 }) => {
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [inputText, setInputText] = useState('');
@@ -90,6 +92,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   // Track current action being worked on
   const currentActionIdRef = useRef<string | null>(null);
+  // Accumulates vault file sources from tool results in the current send.
+  // Reset at the start of every handleSend, attached to the assistant
+  // message when it's finalized.
+  const currentRunSourcesRef = useRef<MessageSource[]>([]);
   // Track if generation was stopped by user
   const generationStoppedRef = useRef<boolean>(false);
 
@@ -558,6 +564,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
     // Reset stopped flag for new generation
     generationStoppedRef.current = false;
+    // Reset source accumulator at the start of each send
+    currentRunSourcesRef.current = [];
 
     const userMessage: Message = {
       id: generateId(),
@@ -701,6 +709,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setToolUsageState({stage: 'using_tool', toolName: tool});
               setStreamingText('');
             } else if (stage === 'tool_result') {
+              // Capture any vault file paths in the tool result so the
+              // assistant message can show "Sources:" chips below its body.
+              try {
+                const sources = extractVaultSources(toolResult);
+                for (const s of sources) {
+                  if (!currentRunSourcesRef.current.some(x => x.path === s.path)) {
+                    currentRunSourcesRef.current.push(s);
+                  }
+                }
+              } catch (sourceErr) {
+                Logger.warn('Source extraction failed:', sourceErr);
+              }
+
               // Complete tool call action with result
               if (currentActionIdRef.current) {
                 const targetActionId = currentActionIdRef.current;
@@ -814,12 +835,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       }
 
       // Create assistant message
+      const collectedSources = currentRunSourcesRef.current.slice();
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: fullResponse,
         timestamp: Date.now(),
         timings: responseTimings,
+        sources: collectedSources.length > 0 ? collectedSources : undefined,
       };
 
       // Check if this is a tool confirmation question
@@ -1167,6 +1190,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               setProposedNote(proposal);
               setShowNoteProposal(true);
             }}
+            onOpenSource={onOpenVaultFile}
           />
         );
       }

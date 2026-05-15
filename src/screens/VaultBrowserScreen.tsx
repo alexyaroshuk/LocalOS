@@ -26,7 +26,18 @@ import {formatBytes} from '../utils/helpers';
 
 type ViewMode = 'setup' | 'browser' | 'reader' | 'navigator';
 
-export const VaultBrowserScreen: React.FC = () => {
+interface VaultBrowserScreenProps {
+  // When set, the screen will scan the vault, find this file by relative
+  // path, and open it in reader mode automatically. Used by source-chip
+  // navigation from the chat screen.
+  initialFilePath?: string | null;
+  onInitialFileHandled?: () => void;
+}
+
+export const VaultBrowserScreen: React.FC<VaultBrowserScreenProps> = ({
+  initialFilePath,
+  onInitialFileHandled,
+}) => {
   const [viewMode, setViewMode] = useState<ViewMode>('setup');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -264,6 +275,42 @@ export const VaultBrowserScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Auto-open a file requested via the initialFilePath prop (e.g. chat
+  // source-chip click). Resolves the relative path against a fresh scan,
+  // opens the file, then clears the request so it doesn't fire again.
+  useEffect(() => {
+    if (!initialFilePath) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const config = await VaultService.getVaultConfig();
+        if (!config || cancelled) return;
+        const scan = await VaultService.scanVault(config.vaultPath);
+        if (cancelled) return;
+        const target = scan.files.find(
+          f =>
+            f.relativePath === initialFilePath ||
+            f.relativePath.endsWith(initialFilePath) ||
+            f.path.endsWith(initialFilePath),
+        );
+        if (target) {
+          await handleOpenFile(target);
+        } else {
+          Logger.warn(`[VaultBrowser] initialFilePath not found: ${initialFilePath}`);
+          Alert.alert('File not found', `Could not locate "${initialFilePath}" in vault.`);
+        }
+      } catch (err) {
+        Logger.error('[VaultBrowser] Failed to open initial file:', err);
+      } finally {
+        if (!cancelled) onInitialFileHandled?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFilePath]);
 
   const handleBackToList = () => {
     setSelectedFile(null);

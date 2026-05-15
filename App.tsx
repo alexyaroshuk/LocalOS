@@ -49,6 +49,14 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('chat');
   const [currentModel, setCurrentModel] = useState<ModelInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  // Set when a chat-message source chip requests opening a vault file.
+  // VaultBrowserScreen reads this prop and auto-opens the file.
+  const [pendingVaultFile, setPendingVaultFile] = useState<string | null>(null);
+
+  const handleOpenVaultFile = (relativePath: string) => {
+    setPendingVaultFile(relativePath);
+    setCurrentScreen('vault');
+  };
 
   useEffect(() => {
     initializeApp();
@@ -198,6 +206,7 @@ function AppContent() {
           <ChatScreen
             currentModel={currentModel}
             onModelSelect={handleModelSelect}
+            onOpenVaultFile={handleOpenVaultFile}
           />
         </View>
 
@@ -230,7 +239,10 @@ function AppContent() {
 
         {currentScreen === 'vault' && (
           <View style={styles.screenContainer}>
-            <VaultBrowserScreen />
+            <VaultBrowserScreen
+              initialFilePath={pendingVaultFile}
+              onInitialFileHandled={() => setPendingVaultFile(null)}
+            />
           </View>
         )}
 

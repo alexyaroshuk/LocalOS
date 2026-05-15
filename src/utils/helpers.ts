@@ -58,6 +58,53 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 /**
+ * Extract vault file paths from a tool result body. Handles the shapes
+ * returned by vault_lookup, search_vault, list_vault_files, and
+ * read_vault_file. Returns deduped {path, label} pairs.
+ */
+export function extractVaultSources(
+  toolResult: any,
+): Array<{path: string; label: string}> {
+  if (!toolResult) return [];
+  const r = toolResult.result ?? toolResult;
+  if (!r || typeof r !== 'object') return [];
+
+  const seen = new Set<string>();
+  const out: Array<{path: string; label: string}> = [];
+
+  const add = (raw: unknown) => {
+    if (typeof raw !== 'string') return;
+    const path = raw.trim();
+    if (!path || path.startsWith('/')) {
+      // Skip absolute paths (would leak device paths). Only relative.
+      return;
+    }
+    if (seen.has(path)) return;
+    seen.add(path);
+    const label = path.split('/').pop() || path;
+    out.push({path, label});
+  };
+
+  // vault_lookup → { path: "Foo/Bar.md" }
+  if (typeof r.path === 'string') add(r.path);
+
+  // read_vault_file → { file: { path: "Foo/Bar.md" } }
+  if (r.file && typeof r.file.path === 'string') add(r.file.path);
+
+  // search_vault → { matches: [{ path }, ...] }
+  if (Array.isArray(r.matches)) {
+    for (const m of r.matches) add(m?.path);
+  }
+
+  // list_vault_files → { files: [{ path }, ...] }
+  if (Array.isArray(r.files)) {
+    for (const f of r.files) add(f?.path);
+  }
+
+  return out;
+}
+
+/**
  * Get chat template for specific model
  * Returns the prompt template based on model type
  */

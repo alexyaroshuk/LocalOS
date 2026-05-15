@@ -10,6 +10,14 @@ export interface MessageTimings {
   prompt_ms?: number;
 }
 
+// Source citation surfaced under an assistant message when tool calls
+// referenced vault files. Tapping a source opens the file in the vault
+// browser. Populated by ChatScreen from tool results.
+export interface MessageSource {
+  path: string;       // relative path inside the vault
+  label?: string;     // display name (defaults to basename)
+}
+
 // Message types for chat
 export interface Message {
   id: string;
@@ -17,6 +25,7 @@ export interface Message {
   content: string;
   timestamp: number;
   timings?: MessageTimings;
+  sources?: MessageSource[];
 }
 
 // Action message type - actions are treated as messages in the chat
