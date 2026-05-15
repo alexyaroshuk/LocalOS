@@ -77,17 +77,47 @@ export const VectorSearchTestScreen: React.FC = () => {
     try {
       Logger.info('[VectorTest] Writing test memories to vault...');
 
-      const preferences = TEST_MEMORIES.filter(m => m.category === 'preference');
-      const facts = TEST_MEMORIES.filter(m => m.category === 'fact');
+      // Layout: each topic as its own H2 sub-heading so the vault chunker
+      // creates one chunk per topic. Tight chunks = strong semantic match
+      // for narrow queries like "beverages" or "where do I live".
+      const prefsContent = `# Preferences
 
-      const prefsContent = `# Preferences\n\n${preferences.map(m => `- ${m.content}`).join('\n')}`;
-      const factsContent = `# Personal Facts\n\n${facts.map(m => `- ${m.content}`).join('\n')}`;
+## Beverages
+- I prefer coffee over tea
+
+## Programming Languages
+- I love programming in TypeScript
+- I enjoy coding with TS
+- Python is my second favorite language
+
+## Music
+- I like listening to jazz music
+
+## Daily Routine
+- I wake up early in the morning
+
+## Colors
+- My favorite color is blue
+`;
+
+      const factsContent = `# Personal Facts
+
+## Location
+- I live in San Francisco
+
+## Work
+- I work on React Native applications
+- I build mobile apps using React Native
+`;
 
       await VaultService.writeFile('Test/Preferences.md', prefsContent);
       await VaultService.writeFile('Test/Facts.md', factsContent);
 
       Logger.info('[VectorTest] Vault files written — indexing triggered automatically');
-      Alert.alert('Success', 'Wrote test memories to vault (Test/Preferences.md, Test/Facts.md). Indexing in background.');
+      Alert.alert(
+        'Success',
+        'Wrote test memories to vault:\n• Test/Preferences.md\n• Test/Facts.md\n\nEach topic is a separate chunk (Beverages, Programming, Music, Location, Work, etc.) for sharp semantic matching. Indexing runs in background.',
+      );
       await loadStats();
     } catch (error) {
       Logger.error('Failed to load test data:', error);

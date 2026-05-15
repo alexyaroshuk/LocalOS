@@ -1559,9 +1559,24 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
     onToolUsage?.('tool_result', toolName, toolArgs, toolResult);
 
+    // Log result body so debugging shows what the tool actually returned
+    try {
+      const resultStr = JSON.stringify(toolResult.result);
+      Logger.info(`🔧 ${toolName} result: ${resultStr.substring(0, 500)}`);
+    } catch {}
+
     if (toolResult.error) {
       return {response: `Tool error: ${toolResult.error}`, usedTool: true, toolName};
     }
+
+    // Detect empty-result cases so the model is told clearly to acknowledge
+    // the gap instead of giving a generic "happy to help" response.
+    const r = toolResult.result as any;
+    const isEmpty =
+      r &&
+      (r.found === false ||
+        (Array.isArray(r.matches) && r.matches.length === 0) ||
+        r.total_matches === 0);
 
     // Build prompt context so the model can give a natural answer
     const systemPrompt = this.getToolSystemPrompt();
@@ -1571,10 +1586,15 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       content: systemPrompt,
       timestamp: Date.now(),
     };
+
+    const instruction = isEmpty
+      ? `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nThe lookup found nothing. Tell the user directly that you don't have that info saved yet, and ask if they'd like to tell you. Do NOT pretend to know. Do NOT say "happy to help". NO tool syntax.`
+      : `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nUse this RESULT to answer the user's question directly. Quote the specific fact from the snippet. Do NOT say "happy to help". Do NOT call another tool. NO tool syntax.`;
+
     const toolResultMessage: Message = {
       id: 'tool-result',
       role: 'system',
-      content: `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nRespond naturally using this data. NO tool syntax.`,
+      content: instruction,
       timestamp: Date.now(),
     };
 
