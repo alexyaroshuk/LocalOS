@@ -961,7 +961,7 @@ export class ToolService {
           name: 'file_path',
           type: 'string',
           description:
-            'Relative path or basename of the file (e.g. "bank_info.md" or "personal/finance/bank_info.md")',
+            'Relative path or basename of the file. Examples: "Fitness Goals.md", "personal/finance/bank_info.md". Parameter name is file_path (not path).',
           required: true,
         },
       ],
@@ -976,7 +976,7 @@ export class ToolService {
             return {success: false, error: 'No vault configured'};
           }
 
-          const filePath = String(args.file_path || '').trim();
+          const filePath = String(args.file_path || args.path || '').trim();
           if (!filePath) {
             return {success: false, error: 'file_path is required'};
           }
