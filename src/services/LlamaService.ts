@@ -45,6 +45,14 @@ export class LlamaService {
   // stats (ms/token, tokens/sec, TTFT) under assistant bubbles.
   private static lastTimings: MessageTimings | undefined;
 
+  // Serializes all load/release operations — prevents races when user switches models rapidly.
+  private static contextOperationMutex: Promise<void> = Promise.resolve();
+  // Tracks the in-flight context.completion() promise so release can wait for it.
+  private static activeCompletionPromise: Promise<any> | null = null;
+  private static isInferencing: boolean = false;
+  // Last-one-wins: path of the most recently requested model load.
+  private static pendingModelId: string | null = null;
+
   // Build a MessageTimings object from llama.rn's native result + client-measured TTFT.
   private static buildTimings(
     nativeTimings: any,
@@ -62,6 +70,57 @@ export class LlamaService {
     };
   }
 
+  // Stop active completion, await it, then release the context.
+  // Called inside the mutex — do NOT call through loadModel/releaseModel public APIs.
+  private static async _releaseInternal(): Promise<void> {
+    if (!this.context) return;
+
+    if (this.isInferencing || this.activeCompletionPromise) {
+      Logger.info('Stopping active completion before context release');
+      try {
+        await this.context.stopCompletion();
+      } catch (stopErr) {
+        // Expected if native layer is already torn down
+        Logger.warn('stopCompletion threw during release (expected if native crashed):', stopErr);
+      }
+      if (this.activeCompletionPromise) {
+        Logger.info('Waiting for in-flight completion to settle...');
+        try { await this.activeCompletionPromise.catch(() => {}); } catch {}
+      }
+      this.isInferencing = false;
+      this.activeCompletionPromise = null;
+    }
+
+    try {
+      await this.context.release();
+      Logger.info('Model context released');
+    } catch (error) {
+      Logger.error('Failed to release context:', error);
+    }
+
+    this.context = null;
+    this.currentModelPath = null;
+    this.currentModelName = null;
+    this.isInitialized = false;
+
+    // Give the native layer time to fully free resources before reinit.
+    Logger.debug('Context released, waiting 100ms before next init');
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  // Wraps context.completion() to track the active promise for safe release.
+  private static async _runCompletion<T>(fn: () => Promise<T>): Promise<T> {
+    this.isInferencing = true;
+    const promise = fn();
+    this.activeCompletionPromise = promise as Promise<any>;
+    try {
+      return await promise;
+    } finally {
+      this.activeCompletionPromise = null;
+      this.isInferencing = false;
+    }
+  }
+
   /**
    * Initialize and load a model
    */
@@ -70,9 +129,17 @@ export class LlamaService {
     modelName: string,
     config: Partial<LlamaConfig> = {},
   ): Promise<void> {
+    this.pendingModelId = modelPath;
+
+    const operationPromise = this.contextOperationMutex.then(async () => {
+      // Last-one-wins: skip if a newer load was requested while we waited
+      if (this.pendingModelId !== modelPath) {
+        Logger.info('Skipping outdated load for:', modelPath);
+        return;
+      }
+
     try {
-      // Release existing context if any
-      await this.releaseModel();
+      await this._releaseInternal();
 
       Logger.info('Loading model from:', modelPath);
 
@@ -178,6 +245,10 @@ export class LlamaService {
       this.isInitialized = false;
       throw error;
     }
+    }); // end contextOperationMutex.then
+
+    this.contextOperationMutex = operationPromise.catch(() => {});
+    return operationPromise;
   }
 
   /**
@@ -287,18 +358,10 @@ export class LlamaService {
    * Release the current chat model and free resources
    */
   static async releaseModel(): Promise<void> {
-    if (this.context) {
-      try {
-        await this.context.release();
-        Logger.info('Model context released');
-      } catch (error) {
-        Logger.error('Failed to release context:', error);
-      }
-      this.context = null;
-      this.currentModelPath = null;
-      this.currentModelName = null;
-      this.isInitialized = false;
-    }
+    this.pendingModelId = null;
+    const operationPromise = this.contextOperationMutex.then(() => this._releaseInternal());
+    this.contextOperationMutex = operationPromise.catch(() => {});
+    return operationPromise;
   }
 
   /**
@@ -371,7 +434,7 @@ export class LlamaService {
       let ttftMs: number | undefined;
 
       // Use completion API with streaming
-      const result = await this.context.completion(
+      const result = await this._runCompletion(() => this.context!.completion(
         {
           prompt,
           n_predict: llamaConfig.maxTokens,
@@ -388,7 +451,7 @@ export class LlamaService {
             fullResponse += data.token;
           }
         },
-      );
+      ));
 
       // If streaming didn't capture the response, use the result
       if (!fullResponse && result.text) {
@@ -459,7 +522,7 @@ export class LlamaService {
       const t0 = Date.now();
       let ttftMs: number | undefined;
 
-      const result = await this.context.completion(
+      const result = await this._runCompletion(() => this.context!.completion(
         {
           ...completionParams,
           messages: chatMessages,
@@ -488,7 +551,7 @@ export class LlamaService {
             }
           }
         },
-      );
+      ));
 
       this.lastTimings = this.buildTimings((result as any).timings, ttftMs);
 
@@ -2175,7 +2238,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       let result: any;
       try {
-        result = await this.context.completion(
+        result = await this._runCompletion(() => this.context!.completion(
           {
             prompt: basePrompt + prefill,
             n_predict: llamaConfig.maxTokens,
@@ -2216,7 +2279,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
               this.lastReasoning = reasoning.substring(0, 300);
             }
           },
-        );
+        ));
         // Overwrite on every iter; final iter (after tool exec) wins,
         // which is the generation that produced the user-visible answer.
         this.lastTimings = this.buildTimings((result as any)?.timings, ttftMs);
