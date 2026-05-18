@@ -1,7 +1,8 @@
 /**
  * Service for managing llama.cpp model inference
  */
-import {initLlama, LlamaContext} from 'llama.rn';
+import {initLlama, loadLlamaModelInfo, LlamaContext} from 'llama.rn';
+import {Platform} from 'react-native';
 import RNFS from 'react-native-fs';
 import {LlamaConfig, Message, MessageTimings, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
@@ -110,6 +111,12 @@ export class LlamaService {
 
   // Wraps context.completion() to track the active promise for safe release.
   private static async _runCompletion<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.isInferencing) {
+      throw new Error('A completion is already in progress. Wait for it to finish before starting another.');
+    }
+    if (!this.context) {
+      throw new Error('Model not loaded');
+    }
     this.isInferencing = true;
     const promise = fn();
     this.activeCompletionPromise = promise as Promise<any>;
@@ -168,15 +175,40 @@ export class LlamaService {
           throw error;
         }
 
+        const fileSizeMB = stat.size / (1024 * 1024);
         Logger.info('✅ Model file validated:', {
           path: modelPath,
-          size: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
+          size: `${fileSizeMB.toFixed(2)} MB`,
           exists: true,
         });
+
+        // Warn for large models — iOS per-app memory is typically 2-3GB.
+        // Model needs ~1.2× its file size in RAM.
+        const estimatedRAMBytes = stat.size * 1.2;
+        const WARN_THRESHOLD = 2 * 1024 * 1024 * 1024; // 2 GB
+        if (estimatedRAMBytes > WARN_THRESHOLD) {
+          Logger.warn(
+            `⚠️ Large model: estimated RAM ~${(estimatedRAMBytes / (1024 ** 3)).toFixed(1)} GB. ` +
+            'May exceed iOS per-app memory limit and crash.'
+          );
+        }
       } catch (fsError) {
         Logger.error('❌ File validation failed:', fsError);
         throw new Error(
           `Cannot load model - file validation failed: ${fsError instanceof Error ? fsError.message : String(fsError)}`
+        );
+      }
+
+      // Lightweight pre-validation: reads GGUF metadata without full init.
+      // Catches corrupt/truncated files before they cause a native SIGSEGV.
+      try {
+        await loadLlamaModelInfo(modelPath);
+        Logger.info('✅ GGUF metadata readable');
+      } catch (metaErr) {
+        Logger.error('❌ GGUF metadata read failed — model file may be corrupt:', metaErr);
+        throw new Error(
+          `Model file failed metadata check (possibly corrupt or incomplete): ` +
+          `${metaErr instanceof Error ? metaErr.message : String(metaErr)}`
         );
       }
 
@@ -190,21 +222,28 @@ export class LlamaService {
       // Use model-specific context size, not the hardcoded default
       const llamaConfig = {
         ...DEFAULT_LLAMA_CONFIG,
-        contextSize: this.modelConfig.contextSize, // Use model's actual context size
+        contextSize: this.modelConfig.contextSize,
         ...config,
       };
 
-      Logger.info('🚀 Initializing model with context size:', llamaConfig.contextSize);
+      // Enforce batch size constraints: n_batch ≤ n_ctx, n_ubatch ≤ n_batch.
+      // Violating these causes undefined native behavior.
+      const nCtx = llamaConfig.contextSize;
+      const nBatch = Math.min(512, nCtx);
+      const nUBatch = Math.min(512, nBatch);
 
-      // Initialize llama context
-      // NOTE: use_mlock disabled for iOS - large models (6GB+) exceed app memory limits
-      // use_mmap handles streaming the model from storage
+      Logger.info('🚀 Initializing model with context size:', nCtx);
+
       this.context = await initLlama({
         model: modelPath,
-        n_ctx: llamaConfig.contextSize,
+        n_ctx: nCtx,
+        n_batch: nBatch,
+        n_ubatch: nUBatch,
         n_gpu_layers: llamaConfig.nGpuLayers,
-        use_mlock: false, // Disabled: iOS memory constraints (1-2GB limit) vs model size
-        use_mmap: true,   // Memory mapping allows efficient streaming from disk
+        use_mlock: false,
+        use_mmap: true,
+        // Matches pocketpal: lets Metal/Vulkan auto-select optimised attention kernel.
+        flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
       });
 
       this.currentModelPath = modelPath;

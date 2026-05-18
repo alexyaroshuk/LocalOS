@@ -118,6 +118,17 @@ export const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
   },
 };
 
+const EMBEDDING_MODEL_PATTERNS = [
+  'nomic-embed', 'bge-', 'e5-', 'gte-', 'mxbai-embed', 'all-minilm',
+  'sentence-', 'embed-', '-embed-', 'embedding',
+];
+
+/** Returns true if the model name looks like an embedding-only model. */
+export function isEmbeddingModel(modelName: string): boolean {
+  const lower = modelName.toLowerCase();
+  return EMBEDDING_MODEL_PATTERNS.some(p => lower.includes(p));
+}
+
 /**
  * Detect model type from model name
  */
