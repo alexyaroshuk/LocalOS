@@ -7,6 +7,7 @@ import MemoryService from './MemoryService';
 import {LettaMemoryTools} from './LettaMemoryTools';
 import {VaultService} from './VaultService';
 import {VaultIndexService} from './VaultIndexService';
+import {DatabaseService} from './DatabaseService';
 import {LlamaService} from './LlamaService';
 import {AIService} from './AIService';
 
@@ -36,6 +37,7 @@ export class ToolService {
     this.registerTool(this.getReadVaultFileTool());
     this.registerTool(this.getSearchVaultTool());
     this.registerTool(this.getVaultLookupTool());
+    this.registerTool(this.getVaultConnectionsTool());
     this.registerTool(this.getVaultWriteProposalTool());
     this.registerTool(this.getVaultCommitWriteTool());
 
@@ -940,6 +942,94 @@ export class ToolService {
           };
         } catch (err) {
           return {success: false, error: err instanceof Error ? err.message : 'lookup failed'};
+        }
+      },
+    };
+  }
+
+  /**
+   * Tool: get_vault_connections
+   * Returns forward links and backlinks for a vault file from the link graph.
+   */
+  private static getVaultConnectionsTool(): Tool {
+    return {
+      name: 'get_vault_connections',
+      description:
+        'READ. Get the link graph for a vault file — what it links to (forward links) and what links back to it (backlinks). Use when user asks "what connects to X", "what does X reference", "what notes mention X", "find related notes to X", or when following [[wiki link]] chains.',
+      parameters: [
+        {
+          name: 'file_path',
+          type: 'string',
+          description:
+            'Relative path or basename of the file (e.g. "bank_info.md" or "personal/finance/bank_info.md")',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {available: hasVault, reason: hasVault ? undefined : 'No vault configured'};
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {
+            return {success: false, error: 'No vault configured'};
+          }
+
+          const filePath = String(args.file_path || '').trim();
+          if (!filePath) {
+            return {success: false, error: 'file_path is required'};
+          }
+
+          const scanResult = await VaultService.scanVault(config.vaultPath);
+          const file = scanResult.files.find(
+            f =>
+              f.name === filePath ||
+              f.basename === filePath.replace(/\.md$/i, '') ||
+              f.relativePath === filePath ||
+              f.relativePath.endsWith('/' + filePath) ||
+              f.relativePath.endsWith(filePath),
+          );
+
+          if (!file) {
+            return {
+              success: false,
+              error: `File not found: ${filePath}`,
+              available_files: scanResult.files.slice(0, 10).map(f => f.relativePath),
+            };
+          }
+
+          const [forwardLinks, backlinks] = await Promise.all([
+            DatabaseService.getForwardLinks(file.path),
+            DatabaseService.getBacklinks(file.path),
+          ]);
+
+          const vaultPrefix = config.vaultPath.endsWith('/')
+            ? config.vaultPath
+            : config.vaultPath + '/';
+
+          const stripVaultRoot = (p: string) =>
+            p.startsWith(vaultPrefix) ? p.slice(vaultPrefix.length) : p;
+
+          return {
+            success: true,
+            file: file.relativePath,
+            forward_links: forwardLinks.map(l => ({
+              target_name: l.targetName,
+              resolved_path: l.resolvedPath ? stripVaultRoot(l.resolvedPath) : null,
+              dangling: l.resolvedPath === null,
+            })),
+            backlinks: backlinks.map(l => ({
+              source_path: stripVaultRoot(l.sourcePath),
+              link_text: l.targetName,
+            })),
+            total_connections: forwardLinks.length + backlinks.length,
+          };
+        } catch (err) {
+          return {
+            success: false,
+            error: err instanceof Error ? err.message : 'get_vault_connections failed',
+          };
         }
       },
     };

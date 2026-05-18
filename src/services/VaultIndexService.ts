@@ -40,37 +40,73 @@ export class VaultIndexService {
   }
 
   /**
-   * Read one vault file from disk, chunk it, embed each chunk, and upsert
-   * the rows. Replaces all prior chunks for that path so renames/deletes
-   * within the file don't leave stale rows.
+   * Read one vault file from disk, extract [[wiki links]] (always), chunk and
+   * embed it (requires embedding model). Replaces all prior index rows for the
+   * path so stale data is never left behind.
    */
   static async indexVaultFile(absolutePath: string): Promise<{
     chunksIndexed: number;
+    linksIndexed: number;
     skipped: boolean;
     reason?: string;
   }> {
-    if (!LlamaService.isEmbeddingModelLoaded()) {
-      return {chunksIndexed: 0, skipped: true, reason: 'embedding model not loaded'};
-    }
-
+    // ── 1. Stat the file ─────────────────────────────────────────────────
     let stat;
     try {
       stat = await RNFS.stat(absolutePath);
     } catch (err) {
       Logger.warn(`[VaultIndex] stat failed for ${absolutePath}`, err);
-      return {chunksIndexed: 0, skipped: true, reason: 'stat failed'};
+      return {chunksIndexed: 0, linksIndexed: 0, skipped: true, reason: 'stat failed'};
     }
     const mtime = stat.mtime ? new Date(stat.mtime).getTime() : Date.now();
 
     const md = await RNFS.readFile(absolutePath, 'utf8');
+
+    // ── 2. Link extraction (no embedding model required) ──────────────────
+    let linksIndexed = 0;
+    try {
+      const vaultRoot = VaultService.getActiveVaultPath();
+      const markdownFile = await VaultService.readMarkdownFile(absolutePath);
+      const rawLinks = markdownFile.links;
+
+      let allVaultFiles: import('../types/vault').VaultFile[] | null = null;
+
+      const resolvedLinks = await Promise.all(
+        rawLinks.map(async linkText => {
+          if (!allVaultFiles && vaultRoot) {
+            const scan = await VaultService.scanVault(vaultRoot);
+            allVaultFiles = scan.files;
+          }
+          let resolvedPath: string | null = null;
+          if (allVaultFiles) {
+            const match = (allVaultFiles as import('../types/vault').VaultFile[]).find(
+              f => f.basename.toLowerCase() === linkText.toLowerCase(),
+            );
+            resolvedPath = match ? match.path : null;
+          }
+          return {targetName: linkText, resolvedPath};
+        }),
+      );
+
+      await DatabaseService.upsertVaultLinks(absolutePath, resolvedLinks);
+      linksIndexed = resolvedLinks.length;
+      Logger.info(`[VaultIndex] Links indexed for ${absolutePath}: ${linksIndexed}`);
+    } catch (linkErr) {
+      Logger.warn(`[VaultIndex] Link extraction failed for ${absolutePath}`, linkErr);
+    }
+
+    // ── 3. Chunk embedding (requires embedding model) ─────────────────────
+    if (!LlamaService.isEmbeddingModelLoaded()) {
+      return {chunksIndexed: 0, linksIndexed, skipped: true, reason: 'embedding model not loaded'};
+    }
+
     const chunks = this.chunkMarkdown(md);
     if (chunks.length === 0) {
       await DatabaseService.deleteVaultChunksForPath(absolutePath);
-      return {chunksIndexed: 0, skipped: true, reason: 'empty file'};
+      return {chunksIndexed: 0, linksIndexed, skipped: true, reason: 'empty file'};
     }
 
-    // Replace strategy: wipe old chunks for this path before inserting new
-    // ones. Cheap (indexed) and avoids orphan rows when headings change.
+    // Replace strategy: wipe old chunks before inserting new ones.
     await DatabaseService.deleteVaultChunksForPath(absolutePath);
 
     let indexed = 0;
@@ -93,7 +129,7 @@ export class VaultIndexService {
     }
 
     Logger.info(`[VaultIndex] Indexed ${absolutePath} → ${indexed}/${chunks.length} chunks`);
-    return {chunksIndexed: indexed, skipped: false};
+    return {chunksIndexed: indexed, linksIndexed, skipped: false};
   }
 
   /**
@@ -140,11 +176,20 @@ export class VaultIndexService {
   }
 
   /**
-   * Remove all index rows for a vault file. Call when a file is deleted
-   * from disk.
+   * Remove all index rows (chunks + links) for a vault file. Call when a
+   * file is deleted from disk.
    */
+  static async removeFileFromIndex(absolutePath: string): Promise<{chunksRemoved: number; linksRemoved: number}> {
+    const chunksRemoved = await DatabaseService.deleteVaultChunksForPath(absolutePath);
+    const linksRemoved = await DatabaseService.deleteVaultLinksForPath(absolutePath);
+    Logger.info(`[VaultIndex] Removed index for ${absolutePath}: ${chunksRemoved} chunks, ${linksRemoved} links`);
+    return {chunksRemoved, linksRemoved};
+  }
+
+  /** @deprecated Use removeFileFromIndex instead */
   static async removeChunksForPath(absolutePath: string): Promise<number> {
-    return DatabaseService.deleteVaultChunksForPath(absolutePath);
+    const result = await this.removeFileFromIndex(absolutePath);
+    return result.chunksRemoved;
   }
 
   /**

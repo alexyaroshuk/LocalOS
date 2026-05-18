@@ -85,7 +85,7 @@ BEFORE CALLING ANY TOOL, THINK STEP-BY-STEP:
 2. What information source is needed?
    - User's own memory/facts? → search archival_memory or core_memory
    - Current real-time info? → search_web or get_current_datetime
-   - Vault/notes? → list_vault_structure, search_vault, read_vault_file
+   - Vault/notes? → list_vault_structure, search_vault, read_vault_file, vault_lookup, get_vault_connections
    - Task management? → archival_memory_insert with tags=["task"]
 3. Is the query ambiguous? Apply this priority:
    - If about DATE/TIME → get_current_datetime (definitive)
@@ -149,6 +149,14 @@ User asks about vault → VAULT (clear intent):
 "Show me my vault structure"
 Thought: "User wants to see vault organization. This is clear."
 [list_vault_structure()]
+
+"What notes reference my bank file?"
+Thought: "User wants backlinks — which files link TO bank. Use graph tool."
+[get_vault_connections(file_path="bank_info.md")]
+
+"What does my fitness tracker note link to?"
+Thought: "User wants forward links from a specific file."
+[get_vault_connections(file_path="fitness_tracker.md")]
 
 User mentions task → CREATE with reasoning:
 "Remind me to call mom daily"

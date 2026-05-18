@@ -220,6 +220,19 @@ export class DatabaseService {
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_path ON vault_chunks(vault_path);');
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_mtime ON vault_chunks(mtime DESC);');
 
+    // Vault links table — graph edges between vault files extracted from [[wiki links]].
+    this.db.executeSync(`
+      CREATE TABLE IF NOT EXISTS vault_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_path TEXT NOT NULL,
+        target_name TEXT NOT NULL,
+        resolved_path TEXT
+      );
+    `);
+    this.db.executeSync('CREATE UNIQUE INDEX IF NOT EXISTS idx_vault_links_unique ON vault_links(source_path, target_name);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_source ON vault_links(source_path);');
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_resolved ON vault_links(resolved_path);');
+
     console.log('[Database] Tables created successfully');
   }
 
@@ -336,6 +349,29 @@ export class DatabaseService {
         console.log('[Database] Migration 3 -> 4 completed');
       } catch (error) {
         console.error('[Database] Migration 3 -> 4 failed:', error);
+        throw error;
+      }
+    }
+
+    // Migration 4 -> 5: Add vault_links table for wiki-link graph
+    if (currentVersion < 5) {
+      console.log('[Database] Running migration 4 -> 5: Adding vault_links table...');
+      try {
+        this.db.executeSync(`
+          CREATE TABLE IF NOT EXISTS vault_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_path TEXT NOT NULL,
+            target_name TEXT NOT NULL,
+            resolved_path TEXT
+          );
+        `);
+        this.db.executeSync('CREATE UNIQUE INDEX IF NOT EXISTS idx_vault_links_unique ON vault_links(source_path, target_name);');
+        this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_source ON vault_links(source_path);');
+        this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_resolved ON vault_links(resolved_path);');
+        this.db.executeSync('UPDATE schema_version SET version = 5, applied_at = ?;', [Date.now()]);
+        console.log('[Database] Migration 4 -> 5 completed');
+      } catch (error) {
+        console.error('[Database] Migration 4 -> 5 failed:', error);
         throw error;
       }
     }
@@ -1066,6 +1102,11 @@ export class DatabaseService {
     } catch (e) {
       // table may not exist on older DBs prior to migration
     }
+    try {
+      this.db.executeSync('DELETE FROM vault_links;');
+    } catch (e) {
+      // table may not exist on older DBs prior to migration
+    }
     console.log('[Database] Database cleared');
   }
 
@@ -1219,6 +1260,55 @@ export class DatabaseService {
       uniqueFiles: filesRes.rows?.[0]?.count || 0,
       embeddingDim: dim,
     };
+  }
+
+  // ============== VAULT LINK OPERATIONS ==============
+
+  static async upsertVaultLinks(
+    sourcePath: string,
+    links: Array<{targetName: string; resolvedPath: string | null}>,
+  ): Promise<void> {
+    this.db.executeSync('DELETE FROM vault_links WHERE source_path = ?;', [sourcePath]);
+    for (const link of links) {
+      this.db.executeSync(
+        'INSERT INTO vault_links (source_path, target_name, resolved_path) VALUES (?, ?, ?);',
+        [sourcePath, link.targetName, link.resolvedPath ?? null],
+      );
+    }
+  }
+
+  static async deleteVaultLinksForPath(sourcePath: string): Promise<number> {
+    const result = this.db.executeSync(
+      'DELETE FROM vault_links WHERE source_path = ?;',
+      [sourcePath],
+    );
+    return result.rowsAffected || 0;
+  }
+
+  static async getForwardLinks(
+    sourcePath: string,
+  ): Promise<Array<{targetName: string; resolvedPath: string | null}>> {
+    const result = this.db.executeSync(
+      'SELECT target_name, resolved_path FROM vault_links WHERE source_path = ?;',
+      [sourcePath],
+    );
+    return (result.rows || []).map((row: any) => ({
+      targetName: row.target_name as string,
+      resolvedPath: (row.resolved_path as string | null) ?? null,
+    }));
+  }
+
+  static async getBacklinks(
+    resolvedPath: string,
+  ): Promise<Array<{sourcePath: string; targetName: string}>> {
+    const result = this.db.executeSync(
+      'SELECT source_path, target_name FROM vault_links WHERE resolved_path = ?;',
+      [resolvedPath],
+    );
+    return (result.rows || []).map((row: any) => ({
+      sourcePath: row.source_path as string,
+      targetName: row.target_name as string,
+    }));
   }
 
   /**
