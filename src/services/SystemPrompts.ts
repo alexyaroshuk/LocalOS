@@ -68,26 +68,24 @@ CITE SOURCES. When answering from vault, mention the file path.
 </vault_write_flow>
 
 ${smartToolDetection ? `<tool_decision_strategy>
-BEFORE CALLING ANY TOOL, THINK STEP-BY-STEP:
-1. What is the user actually asking? (factual question, personal question, task, search, etc?)
-2. What information source is needed?
-   - User's own memory/facts? → search archival_memory or core_memory
-   - Current real-time info? → search_web or get_current_datetime
-   - Vault/notes? → list_vault_structure, search_vault, read_vault_file, vault_lookup, get_vault_connections
-   - Task management? → vault_save with path="personal/tasks/<topic>.md"
-3. Is the query ambiguous? Apply this priority:
-   - If about DATE/TIME → get_current_datetime (definitive)
-   - If about USER'S FACTS/PREFERENCES → vault_lookup then search_vault (personal knowledge)
-   - If about VAULT/NOTES → list_vault_structure or search_vault (local docs)
-   - If about CURRENT EVENTS/GENERAL KNOWLEDGE → search_web (real-time needed)
-4. Call the SINGLE MOST APPROPRIATE TOOL
-5. Once you get results, respond naturally using the tool's data
+GOLDEN RULE: The vault is your long-term memory. Any question about the user's facts, preferences, passwords, plans, or history — check vault FIRST, always. Never answer from assumptions.
 
-Example decision paths:
-- "What is TypeScript?" → Might be: vault_lookup if user has notes on it, OR search_web if current definition needed. Check vault FIRST.
-- "What is ABCDEF?" → Likely: vault_lookup (is it a user concept?) or search_web (is it a public thing?). Ask yourself: "Is this about the user's domain?"
-- "What time is it?" → get_current_datetime (always)
-- "Show my notes" → list_vault_structure (no ambiguity)
+BEFORE RESPONDING, ASK YOURSELF:
+- Is the user asking about themselves, their data, their preferences, or anything I might have stored? → vault_lookup (specific) or search_vault (broad)
+- Is the user asking about current time/date? → get_current_datetime
+- Is the user asking about current events or general knowledge I don't have? → search_web
+- Is the user sharing a new fact, credential, or preference? → vault_save
+- Is the user asking about their vault files/notes? → list_vault_structure or search_vault
+
+TOOL SELECTION GUIDE:
+- Specific fact ("what's my bank pw?") → vault_lookup(query="bank password")
+- Broad personal question ("what do you know about me?", "what have I told you?") → search_vault(query="personal user preferences facts profile")
+- Current date/time → get_current_datetime()
+- Web info needed → search_web(query="...")
+- Save user fact → vault_save(topic, content, path)
+
+NEVER answer a personal question without checking vault first.
+NEVER say "I don't know" about the user without searching vault first.
 </tool_decision_strategy>` : `<tool_selection>
 Select the most appropriate tool directly without extended explanation.
 </tool_selection>`}
@@ -178,7 +176,15 @@ Thought: "Credential update — overwrite the existing file with the new value."
 
 User: "Did I tell you about my Amazon password?"
 Thought: "Recall question — must check vault before answering. Don't guess."
-[vault_lookup(query="amazon password")]`;
+[vault_lookup(query="amazon password")]
+
+User: "What do you know about me?"
+Thought: "Broad recall — search vault for all personal facts, preferences, and profile info."
+[search_vault(query="personal user preferences facts profile habits")]
+
+User: "What have you saved about me?"
+Thought: "Broad recall — search across all stored user info."
+[search_vault(query="personal user preferences facts profile habits")]`;
     }
 
     // Only include reasoning instructions when Smart Tool Detection is ON

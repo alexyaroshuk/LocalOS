@@ -1431,6 +1431,21 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return await this.runTriggerTool('vault_lookup', {query: q}, messages, config, onToken, onToolUsage);
     }
 
+    // BROAD SELF-RECALL — "what do you know about me", "what have you saved", "what do you remember"
+    // These ask about the agent's knowledge, not a specific fact — use search_vault for top-K coverage.
+    const broadRecallPatterns = [
+      /what\s+do\s+you\s+know\s+about\s+me/i,
+      /what\s+have\s+you\s+(saved|stored|recorded|remembered)/i,
+      /what\s+do\s+you\s+remember\s+(about\s+me)?/i,
+      /tell\s+me\s+what\s+you\s+know/i,
+      /what\s+information\s+do\s+you\s+have/i,
+      /do\s+you\s+know\s+anything\s+about\s+me/i,
+    ];
+    if (broadRecallPatterns.some(re => re.test(content)) && hasTool('search_vault')) {
+      Logger.info('🧠 PREFLIGHT: search_vault (broad self-recall)');
+      return await this.runTriggerTool('search_vault', {query: 'personal user preferences facts profile habits'}, messages, config, onToken, onToolUsage);
+    }
+
     // VAULT KNOWLEDGE RECALL — "tell me about my X project / vault / notes".
     if (/\btell me about my\b/i.test(content) && hasTool('search_vault')) {
       const q = content.replace(/^.*\btell me about my\b\s*/i, '').replace(/\?.*$/, '').trim();
@@ -2436,6 +2451,35 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         if (iter === 0 && !usedTool) {
           Logger.debug(`tool_calls field type: ${typeof result.tool_calls}, value: ${JSON.stringify(result.tool_calls)}`);
           Logger.debug(`Raw model content (first 500 chars): ${finalText.substring(0, 500)}`);
+
+          // PERSONAL-QUESTION GUARD: model answered without checking vault.
+          // Structural heuristic (question + personal reference) catches unbounded phrase space.
+          const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content?.trim() ?? '';
+          const isQuestion = /[?]/.test(lastUserMsg) || /^(what|where|when|who|how|which|do|did|have|can|is|are)\b/i.test(lastUserMsg);
+          const isPersonal = /\b(me|my|i |you know|you remember|you saved|you have|about me|tell me)\b/i.test(lastUserMsg);
+          if (isQuestion && isPersonal && this.availableTools.some(t => t.name === 'search_vault')) {
+            Logger.warn(`⚠️ Personal question answered without vault check. Forcing search_vault.`);
+            const cleanQ = lastUserMsg.replace(/^(what|where|when|how|which|do|did|have|can)\s+(i|you|do i|do you|did i|did you|have you|have i)\s+/i, '').replace(/[?]+$/, '').trim() || 'personal user facts preferences profile';
+            const svArgs = {query: cleanQ};
+            onToolUsage?.('tool_call', 'search_vault', svArgs);
+            const svResult = await ToolService.executeTool({id: generateId(), name: 'search_vault', arguments: svArgs});
+            onToolUsage?.('tool_result', 'search_vault', svArgs, svResult);
+            const svR = svResult.result as any;
+            if (svR?.results?.length > 0) {
+              // Re-generate with vault context injected
+              usedTool = true;
+              firstToolName = 'search_vault';
+              const vaultContext = svR.results.map((r: any) => `[${r.path}]: ${r.snippet}`).join('\n');
+              const regenMessages = [
+                ...messages,
+                {role: 'assistant' as const, content: `[search_vault result]\n${vaultContext}`},
+                {role: 'user' as const, content: lastUserMsg},
+              ];
+              onToolUsage?.('generating');
+              finalText = await this.chatCompletion(regenMessages, config, onToken);
+              Logger.info(`✅ Personal-question guard: regenerated with ${svR.results.length} vault results`);
+            }
+          }
 
           // HALLUCINATION GUARD: model claimed to save/store something but called no tool.
           // Detect the pattern, re-execute vault_save with inferred args, fix the response.
