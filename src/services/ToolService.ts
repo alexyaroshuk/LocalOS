@@ -40,6 +40,7 @@ export class ToolService {
     this.registerTool(this.getVaultConnectionsTool());
     this.registerTool(this.getVaultWriteProposalTool());
     this.registerTool(this.getVaultCommitWriteTool());
+    this.registerTool(this.getVaultSaveTool());
 
     // Register vault write tools
     this.registerTool(this.getSuggestJournalEntryTool());
@@ -1219,6 +1220,90 @@ export class ToolService {
           };
         } catch (err) {
           return {success: false, error: err instanceof Error ? err.message : 'commit failed'};
+        }
+      },
+    };
+  }
+
+  // ============== VAULT SAVE (single-shot write) ==============
+
+  /**
+   * Tool: vault_save
+   * One-shot save: lookup + write in a single call. No chaining needed.
+   */
+  private static getVaultSaveTool(): Tool {
+    return {
+      name: 'vault_save',
+      description:
+        'Save a fact, credential, or preference to the vault. Handles lookup and write automatically — no need to call vault_lookup or vault_commit_write separately. Use for any persistent user info: passwords, PINs, card numbers, preferences, habits, contact info. PATH CONVENTION: personal/passwords/<topic>.md | personal/financial/<topic>.md | personal/contact/<topic>.md | personal/preferences/<topic>.md | personal/notes/<topic>.md',
+      parameters: [
+        {
+          name: 'topic',
+          type: 'string',
+          description: 'Short label for what is being saved (e.g. "bank password", "credit card", "email").',
+          required: true,
+        },
+        {
+          name: 'content',
+          type: 'string',
+          description: 'Full markdown content to write. Use format: "# <topic>\\n\\n<topic> = <value>\\n"',
+          required: true,
+        },
+        {
+          name: 'path',
+          type: 'string',
+          description: 'Relative vault path (e.g. "personal/passwords/bank.md"). Must end in .md.',
+          required: true,
+        },
+      ],
+      checkAvailability: async () => {
+        const hasVault = await VaultService.hasVault();
+        return {available: hasVault, reason: hasVault ? undefined : 'No vault configured'};
+      },
+      execute: async (args: Record<string, any>) => {
+        try {
+          const config = await VaultService.getVaultConfig();
+          if (!config) {return {success: false, error: 'No vault configured'};}
+
+          const topic = String(args.topic || '').trim();
+          const content = String(args.content || '').trim();
+          const relPath = String(args.path || '').replace(/^\//, '').replace(/\.\.\//g, '');
+
+          if (!relPath.endsWith('.md')) {
+            return {success: false, error: 'path must end in .md'};
+          }
+          if (!content) {
+            return {success: false, error: 'content is empty'};
+          }
+
+          const RNFS = require('react-native-fs');
+          const absPath = `${config.vaultPath}/${relPath}`;
+
+          // Check for existing file
+          const exists = await RNFS.exists(absPath);
+          if (exists) {
+            const existing = await RNFS.readFile(absPath, 'utf8');
+            if (existing.trim() === content.trim()) {
+              return {success: true, action: 'already_exists', path: relPath, message: `Already saved at ${relPath}`};
+            }
+            // Append new value
+            const folder = absPath.substring(0, absPath.lastIndexOf('/'));
+            await RNFS.mkdir(folder);
+            await RNFS.appendFile(absPath, `\n${content}`, 'utf8');
+            // Re-index
+            VaultIndexService.indexVaultFile(absPath).catch(() => {});
+            return {success: true, action: 'updated', path: relPath, message: `Updated ${relPath} with new value for "${topic}"`};
+          }
+
+          // Create new file
+          const folder = absPath.substring(0, absPath.lastIndexOf('/'));
+          await RNFS.mkdir(folder);
+          await RNFS.writeFile(absPath, content, 'utf8');
+          // Re-index
+          VaultIndexService.indexVaultFile(absPath).catch(() => {});
+          return {success: true, action: 'created', path: relPath, message: `Saved "${topic}" to ${relPath}`};
+        } catch (err) {
+          return {success: false, error: err instanceof Error ? err.message : 'vault_save failed'};
         }
       },
     };
