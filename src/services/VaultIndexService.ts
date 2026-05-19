@@ -233,11 +233,14 @@ export class VaultIndexService {
 
   private static truncateSnippet(text: string, maxChars: number = 200): string {
     // Skip YAML frontmatter — otherwise the snippet is just `---\ndate:\ntags:\n---`
-    // and the model sees no actual content.
+    // and the model sees no actual content. If stripping leaves nothing
+    // (chunk was frontmatter-only), fall back to the original text so
+    // downstream "quote from snippet" prompts have something to quote.
     let body = text;
     const fmMatch = body.match(/^---\n[\s\S]*?\n---\n?/);
     if (fmMatch) {
-      body = body.slice(fmMatch[0].length).trimStart();
+      const stripped = body.slice(fmMatch[0].length).trimStart();
+      body = stripped.length > 0 ? stripped : text;
     }
     if (body.length <= maxChars) {
       return body;

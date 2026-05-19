@@ -1737,7 +1737,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
     const instruction = isEmpty
       ? `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nThe lookup found nothing. Tell the user directly that you don't have that info saved yet, and ask if they'd like to tell you. Do NOT pretend to know. Do NOT say "happy to help". NO tool syntax.`
-      : `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nUse this RESULT to answer the user's question directly. Quote the specific fact from the snippet. Do NOT say "happy to help". Do NOT call another tool. NO tool syntax.`;
+      : `RESULT (vault data — this is real, treat as ground truth): ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nThe RESULT above contains the user's actual stored info. Each match has a "full_content" or "snippet" field — read either and summarize specifics (file names, facts, preferences). Do NOT say "I don't have that" or "nothing on that yet" — the data is right there. Do NOT call another tool. NO tool syntax. 1–2 short sentences, plain prose.`;
 
     const toolResultMessage: Message = {
       id: 'tool-result',
