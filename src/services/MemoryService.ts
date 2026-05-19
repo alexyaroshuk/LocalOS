@@ -14,9 +14,9 @@ export interface CoreMemoryBlocks {
  * Default core memory when user first starts
  */
 const DEFAULT_CORE_MEMORY: CoreMemoryBlocks = {
-  user_profile: 'New user - learning about preferences and personality.',
-  conversation_style: 'Professional and helpful tone.',
-  current_focus: 'Getting to know the user and setting up initial tasks.',
+  user_profile: 'New user — learning their preferences.',
+  conversation_style: 'Cool, efficient agent. Zero formal bullshit. Straight to the point. One short sentence default. Lowercase fine. No "I apologize / I\'m happy to / Based on the information / It seems that".',
+  current_focus: 'Getting to know the user.',
   relationship_context: 'No context yet.',
 };
 
