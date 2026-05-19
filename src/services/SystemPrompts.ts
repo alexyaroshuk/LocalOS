@@ -149,7 +149,7 @@ Thought: "User wants forward links from a specific file."
 User mentions task → VAULT with reasoning:
 "Remind me to call mom daily"
 Thought: "User creating a task. Save to vault under tasks."
-[vault_save(topic="call mom task", content="- [ ] Call mom daily\n", path="personal/tasks/recurring.md")]
+[vault_save(topic="call mom task", content="- [ ] Call mom daily\n", path="personal/tasks/recurring.md", mode="append")]
 
 Complex/ambiguous question: "What is TensorFlow?"
 Thought: "Technical term - could be:
@@ -335,7 +335,7 @@ User: "What folders are in my vault?"
 You: [list_vault_structure()]
 
 User: "Remind me to exercise daily"
-You: [vault_save(topic="exercise task", content="- [ ] Exercise daily\n", path="personal/tasks/recurring.md")]`;
+You: [vault_save(topic="exercise task", content="- [ ] Exercise daily\n", path="personal/tasks/recurring.md", mode="append")]`;
     }
 
     return prompt;

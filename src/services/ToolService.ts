@@ -1235,7 +1235,7 @@ export class ToolService {
     return {
       name: 'vault_save',
       description:
-        'Save a fact, credential, or preference to the vault. Handles lookup and write automatically — no need to call vault_lookup or vault_commit_write separately. Use for any persistent user info: passwords, PINs, card numbers, preferences, habits, contact info. PATH CONVENTION: personal/passwords/<topic>.md | personal/financial/<topic>.md | personal/contact/<topic>.md | personal/preferences/<topic>.md | personal/notes/<topic>.md',
+        'Save a fact, credential, or preference to the vault. Handles lookup and write automatically. Use for any persistent user info: passwords, PINs, cards, preferences, habits, contact info. Existing files are OVERWRITTEN by default (correct for single-value facts). Pass mode="append" only for list-type files like tasks. PATH CONVENTION: personal/passwords/<topic>.md | personal/financial/<topic>.md | personal/contact/<topic>.md | personal/preferences/<topic>.md | personal/tasks/<topic>.md | personal/notes/<topic>.md',
       parameters: [
         {
           name: 'topic',
@@ -1255,6 +1255,12 @@ export class ToolService {
           description: 'Relative vault path (e.g. "personal/passwords/bank.md"). Must end in .md.',
           required: true,
         },
+        {
+          name: 'mode',
+          type: 'string',
+          description: '"overwrite" (default) replaces the file. "append" adds to end — use only for task lists or multi-entry notes.',
+          required: false,
+        },
       ],
       checkAvailability: async () => {
         const hasVault = await VaultService.hasVault();
@@ -1268,6 +1274,7 @@ export class ToolService {
           const topic = String(args.topic || '').trim();
           const content = String(args.content || '').trim();
           const relPath = String(args.path || '').replace(/^\//, '').replace(/\.\.\//g, '');
+          const mode = String(args.mode || 'overwrite').toLowerCase();
 
           if (!relPath.endsWith('.md')) {
             return {success: false, error: 'path must end in .md'};
@@ -1278,6 +1285,8 @@ export class ToolService {
 
           const RNFS = require('react-native-fs');
           const absPath = `${config.vaultPath}/${relPath}`;
+          const folder = absPath.substring(0, absPath.lastIndexOf('/'));
+          await RNFS.mkdir(folder);
 
           // Check for existing file
           const exists = await RNFS.exists(absPath);
@@ -1286,20 +1295,18 @@ export class ToolService {
             if (existing.trim() === content.trim()) {
               return {success: true, action: 'already_exists', path: relPath, message: `Already saved at ${relPath}`};
             }
-            // Append new value
-            const folder = absPath.substring(0, absPath.lastIndexOf('/'));
-            await RNFS.mkdir(folder);
-            await RNFS.appendFile(absPath, `\n${content}`, 'utf8');
-            // Re-index
+            if (mode === 'append') {
+              await RNFS.appendFile(absPath, `\n${content}`, 'utf8');
+            } else {
+              // Default: overwrite — correct for single-value facts like passwords
+              await RNFS.writeFile(absPath, content, 'utf8');
+            }
             VaultIndexService.indexVaultFile(absPath).catch(() => {});
-            return {success: true, action: 'updated', path: relPath, message: `Updated ${relPath} with new value for "${topic}"`};
+            return {success: true, action: 'updated', path: relPath, message: `Updated "${topic}" at ${relPath}`};
           }
 
-          // Create new file
-          const folder = absPath.substring(0, absPath.lastIndexOf('/'));
-          await RNFS.mkdir(folder);
+          // Create new file (folder already created above)
           await RNFS.writeFile(absPath, content, 'utf8');
-          // Re-index
           VaultIndexService.indexVaultFile(absPath).catch(() => {});
           return {success: true, action: 'created', path: relPath, message: `Saved "${topic}" to ${relPath}`};
         } catch (err) {
