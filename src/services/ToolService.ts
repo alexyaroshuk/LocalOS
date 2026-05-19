@@ -633,12 +633,12 @@ export class ToolService {
     return {
       name: 'list_vault_files',
       description:
-        'READ. List all markdown files in the vault with their folder locations. Examples: "list all my notes", "show me every file in my vault", "what files do I have in Learning folder". Optional folder filter. For finding specific content, use vault_lookup or search_vault instead.',
+        'READ. List vault files with a one-line content preview (first heading + first ~120 chars of body, frontmatter stripped). Use this for broad questions like "what do you know about me", "tell me about myself", or "what\'s in my vault" — you get an inventory plus a content gist in one call, cheaper than searching and then reading. Optional folder filter. For finding a specific fact, prefer vault_lookup or search_vault.',
       parameters: [
         {
           name: 'folder',
           type: 'string',
-          description: 'Optional: Filter files by folder name (e.g., "Learning", "Projects")',
+          description: 'Optional: Filter files by folder name (e.g., "personal", "Learning", "Projects")',
           required: false,
         },
       ],
@@ -670,17 +670,53 @@ export class ToolService {
             );
           }
 
+          // Enrich top-N most-recent files with first heading + preview. Cap to
+          // keep token cost bounded; skim is meant to be cheap.
+          const MAX_ENRICHED = 30;
+          const MAX_FILE_SIZE = 200 * 1024;
+          const sorted = [...files].sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+          const enrichedMap = new Map<string, {first_heading?: string; preview?: string; tags?: string[]}>();
+          await Promise.all(
+            sorted.slice(0, MAX_ENRICHED).map(async f => {
+              if (f.size > MAX_FILE_SIZE) {
+                return;
+              }
+              try {
+                const md = await VaultService.readMarkdownFile(f.path);
+                const body = md.content.trimStart();
+                const headingMatch = body.match(/^#{1,6}\s+(.+?)\s*$/m);
+                const first_heading = headingMatch ? headingMatch[1].trim() : undefined;
+                // Drop heading lines for the preview so it isn't a duplicate
+                // of first_heading. Collapse whitespace to keep it on one line.
+                const bodyNoHeadings = body.replace(/^#{1,6}\s+.+$/gm, '').replace(/\s+/g, ' ').trim();
+                const preview = bodyNoHeadings.length > 120
+                  ? bodyNoHeadings.slice(0, 120).trim() + '…'
+                  : bodyNoHeadings || undefined;
+                enrichedMap.set(f.path, {first_heading, preview, tags: md.tags?.length ? md.tags : undefined});
+              } catch {
+                // unreadable file — skip enrichment, basic entry still returned
+              }
+            }),
+          );
+
           return {
             success: true,
             total_files: files.length,
-            files: files.map(f => ({
-              name: f.basename,
-              full_name: f.name,
-              path: f.relativePath,
-              folder: f.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
-              size: f.size,
-              modified: f.mtime.toISOString(),
-            })),
+            enriched_count: enrichedMap.size,
+            files: files.map(f => {
+              const enriched = enrichedMap.get(f.path);
+              return {
+                name: f.basename,
+                full_name: f.name,
+                path: f.relativePath,
+                folder: f.folder.replace(config.vaultPath, '').replace(/^\//, '') || 'root',
+                size: f.size,
+                modified: f.mtime.toISOString(),
+                first_heading: enriched?.first_heading,
+                preview: enriched?.preview,
+                tags: enriched?.tags,
+              };
+            }),
           };
         } catch (error) {
           return {

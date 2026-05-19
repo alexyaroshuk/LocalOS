@@ -1017,6 +1017,8 @@ Do not announce, explain, or describe the call. Just emit the bracket
 expression alone on its own line. The tool will run and the result
 will be returned. Then write the final natural-language answer.
 
+The function name inside [name()] MUST be a tool from the AVAILABLE TOOLS list above. NEVER use a parameter value or enum label (e.g. user_profile, conversation_style, current_focus, relationship_context) as the function name — those are arguments to update_core_memory, not tools.
+
 # BRACKETS ARE FOR TOOL CALLS ONLY
 Plain-text replies must NEVER be wrapped in brackets. "yo." not "[yo.]". "sup." not "[sup.]". Brackets without a function name = wrong format.
 
@@ -1085,6 +1087,15 @@ Assistant: [search_vault(query="React Native")]
 
 User: What folders do I have?
 Assistant: [list_vault_structure()]
+
+User: What do you know about me?
+Assistant: [list_vault_files(folder="personal")]
+
+User: Tell me about myself
+Assistant: [list_vault_files(folder="personal")]
+
+User: What's in my vault?
+Assistant: [list_vault_files()]
 
 User: Read Vector Search.md
 Assistant: [read_vault_file(file_path="Vector Search.md")]
@@ -2505,11 +2516,22 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             const svResult = await ToolService.executeTool({id: generateId(), name: 'search_vault', arguments: svArgs});
             onToolUsage?.('tool_result', 'search_vault', svArgs, svResult);
             const svR = svResult.result as any;
-            if (svR?.results?.length > 0) {
+            // search_vault returns `matches` (semantic/keyword path) — older
+            // callers may still produce `results`. Accept both shapes.
+            const guardMatches = (svR?.matches ?? svR?.results ?? []) as Array<{
+              path?: string; heading?: string; snippet?: string; full_content?: string;
+            }>;
+            if (guardMatches.length > 0) {
               // Re-generate with vault context injected
               usedTool = true;
               firstToolName = 'search_vault';
-              const vaultContext = svR.results.map((r: any) => `[${r.path}]: ${r.snippet}`).join('\n');
+              const vaultContext = guardMatches
+                .map(r => {
+                  const header = r.heading ? `${r.path} — ${r.heading}` : (r.path ?? '');
+                  const body = r.full_content ?? r.snippet ?? '';
+                  return `[${header}]\n${body}`;
+                })
+                .join('\n\n');
               const regenMessages = [
                 ...messages,
                 {role: 'assistant' as const, content: `[search_vault result]\n${vaultContext}`},
@@ -2517,7 +2539,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
               ];
               onToolUsage?.('generating');
               finalText = await this.chatCompletion(regenMessages, config, onToken);
-              Logger.info(`✅ Personal-question guard: regenerated with ${svR.results.length} vault results`);
+              Logger.info(`✅ Personal-question guard: regenerated with ${guardMatches.length} vault results`);
             }
           }
 
