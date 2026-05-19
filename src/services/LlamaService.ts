@@ -1217,10 +1217,10 @@ ${toolsJson}
 CRITICAL TOOL USAGE RULES:
 
 1. MEMORY TOOLS - Use these to remember and recall information:
-   - When user shares personal info: USE core_memory_append or archival_memory_insert
-   - When user asks "what do you know": USE archival_memory_search
+   - When user shares personal info: USE vault_lookup then vault_write_proposal
+   - When user asks "what do you know": USE vault_lookup or search_vault
    - When user asks about past conversations: USE conversation_search
-   - ALWAYS search memory BEFORE saying "I don't know"
+   - ALWAYS check vault BEFORE saying "I don't know"
 
 2. WEB SEARCH - Use ONLY for current events/news:
    - Keywords: "news", "latest", "headlines", "trending", "current events"
@@ -1252,21 +1252,21 @@ User: "News about AI" → YOU MUST RESPOND: [search_web(query="AI news")]
 User: "What's trending" → YOU MUST RESPOND: [search_web(query="trending topics")]
 
 MEMORY - WRITE (User shares info about themselves):
-User: "I prefer TypeScript" → YOU MUST RESPOND: [archival_memory_insert(content="User prefers TypeScript over JavaScript", tags=["preference", "programming"])]
-User: "My favorite color is blue" → YOU MUST RESPOND: [core_memory_append(label="user_profile", content="Favorite color: blue")]
-User: "I work best in mornings" → YOU MUST RESPOND: [archival_memory_insert(content="User works best in the morning hours", tags=["habit", "productivity"])]
+User: "I prefer TypeScript" → YOU MUST RESPOND: [vault_lookup(query="TypeScript preference")] then [vault_write_proposal(suggested_path="personal/preferences/dev.md", content="Prefers TypeScript over JavaScript", mode="append")]
+User: "My favorite color is blue" → YOU MUST RESPOND: [vault_lookup(query="favorite color")] then [vault_write_proposal(suggested_path="personal/preferences/general.md", content="Favorite color: blue", mode="append")]
+User: "I work best in mornings" → YOU MUST RESPOND: [vault_lookup(query="morning work habit")] then [vault_write_proposal(suggested_path="personal/habits/schedule.md", content="Works best in the mornings", mode="append")]
 User: "Remember I'm working on LocalOS" → YOU MUST RESPOND: [core_memory_append(label="current_focus", content="Working on LocalOS project")]
 
 MEMORY - READ (User asks about themselves):
-User: "What do you know about me?" → YOU MUST RESPOND: [archival_memory_search(query="user preferences habits", top_k=10)]
-User: "What are my preferences?" → YOU MUST RESPOND: [archival_memory_search(query="preferences", top_k=5)]
-User: "Do you remember what I said about TypeScript?" → YOU MUST RESPOND: [archival_memory_search(query="TypeScript", top_k=3)]
+User: "What do you know about me?" → YOU MUST RESPOND: [search_vault(query="user preferences habits")]
+User: "What are my preferences?" → YOU MUST RESPOND: [search_vault(query="preferences")]
+User: "Do you remember what I said about TypeScript?" → YOU MUST RESPOND: [vault_lookup(query="TypeScript")]
 User: "What did we discuss yesterday?" → YOU MUST RESPOND: [conversation_search(query="yesterday discussion", limit=5)]
 
 ABSOLUTE RULES - NEVER VIOLATE THESE:
-1. If user shares personal info → IMMEDIATELY call archival_memory_insert or core_memory_append
-2. If user asks "what do you know" → IMMEDIATELY call archival_memory_search
-3. DO NOT say "I don't have access" - YOU HAVE MEMORY TOOLS
+1. If user shares personal info → IMMEDIATELY call vault_lookup then vault_write_proposal
+2. If user asks "what do you know" → IMMEDIATELY call search_vault
+3. DO NOT say "I don't have access" - YOU HAVE VAULT TOOLS
 4. DO NOT respond with conversational text - CALL THE TOOL FIRST
 5. Tool calls MUST be on their own line, not mixed with text`;
     } else {
@@ -1276,8 +1276,8 @@ ABSOLUTE RULES - NEVER VIOLATE THESE:
 To call a tool, output: [tool_name(param="value")]
 
 REMEMBER:
-- Check archival_memory_search when user asks about themselves
-- Save important info with archival_memory_insert or core_memory_append
+- Check vault_lookup or search_vault when user asks about themselves
+- Save important info with vault_write_proposal (after vault_lookup), or core_memory_append for behavior hints
 - Use search_web only for current events/news, not for user information`;
     }
 
@@ -2366,8 +2366,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             const TOOL_ALIASES: Record<string, string> = {
               suggest_vault_lookup: 'vault_lookup',
               suggest_vault_search: 'search_vault',
-              suggest_archival_memory_search: 'archival_memory_search',
-              suggest_archival_memory_insert: 'archival_memory_insert',
+              suggest_vault_write: 'vault_write_proposal',
+              suggest_vault_write_proposal: 'vault_write_proposal',
             };
             if (TOOL_ALIASES[obj.name]) {
               Logger.debug(`Tool alias: '${obj.name}' → '${TOOL_ALIASES[obj.name]}'`);

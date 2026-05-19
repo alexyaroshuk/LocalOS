@@ -501,9 +501,6 @@ export class LettaMemoryTools {
       this.getCoreMemoryAppendTool(),
       this.getCoreMemoryReplaceTool(),
       this.getCoreMemoryClearTool(),
-      this.getArchivalMemoryInsertTool(),
-      this.getArchivalMemorySearchTool(),
-      this.getArchivalMemoryDeleteTool(),
       this.getConversationSearchTool(),
     ];
   }
