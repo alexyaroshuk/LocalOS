@@ -2407,7 +2407,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         const userQuery = lastUser?.content?.trim() ?? '';
         if (userQuery) {
           try {
-            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.42);
+            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.42, this.smartToolDetection);
             if (routed) {
               Logger.info(
                 `🧭 ToolRouter: forcing "${routed.tool.name}" (sim=${routed.similarity.toFixed(3)}) for query "${userQuery.substring(0, 60)}"`,

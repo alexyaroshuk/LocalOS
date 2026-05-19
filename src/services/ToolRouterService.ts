@@ -51,10 +51,21 @@ export class ToolRouterService {
   }
 
   /**
+   * Conversational openers / acknowledgements that should never trigger a
+   * tool call. Short and high-frequency — model handles them inline.
+   */
+  private static readonly GREETING_RE = /^(hi|hello|hey|yo|sup|howdy|greetings|what'?s\s*up|wassup|good\s*(morning|afternoon|evening|night)|thanks|thank\s*you|ty|thx|ok|okay|cool|nice|got\s*it|sounds\s*good|bye|goodbye|cya|see\s*ya)[\s!.?]*$/i;
+
+  /** Personal pronouns — strong signal the query is about user, not the web. */
+  private static readonly PERSONAL_RE = /\b(my|me|i|i'?m|i'?ve|i'?d|i'?ll|mine|myself|i\s+have|i\s+had|do\s+i|did\s+i|am\s+i|was\s+i)\b/i;
+
+  /**
    * Find the best matching tool for a user query.
    *
    * Returns null if:
    *  - Embedding model not loaded
+   *  - smartMode is ON (LLM decides — router stays out of the way)
+   *  - Query is a greeting / acknowledgement
    *  - Top similarity below threshold
    *  - Best-matching tool has parameters we can't infer (multi-arg writes)
    *
@@ -66,7 +77,13 @@ export class ToolRouterService {
     query: string,
     tools: Tool[],
     threshold: number = 0.45,
+    smartMode: boolean = false,
   ): Promise<RouteResult | null> {
+    if (smartMode) {
+      L.debug('[ToolRouter] Skipped — smart tool detection ON (LLM decides)');
+      return null;
+    }
+
     if (!EmbeddingService.isModelLoaded()) {
       L.debug('[ToolRouter] Skipped — embedding model not loaded');
       return null;
@@ -74,7 +91,24 @@ export class ToolRouterService {
 
     if (tools.length === 0) return null;
 
-    await this.ensureEmbeddings(tools);
+    const trimmed = query.trim();
+    if (this.GREETING_RE.test(trimmed)) {
+      L.info(`[ToolRouter] Skipped greeting/ack: "${trimmed.substring(0, 40)}"`);
+      return null;
+    }
+
+    // Personal-pronoun questions are about the user's vault, never the web.
+    // Drop search_web from candidates so a noisy 0.51 sim can't outrank
+    // a genuine vault match at 0.48.
+    const isPersonal = this.PERSONAL_RE.test(trimmed);
+    const candidates = isPersonal
+      ? tools.filter(t => t.name !== 'search_web' && t.name !== 'fetch_web_page')
+      : tools;
+    if (isPersonal) {
+      L.debug('[ToolRouter] Personal pronoun detected — excluding web tools');
+    }
+
+    await this.ensureEmbeddings(candidates);
 
     let queryEmb: number[];
     try {
@@ -88,7 +122,7 @@ export class ToolRouterService {
     let bestSim = -1;
     const allScores: Array<{name: string; sim: number}> = [];
 
-    for (const tool of tools) {
+    for (const tool of candidates) {
       const toolEmb = this.toolEmbeddings.get(tool.name);
       if (!toolEmb) continue;
       try {
