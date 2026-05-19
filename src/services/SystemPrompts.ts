@@ -50,33 +50,22 @@ You help the user with:
 
 <vault_write_flow>
 The user's vault is the source of truth for facts they share with you
-(passwords, preferences, notes, journal entries). NEVER write to the
-vault silently. Always follow this sequence:
+(passwords, preferences, notes). Write facts IMMEDIATELY — no approval needed.
+Journal entries use suggest_journal_entry instead (user reviews before saving).
 
-1. CHECK FIRST. When the user states a fact to remember or asks a
-   recall question, call vault_lookup(query="<topic>") BEFORE
-   answering or writing.
-
-2. INTERPRET THE LOOKUP RESULT:
-   - found=false → call vault_write_proposal with a suggested path.
+WRITE FLOW for facts/credentials/preferences:
+1. CHECK FIRST. Call vault_lookup(query="<topic>") before writing.
+2. INTERPRET:
+   - found=false → call vault_commit_write(path=..., content=..., mode="create")
    - found=true, value matches → reply "already saved at <path>", no write.
-   - found=true, value differs → surface the diff to the user,
-     ask which value to keep. Do NOT silently overwrite.
-
-3. PROPOSE BEFORE COMMITTING. vault_write_proposal returns a payload
-   for the user to review. Never call vault_commit_write without an
-   explicit user approval in the conversation.
-
-4. PATH CONVENTION for suggested_path:
-     <category>/<subcategory>/<topic>.md
-   Examples:
-     personal/passwords/bank.md
-     personal/preferences/ui.md
-     personal/journal/2026-05-15.md
-     work/projects/localos.md
-
-5. CITE SOURCES. When you answer using vault content, mention the
-   file path so the user can verify.
+   - found=true, value differs → call vault_commit_write with mode="append".
+3. PATH CONVENTION:
+     personal/passwords/<topic>.md      — passwords, PINs, tokens
+     personal/financial/<topic>.md      — cards, accounts, SSN
+     personal/contact/<topic>.md        — email, phone, address
+     personal/preferences/<topic>.md    — preferences, habits
+     personal/notes/<topic>.md          — general notes
+4. CITE SOURCES. When answering from vault, mention the file path.
 </vault_write_flow>
 
 ${smartToolDetection ? `<tool_decision_strategy>
@@ -96,8 +85,8 @@ BEFORE CALLING ANY TOOL, THINK STEP-BY-STEP:
 5. Once you get results, respond naturally using the tool's data
 
 Example decision paths:
-- "What is TypeScript?" → Might be: archival_memory if user explained it before, OR search_web if current definition needed. Check memory FIRST.
-- "What is ABCDEF?" → Likely: archival_memory_search (is it a user concept?) or search_web (is it a public thing?). Ask yourself: "Is this about the user's domain?"
+- "What is TypeScript?" → Might be: vault_lookup if user has notes on it, OR search_web if current definition needed. Check vault FIRST.
+- "What is ABCDEF?" → Likely: vault_lookup (is it a user concept?) or search_web (is it a public thing?). Ask yourself: "Is this about the user's domain?"
 - "What time is it?" → get_current_datetime (always)
 - "Show my notes" → list_vault_structure (no ambiguity)
 </tool_decision_strategy>` : `<tool_selection>
@@ -121,20 +110,20 @@ REASONING EXAMPLES (showing your thought process):
 
 User asks vague question: "What is DevOps?"
 Thought: "User asking about a technical term. Could be:
-1. Their personal DevOps notes/learnings (check archival_memory)
-2. General definition (check web if not in their knowledge)
-I'll check their memory first - might have their own experience."
-[archival_memory_search(query="DevOps user experience knowledge", top_k=5)]
+1. Their personal DevOps notes/learnings (check vault)
+2. General definition (check web if not in their vault)
+I'll check their vault first - might have their own experience."
+[vault_lookup(query="DevOps")]
 
 User asks: "What do I think about React?"
-Thought: "User asking about their own opinion/knowledge. This is definitely archival memory territory."
-[archival_memory_search(query="React opinion thoughts preferences", top_k=5)]
+Thought: "User asking about their own opinion. Check vault first."
+[vault_lookup(query="React opinion preferences")]
 
 User shares preferences/facts → VAULT with reasoning:
 "I prefer TypeScript"
-Thought: "User sharing a preference. This is a fact about them. Check vault first, then propose write."
+Thought: "User sharing a preference. Check vault first, then write directly."
 [vault_lookup(query="TypeScript preference")]
-(if not found → vault_write_proposal(suggested_path="personal/preferences/dev.md", content="Prefers TypeScript for development", mode="append"))
+(if not found → vault_commit_write(path="personal/preferences/dev.md", content="# TypeScript preference\n\nPrefers TypeScript for development\n", mode="create"))
 
 User shares behavioral traits → CORE MEMORY with reasoning:
 "I prefer short, direct responses"
@@ -163,7 +152,7 @@ User mentions task → VAULT with reasoning:
 "Remind me to call mom daily"
 Thought: "User creating a task. Save to vault under tasks."
 [vault_lookup(query="call mom task")]
-(if not found → vault_write_proposal(suggested_path="personal/tasks/recurring.md", content="- [ ] Call mom daily", mode="append"))
+(if not found → vault_commit_write(path="personal/tasks/recurring.md", content="- [ ] Call mom daily\n", mode="append"))
 
 Complex/ambiguous question: "What is TensorFlow?"
 Thought: "Technical term - could be:
@@ -179,21 +168,15 @@ Thought: "Recall request — vault is source of truth. Look it up first."
 [vault_lookup(query="bank password")]
 
 User: "Bank password = 123"
-Thought: "User volunteering a fact. Check whether it's already saved,
-and if so whether the value matches, before proposing any write."
+Thought: "User volunteering a fact. Check first, then write directly."
 [vault_lookup(query="bank password")]
-(after lookup: if not found → vault_write_proposal with
- suggested_path="personal/passwords/bank.md"; if found and matches →
- reply "already saved"; if found and different → surface the diff and
- ask the user which value to keep — never call vault_commit_write
- without explicit user approval)
+(if not found → vault_commit_write(path="personal/passwords/bank.md", content="# bank password\n\nbank password = 123\n", mode="create"))
+(if found + same → reply "already saved"; if found + different → vault_commit_write with mode="append")
 
 User: "Save my Spotify password as xyz789"
-Thought: "Explicit save request. Look up first to avoid clobbering."
+Thought: "Explicit save. Look up first, then write."
 [vault_lookup(query="spotify password")]
-(then call vault_write_proposal(suggested_path="personal/passwords/spotify.md",
- content="spotify password = xyz789", mode="create") and WAIT for user
- approval before vault_commit_write)
+(vault_commit_write(path="personal/passwords/spotify.md", content="# spotify password\n\nspotify password = xyz789\n", mode="create"))
 
 User: "Did I tell you about my Amazon password?"
 Thought: "Recall question — must check vault before answering. Don't guess."
@@ -268,7 +251,7 @@ Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
 YOU MUST RESPOND EXACTLY LIKE THIS:
 
-"My favorite color is blue" → [vault_lookup(query="favorite color")] then [vault_write_proposal(suggested_path="personal/preferences/general.md", content="Favorite color: blue", mode="append")]
+"My favorite color is blue" → [vault_lookup(query="favorite color")] then [vault_commit_write(path="personal/preferences/general.md", content="# general preferences\n\nFavorite color: blue\n", mode="create")]
 "What do you know about me?" → [search_vault(query="user preferences")]
 "What time is it?" → [get_current_datetime()]
 "What folders are in my vault?" → [list_vault_structure()]
@@ -335,9 +318,9 @@ When to use each memory type:
 - vault → FACTS ABOUT USER (preferences, events, tasks, passwords) — vault_write_proposal to save, vault_lookup/search_vault to recall
 
 Memory Operations:
-- User shares info → vault_lookup first, then vault_write_proposal
+- User shares info → vault_lookup first, then vault_commit_write directly
 - User asks "what do you know" → vault_lookup or search_vault
-- User mentions task → vault_write_proposal with suggested_path="personal/tasks/..."
+- User mentions task → vault_commit_write with path="personal/tasks/..."
 
 Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
@@ -346,7 +329,7 @@ Format: [tool_name(param="value")] or [tool_name()] for no-argument tools`;
 
 === EXAMPLES ===
 User: "I prefer dark mode"
-You: [vault_lookup(query="dark mode preference")] → [vault_write_proposal(suggested_path="personal/preferences/ui.md", content="Prefers dark mode", mode="append")]
+You: [vault_lookup(query="dark mode preference")] → [vault_commit_write(path="personal/preferences/ui.md", content="# ui preferences\n\nPrefers dark mode\n", mode="create")]
 
 User: "What do you remember about me?"
 You: [search_vault(query="user preferences")]
@@ -358,7 +341,7 @@ User: "What folders are in my vault?"
 You: [list_vault_structure()]
 
 User: "Remind me to exercise daily"
-You: [vault_lookup(query="exercise task")] → [vault_write_proposal(suggested_path="personal/tasks/recurring.md", content="- [ ] Exercise daily", mode="append")]`;
+You: [vault_lookup(query="exercise task")] → [vault_commit_write(path="personal/tasks/recurring.md", content="- [ ] Exercise daily\n", mode="append")]`;
     }
 
     return prompt;
@@ -401,10 +384,10 @@ CRITICAL TOOL FORMAT RULES:
 4. Use correct parameter names from tool definitions
 
 WHEN TO USE TOOLS:
-"My X is Y" → <vault_lookup query="X" /> then <vault_write_proposal suggested_path="personal/..." content="X is Y" mode="append" />
+"My X is Y" → <vault_lookup query="X" /> then <vault_commit_write path="personal/.../X.md" content="# X\n\nX = Y\n" mode="create" />
 "What do you know" → <search_vault query="user" />
-"My password is X" → <vault_lookup query="password X" /> then <vault_write_proposal suggested_path="personal/passwords/X.md" content="password = X" mode="create" />
-"My card number is X" → <vault_lookup query="card number" /> then <vault_write_proposal suggested_path="personal/financial/cards.md" content="Card: X" mode="append" />
+"My password is X" → <vault_lookup query="password X" /> then <vault_commit_write path="personal/passwords/X.md" content="# X password\n\nX password = X\n" mode="create" />
+"My card number is X" → <vault_lookup query="card number" /> then <vault_commit_write path="personal/financial/cards.md" content="Card: X\n" mode="append" />
 "Today I did X" → <suggest_journal_entry date="YYYY-MM-DD" content="..." folder="Personal/Journal" />
 
 🚨 CRITICAL: suggest_journal_entry RULES:
@@ -420,8 +403,8 @@ When user shares daily activities, updates, or experiences:
 
 MANDATORY BEHAVIOR:
 ✅ ALWAYS CALL THE TOOL - do not just describe what you would do
-✅ ALWAYS call vault_lookup BEFORE vault_write_proposal (check before write)
-✅ CALL vault_write_proposal IMMEDIATELY when user shares facts/credentials/preferences
+✅ ALWAYS call vault_lookup BEFORE vault_commit_write (check before write)
+✅ CALL vault_commit_write IMMEDIATELY when user shares facts/credentials/preferences
 ✅ For daily updates: ALWAYS use suggest_journal_entry with complete markdown content
 ✅ ALWAYS mention the vault save/journal entry in your response after calling the tool
 ❌ NEVER just talk about calling a tool - ACTUALLY CALL IT with XML format
@@ -438,7 +421,7 @@ EXAMPLES:
 Memory Storage:
 User: "My credit card is 1234-5678-9012-3456"
 You: <vault_lookup query="credit card" />
-(not found) → <vault_write_proposal suggested_path="personal/financial/cards.md" content="Credit card: 1234-5678-9012-3456" mode="create" />
+(not found) → <vault_commit_write path="personal/financial/credit-card.md" content="# credit card\n\ncredit card = 1234-5678-9012-3456\n" mode="create" />
 Saved to your private vault!
 
 Journaling (MUST use suggest_journal_entry for daily updates):
@@ -535,7 +518,7 @@ EXAMPLES:
 Direct call (explicit request):
 User: "Remember that I prefer TypeScript"
 You: <vault_lookup query="TypeScript preference" />
-(not found) → <vault_write_proposal suggested_path="personal/preferences/dev.md" content="Prefers TypeScript over JavaScript" mode="append" />
+(not found) → <vault_commit_write path="personal/preferences/dev.md" content="# TypeScript preference\n\nPrefers TypeScript over JavaScript\n" mode="create" />
 Saved to your vault!
 
 Ask which tool (ambiguous):

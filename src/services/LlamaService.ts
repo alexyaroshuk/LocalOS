@@ -1252,9 +1252,9 @@ User: "News about AI" → YOU MUST RESPOND: [search_web(query="AI news")]
 User: "What's trending" → YOU MUST RESPOND: [search_web(query="trending topics")]
 
 MEMORY - WRITE (User shares info about themselves):
-User: "I prefer TypeScript" → YOU MUST RESPOND: [vault_lookup(query="TypeScript preference")] then [vault_write_proposal(suggested_path="personal/preferences/dev.md", content="Prefers TypeScript over JavaScript", mode="append")]
-User: "My favorite color is blue" → YOU MUST RESPOND: [vault_lookup(query="favorite color")] then [vault_write_proposal(suggested_path="personal/preferences/general.md", content="Favorite color: blue", mode="append")]
-User: "I work best in mornings" → YOU MUST RESPOND: [vault_lookup(query="morning work habit")] then [vault_write_proposal(suggested_path="personal/habits/schedule.md", content="Works best in the mornings", mode="append")]
+User: "I prefer TypeScript" → YOU MUST RESPOND: [vault_lookup(query="TypeScript preference")] then [vault_commit_write(path="personal/preferences/dev.md", content="# TypeScript preference\n\nPrefers TypeScript over JavaScript\n", mode="create")]
+User: "My favorite color is blue" → YOU MUST RESPOND: [vault_lookup(query="favorite color")] then [vault_commit_write(path="personal/preferences/general.md", content="# general preferences\n\nFavorite color: blue\n", mode="create")]
+User: "I work best in mornings" → YOU MUST RESPOND: [vault_lookup(query="morning work habit")] then [vault_commit_write(path="personal/habits/schedule.md", content="# schedule habits\n\nWorks best in the mornings\n", mode="create")]
 User: "Remember I'm working on LocalOS" → YOU MUST RESPOND: [core_memory_append(label="current_focus", content="Working on LocalOS project")]
 
 MEMORY - READ (User asks about themselves):
@@ -1264,7 +1264,7 @@ User: "Do you remember what I said about TypeScript?" → YOU MUST RESPOND: [vau
 User: "What did we discuss yesterday?" → YOU MUST RESPOND: [conversation_search(query="yesterday discussion", limit=5)]
 
 ABSOLUTE RULES - NEVER VIOLATE THESE:
-1. If user shares personal info → IMMEDIATELY call vault_lookup then vault_write_proposal
+1. If user shares personal info → IMMEDIATELY call vault_lookup then vault_commit_write
 2. If user asks "what do you know" → IMMEDIATELY call search_vault
 3. DO NOT say "I don't have access" - YOU HAVE VAULT TOOLS
 4. DO NOT respond with conversational text - CALL THE TOOL FIRST
@@ -1417,6 +1417,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       /\bnote\s+that\b/i,
       /\bremember\s+(that|this|I)\b/i,
       /^[\w][\w\s-]{0,40}\s*=\s*\S+/,
+      /^my\s+[\w][\w\s-]{1,40}\s+is\s+\S+/i,
     ];
     if (writePatterns.some(re => re.test(content)) && hasTool('vault_lookup')) {
       const writeFlow = await this.runWriteIntentFlow(content, messages, config, onToken, onToolUsage);
@@ -1506,59 +1507,49 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     let storePending = false;
 
     if (lookup.found) {
-      // Has an existing entry — propose update with diff awareness.
       const existingSnippet = String(lookup.snippet || '').trim();
       if (existingSnippet && existingSnippet.includes(content.trim())) {
-        summary = `That value is already saved at \`${lookup.path}\`. Nothing to do.`;
+        summary = `Already saved at \`${lookup.path}\`. Nothing to do.`;
       } else {
-        mode = 'update';
-        // Step 2: propose update
-        const proposeArgs = {suggested_path: lookup.path, content, mode: 'update'};
-        onToolUsage?.('tool_call', 'vault_write_proposal', proposeArgs);
-        const proposeRes = await ToolService.executeTool({
+        // Append new value to existing file rather than overwriting.
+        mode = 'append';
+        const commitArgs = {path: lookup.path, content, mode: 'append'};
+        onToolUsage?.('tool_call', 'vault_commit_write', commitArgs);
+        const commitRes = await ToolService.executeTool({
           id: generateId(),
-          name: 'vault_write_proposal',
-          arguments: proposeArgs,
+          name: 'vault_commit_write',
+          arguments: commitArgs,
         });
-        onToolUsage?.('tool_result', 'vault_write_proposal', proposeArgs, proposeRes);
-        const p: any = proposeRes.result || {};
-        summary = `I already have something for "${topic}" at \`${lookup.path}\` (existing: ${existingSnippet || '(empty)'}). Proposed update: \`${content}\`. Reply "yes" to overwrite, or tell me what to keep.`;
-        this.pendingProposal = {path: p.suggested_path || lookup.path, content, mode: 'update'};
-        storePending = true;
+        onToolUsage?.('tool_result', 'vault_commit_write', commitArgs, commitRes);
+        const ok = (commitRes.result as any)?.success;
+        summary = ok
+          ? `Updated \`${lookup.path}\` with the new value.`
+          : `Couldn't update \`${lookup.path}\`: ${(commitRes.result as any)?.error}`;
       }
     } else {
-      // No existing entry — propose create at suggestedPath.
+      // No existing entry — write directly.
       mode = 'create';
-      const proposeArgs = {suggested_path: suggestedPath, content, mode: 'create'};
-      onToolUsage?.('tool_call', 'vault_write_proposal', proposeArgs);
-      const proposeRes = await ToolService.executeTool({
+      const commitArgs = {path: suggestedPath, content, mode: 'create'};
+      onToolUsage?.('tool_call', 'vault_commit_write', commitArgs);
+      const commitRes = await ToolService.executeTool({
         id: generateId(),
-        name: 'vault_write_proposal',
-        arguments: proposeArgs,
+        name: 'vault_commit_write',
+        arguments: commitArgs,
       });
-      onToolUsage?.('tool_result', 'vault_write_proposal', proposeArgs, proposeRes);
-      const p: any = proposeRes.result || {};
-      const action = p.action || 'create';
-      if (action === 'already_exists_same') {
-        summary = `That value is already saved at \`${p.suggested_path}\`. Nothing to do.`;
-      } else if (action === 'diff') {
-        summary = `\`${p.suggested_path}\` already exists with different content. Existing: ${String(p.existing_content || '').slice(0, 200)}. Proposed: ${content}. Reply "yes" to overwrite.`;
-        this.pendingProposal = {path: p.suggested_path, content, mode: 'update'};
-        storePending = true;
-      } else {
-        summary = `I'll save this to \`${p.suggested_path}\` as:\n\n\`${content}\`\n\nReply "yes" to confirm, or tell me a different path.`;
-        this.pendingProposal = {path: p.suggested_path, content, mode: 'create'};
-        storePending = true;
-      }
+      onToolUsage?.('tool_result', 'vault_commit_write', commitArgs, commitRes);
+      const ok = (commitRes.result as any)?.success;
+      summary = ok
+        ? `Saved to \`${suggestedPath}\`.`
+        : `Couldn't save: ${(commitRes.result as any)?.error}`;
     }
 
     onToolUsage?.('generating');
-    Logger.info(`💾 PREFLIGHT write-flow result: pending=${storePending} mode=${mode}`);
+    Logger.info(`💾 PREFLIGHT write-flow result: mode=${mode}`);
 
     return {
       response: summary,
       usedTool: true,
-      toolName: 'vault_write_proposal',
+      toolName: 'vault_commit_write',
     };
   }
 
@@ -1635,6 +1626,24 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       const value = kv[2].trim();
       const slug = key.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const folder = /password|secret|token|key/i.test(key) ? 'passwords' : 'notes';
+      return {
+        topic: key,
+        content: `# ${key}\n\n${key} = ${value}\n`,
+        suggestedPath: `personal/${folder}/${slug}.md`,
+      };
+    }
+
+    // Generic "My X is Y"
+    const myXisY = text.match(/^my\s+([\w][\w\s-]{1,40?})\s+is\s+(.+)$/i);
+    if (myXisY) {
+      const key = myXisY[1].trim().toLowerCase();
+      const value = myXisY[2].trim().replace(/[.!?]+$/, '');
+      const slug = key.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const folder =
+        /password|pin|secret|token|key/.test(key) ? 'passwords' :
+        /card|bank|account|ssn|tax|financial|credit|debit/.test(key) ? 'financial' :
+        /email|phone|address|number/.test(key) ? 'contact' :
+        'preferences';
       return {
         topic: key,
         content: `# ${key}\n\n${key} = ${value}\n`,

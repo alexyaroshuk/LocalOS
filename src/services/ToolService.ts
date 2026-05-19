@@ -1139,7 +1139,7 @@ export class ToolService {
     return {
       name: 'vault_commit_write',
       description:
-        'Commit an approved write to the vault. Only call AFTER the user has explicitly approved a proposal returned by vault_write_proposal. The mode must match the proposal: create, update, or append.',
+        'Write a markdown file to the vault. Use after vault_lookup confirms the write is needed. mode="create" for new files, "append" to add to existing, "update" to overwrite.',
       parameters: [
         {
           name: 'path',
