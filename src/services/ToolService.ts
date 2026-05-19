@@ -1273,7 +1273,7 @@ export class ToolService {
 
           const topic = String(args.topic || '').trim();
           const content = String(args.content || '').trim();
-          const relPath = String(args.path || '').replace(/^\//, '').replace(/\.\.\//g, '');
+          const relPath = String(args.path || '').replace(/^\//, '').replace(/\.\.\//g, '').toLowerCase();
           const mode = String(args.mode || 'overwrite').toLowerCase();
 
           if (!relPath.endsWith('.md')) {

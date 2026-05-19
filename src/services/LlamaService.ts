@@ -2392,7 +2392,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         const userQuery = lastUser?.content?.trim() ?? '';
         if (userQuery) {
           try {
-            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.45);
+            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.42);
             if (routed) {
               Logger.info(
                 `🧭 ToolRouter: forcing "${routed.tool.name}" (sim=${routed.similarity.toFixed(3)}) for query "${userQuery.substring(0, 60)}"`,
@@ -2436,6 +2436,36 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         if (iter === 0 && !usedTool) {
           Logger.debug(`tool_calls field type: ${typeof result.tool_calls}, value: ${JSON.stringify(result.tool_calls)}`);
           Logger.debug(`Raw model content (first 500 chars): ${finalText.substring(0, 500)}`);
+
+          // HALLUCINATION GUARD: model claimed to save/store something but called no tool.
+          // Detect the pattern, re-execute vault_save with inferred args, fix the response.
+          const SAVE_HALLUCINATION = /\b(?:saved?|stored?|updated?|recorded?)\b/i;
+          if (SAVE_HALLUCINATION.test(finalText) && this.availableTools.some(t => t.name === 'vault_save')) {
+            const lastUser = [...messages].reverse().find(m => m.role === 'user');
+            if (lastUser?.content) {
+              const parsed = LlamaService.parseWriteIntent(lastUser.content);
+              if (parsed) {
+                Logger.warn(`⚠️ Hallucination: model said saved but called no tool. Forcing vault_save for "${parsed.topic}"`);
+                const saveArgs = {topic: parsed.topic, content: parsed.content, path: parsed.suggestedPath};
+                onToolUsage?.('tool_call', 'vault_save', saveArgs);
+                const saveResult = await ToolService.executeTool({
+                  id: generateId(),
+                  name: 'vault_save',
+                  arguments: saveArgs,
+                });
+                onToolUsage?.('tool_result', 'vault_save', saveArgs, saveResult);
+                usedTool = true;
+                firstToolName = 'vault_save';
+                const r = saveResult.result as any;
+                finalText =
+                  r?.action === 'already_exists' ? `Already saved at \`${parsed.suggestedPath}\`.` :
+                  r?.action === 'updated'        ? `Updated \`${parsed.suggestedPath}\`.` :
+                  r?.action === 'created'        ? `Saved to \`${parsed.suggestedPath}\`.` :
+                  finalText;
+                Logger.info(`✅ Hallucination corrected: vault_save action=${r?.action}`);
+              }
+            }
+          }
         }
         break;
       }

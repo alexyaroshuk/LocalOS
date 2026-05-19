@@ -172,6 +172,10 @@ User: "Save my Spotify password as xyz789"
 Thought: "Explicit save request."
 [vault_save(topic="spotify password", content="# spotify password\n\nspotify password = xyz789\n", path="personal/passwords/spotify.md")]
 
+User: "My git pw changed to abc99"
+Thought: "Credential update — overwrite the existing file with the new value."
+[vault_save(topic="git password", content="# git password\n\ngit password = abc99\n", path="personal/passwords/git.md")]
+
 User: "Did I tell you about my Amazon password?"
 Thought: "Recall question — must check vault before answering. Don't guess."
 [vault_lookup(query="amazon password")]`;
