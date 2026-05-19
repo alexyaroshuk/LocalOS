@@ -232,9 +232,16 @@ export class VaultIndexService {
   }
 
   private static truncateSnippet(text: string, maxChars: number = 200): string {
-    if (text.length <= maxChars) {
-      return text;
+    // Skip YAML frontmatter — otherwise the snippet is just `---\ndate:\ntags:\n---`
+    // and the model sees no actual content.
+    let body = text;
+    const fmMatch = body.match(/^---\n[\s\S]*?\n---\n?/);
+    if (fmMatch) {
+      body = body.slice(fmMatch[0].length).trimStart();
     }
-    return text.slice(0, maxChars).trim() + '…';
+    if (body.length <= maxChars) {
+      return body;
+    }
+    return body.slice(0, maxChars).trim() + '…';
   }
 }

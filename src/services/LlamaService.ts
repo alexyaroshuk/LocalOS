@@ -1017,6 +1017,9 @@ Do not announce, explain, or describe the call. Just emit the bracket
 expression alone on its own line. The tool will run and the result
 will be returned. Then write the final natural-language answer.
 
+# BRACKETS ARE FOR TOOL CALLS ONLY
+Plain-text replies must NEVER be wrapped in brackets. "yo." not "[yo.]". "sup." not "[sup.]". Brackets without a function name = wrong format.
+
 # TOOL POLICY (CRUD framing)
 
 Think of each user message as one of four operations. Pick a tool by
@@ -2417,7 +2420,18 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       // Model emitted no tool call. Before giving up, ask the router whether
       // the query semantically matches a tool's description. Deterministic
       // and reusable across all tools — no per-intent regex needed.
-      if ((!toolCalls || toolCalls.length === 0) && iter === 0 && this.availableTools.length > 0) {
+      // Skip the router if the model produced ANY plain text — that's an
+      // intentional reply, not a bailout. Router was meant to catch silent
+      // failures, not override deliberate answers.
+      const modelText = String(result.content ?? result.text ?? '').trim();
+      const strippedText = modelText.replace(/^\[|\]$/g, '').trim();
+      const hasIntentionalReply = strippedText.length > 0 && !/^\w+\s*\(/.test(strippedText);
+      if (
+        (!toolCalls || toolCalls.length === 0) &&
+        !hasIntentionalReply &&
+        iter === 0 &&
+        this.availableTools.length > 0
+      ) {
         const lastUser = [...messages].reverse().find(m => m.role === 'user');
         const userQuery = lastUser?.content?.trim() ?? '';
         if (userQuery) {
@@ -2447,7 +2461,18 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         // accumulator. Empty string is treated as absent.
         const candidates = [result.content, result.text, prevContent];
         const picked = candidates.find(c => typeof c === 'string' && c.length > 0) ?? '';
-        const rawContent = String(picked).trim();
+        let rawContent = String(picked).trim();
+        // Strip wrapper brackets from plain-text replies. The model sees
+        // every prompt example as `[tool(...)]` and sometimes echoes the
+        // bracket style on plain answers ("[yo.]"). Strip if not a tool call.
+        if (
+          rawContent.length > 2 &&
+          rawContent.startsWith('[') &&
+          rawContent.endsWith(']') &&
+          !/^\[\s*\w+\s*\(/.test(rawContent)
+        ) {
+          rawContent = rawContent.slice(1, -1).trim();
+        }
         finalText = rawContent;
         if (!this.thinkingEnabled) {
           finalText = this.stripThinkingBlocks(finalText);
@@ -2543,6 +2568,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           Logger.warn(`Tool args JSON parse failed for ${toolName}:`, parseErr);
         }
 
+        Logger.info(`🔧 → ${toolName}(${JSON.stringify(args)})`);
         onToolUsage?.('tool_call', toolName, args);
 
         const toolResult = await ToolService.executeTool({
@@ -2550,6 +2576,14 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           name: toolName,
           arguments: args,
         });
+
+        // Full tool result for debugging — covers both success payload and error.
+        try {
+          const dump = JSON.stringify(toolResult.error ? {error: toolResult.error} : toolResult.result, null, 2);
+          Logger.info(`🔧 ← ${toolName} result (${dump.length} chars):\n${dump}`);
+        } catch (logErr) {
+          Logger.warn(`Tool result stringify failed for ${toolName}:`, logErr);
+        }
 
         onToolUsage?.('tool_result', toolName, args, toolResult);
         return {toolName, args, toolResult};
@@ -2578,6 +2612,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         for (const {toolName, toolResult} of execResults) {
           const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
           const resultText = PromptBuilder.truncateToolResult(payload, TOKEN_BUDGETS.toolResult);
+          Logger.info(`🔧 ↪ ${toolName} model-visible (${resultText.length} chars):\n${resultText}`);
           convo.push({
             role: 'system',
             content: `Tool result for ${toolName}: ${resultText}\n\nUse this result to answer the user's question directly.`,

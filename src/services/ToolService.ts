@@ -814,18 +814,25 @@ export class ToolService {
           // internally when embedding model is not loaded).
           const hits = await VaultIndexService.searchChunks(query, {topK: 3});
           if (hits.length > 0) {
-            // Enrich top-1 with full file content so the agent can answer
-            // directly when the best match is sufficient. Lower-ranked hits
-            // stay as snippets to keep token cost bounded.
+            // Enrich the first reachable hit with full content. Index entries
+            // can go stale (file moved/deleted); fall through to the next hit
+            // instead of returning snippet-only results to the model.
             let topFullContent: string | undefined;
-            try {
-              const md = await VaultService.readMarkdownFile(hits[0].path);
-              topFullContent = md.content;
-              const MAX = 4000;
-              if (topFullContent.length > MAX) {
-                topFullContent = topFullContent.substring(0, MAX) + '\n…[truncated]';
+            let enrichedIndex = -1;
+            for (let i = 0; i < hits.length; i++) {
+              try {
+                const md = await VaultService.readMarkdownFile(hits[i].path);
+                const MAX = 4000;
+                topFullContent =
+                  md.content.length > MAX
+                    ? md.content.substring(0, MAX) + '\n…[truncated]'
+                    : md.content;
+                enrichedIndex = i;
+                break;
+              } catch {
+                // try next hit
               }
-            } catch {}
+            }
 
             return {
               success: true,
@@ -836,7 +843,7 @@ export class ToolService {
                 path: h.path.replace(config.vaultPath, '').replace(/^\//, ''),
                 heading: h.heading,
                 snippet: h.snippet,
-                full_content: i === 0 ? topFullContent : undefined,
+                full_content: i === enrichedIndex ? topFullContent : undefined,
                 similarity: Number(h.similarity.toFixed(3)),
                 modified: new Date(h.mtime).toISOString(),
               })),

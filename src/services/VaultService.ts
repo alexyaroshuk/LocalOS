@@ -347,7 +347,9 @@ export class VaultService {
         links,
       };
     } catch (error) {
-      Logger.error('Failed to read markdown file:', error);
+      // Log at debug; callers decide if missing/unreadable files are fatal
+      // (search_vault probes top-1 hit and swallows ENOENT silently).
+      Logger.debug('readMarkdownFile failed:', error);
       throw error;
     }
   }
