@@ -2473,6 +2473,50 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         const candidates = [result.content, result.text, prevContent];
         const picked = candidates.find(c => typeof c === 'string' && c.length > 0) ?? '';
         let rawContent = String(picked).trim();
+
+        // Iter > 0 with a bracket-shaped response = model tried another tool
+        // call after already getting tool data. Rescue failed (unknown name
+        // like "read_vault_files" plural). Don't leak the leftover bracket
+        // text — force one more turn with an explicit "answer now" nudge.
+        const looksLikeToolCallAttempt =
+          rawContent.length > 2 &&
+          rawContent.startsWith('[') &&
+          rawContent.endsWith(']') &&
+          /^\[\s*\w+\s*\(/.test(rawContent);
+        if (iter > 0 && usedTool && looksLikeToolCallAttempt) {
+          Logger.warn(`⚠️ Iter ${iter + 1}: model emitted bracket call "${rawContent}" after tool result. Forcing synthesis turn.`);
+          convo.push({
+            role: 'system',
+            content:
+              `Your previous output "${rawContent}" was not a valid tool call ` +
+              `and you already have the data you need. Reply now with the ` +
+              `final natural-language answer in 1 short sentence. Plain prose ` +
+              `only. NO brackets, NO tool calls.`,
+          });
+          try {
+            const ctx: any = this.context as any;
+            const reformatted: any = await ctx.getFormattedChat(convo as any, null, {
+              jinja: true,
+              tools: toolsSchema,
+              tool_choice: 'auto',
+              parallel_tool_calls: {},
+              add_generation_prompt: true,
+              enable_thinking: this.thinkingEnabled,
+              ...(this.thinkingEnabled ? {reasoning_format: 'auto' as const} : {}),
+            });
+            basePrompt = (reformatted && reformatted.prompt) || basePrompt;
+            chatFormat = reformatted?.chat_format ?? chatFormat;
+            grammar = reformatted?.grammar ?? grammar;
+            grammarTriggers = reformatted?.grammar_triggers ?? grammarTriggers;
+            preservedTokens = reformatted?.preserved_tokens ?? preservedTokens;
+            prefill = '';
+          } catch (reformatErr) {
+            Logger.warn('Reformat for synthesis nudge failed:',
+              reformatErr instanceof Error ? reformatErr.message : String(reformatErr));
+          }
+          continue;
+        }
+
         // Strip wrapper brackets from plain-text replies. The model sees
         // every prompt example as `[tool(...)]` and sometimes echoes the
         // bracket style on plain answers ("[yo.]"). Strip if not a tool call.
@@ -2637,7 +2681,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           Logger.info(`🔧 ↪ ${toolName} model-visible (${resultText.length} chars):\n${resultText}`);
           convo.push({
             role: 'system',
-            content: `Tool result for ${toolName}: ${resultText}\n\nUse this result to answer the user's question directly.`,
+            content:
+              `Tool result for ${toolName}:\n${resultText}\n\n` +
+              `You now have the data you need. Write the final natural-language ` +
+              `answer to the user's last message in 1–2 short sentences. ` +
+              `DO NOT call another tool. DO NOT emit any [bracket(...)] call. ` +
+              `Plain prose only. If the result is empty, reply "nothing on that yet."`,
           });
         }
         try {
