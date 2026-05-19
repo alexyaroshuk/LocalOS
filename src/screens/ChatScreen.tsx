@@ -863,6 +863,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       } else {
         Logger.info(`💬 Regular response (no tools used)`);
       }
+      // Log the actual assistant message rendered to the user so logs.txt
+      // captures the end-of-pipeline output, not just intermediate state.
+      Logger.info(
+        `📤 Assistant message (${fullResponse.length} chars):\n${fullResponse}`,
+      );
     } catch (error) {
       // Don't show error if user stopped generation
       if (generationStoppedRef.current) {

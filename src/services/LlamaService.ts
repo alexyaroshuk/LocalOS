@@ -2533,6 +2533,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           finalText = this.stripThinkingBlocks(finalText);
         }
         Logger.info(`✅ Native loop done (iter=${iter + 1}, usedTool=${usedTool}, len=${finalText.length})`);
+        Logger.info(`📝 Final agent text:\n${finalText}`);
         if (!finalText) {
           Logger.warn(`⚠️ Empty content on iter ${iter + 1}. Raw fields:`, {
             contentLen: result.content?.length ?? 0,
