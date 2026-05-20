@@ -51,7 +51,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   );
   const [streamingText, setStreamingText] = useState('');
   const [toolsEnabled, setToolsEnabled] = useState(true); // Enable tools by default
-  const [smartToolDetection, setSmartToolDetection] = useState(false); // Smart tool detection mode
   const [_toolUsageState, setToolUsageState] = useState<{
     stage: 'thinking' | 'using_tool' | 'processing' | 'generating' | 'idle' | null;
     toolName?: string;
@@ -999,18 +998,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     Alert.alert('Tools ' + (newToolsState ? 'Enabled' : 'Disabled'), toolMessage);
   };
 
-  const toggleSmartToolDetection = () => {
-    const newState = !smartToolDetection;
-    setSmartToolDetection(newState);
-    AIService.setSmartToolDetection(newState);
-    Alert.alert(
-      'Smart Tool Detection ' + (newState ? 'Enabled' : 'Disabled'),
-      newState
-        ? 'LLM always decides whether to use tools (keyword shortcuts bypassed)'
-        : 'Keyword/regex shortcuts re-enabled for faster tool triggering',
-    );
-  };
-
   const handleStopGeneration = async () => {
     Logger.info('🛑 User clicked stop button');
     Logger.info(`Current state - isGenerating: ${isGenerating}, currentActionId: ${currentActionIdRef.current}`);
@@ -1346,15 +1333,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 toolsEnabled && styles.toolsButtonActive,
               ]}>
               Tools {toolsEnabled ? 'ON' : 'OFF'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleSmartToolDetection} style={styles.smartButton}>
-            <Text
-              style={[
-                styles.smartButtonText,
-                smartToolDetection && styles.toolsButtonActive,
-              ]}>
-              🧠
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowLogs(true)}>

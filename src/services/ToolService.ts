@@ -3,8 +3,6 @@
  */
 import {Tool, ToolCall, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
-import MemoryService from './MemoryService';
-import {LettaMemoryTools} from './LettaMemoryTools';
 import {VaultService} from './VaultService';
 import {VaultIndexService} from './VaultIndexService';
 import {DatabaseService} from './DatabaseService';
@@ -23,27 +21,18 @@ export class ToolService {
       return;
     }
 
-    // Register all tools
+    // Time + web
     this.registerTool(this.getCurrentDateTimeTool());
     this.registerTool(this.getSearchWebTool());
     this.registerTool(this.getFetchWebPageTool());
 
-    // Register Letta-compatible memory tools
-    LettaMemoryTools.getAllTools().forEach(tool => this.registerTool(tool));
-
-    // Register vault tools
-    this.registerTool(this.getListVaultStructureTool());
+    // Vault read
     this.registerTool(this.getListVaultFilesTool());
     this.registerTool(this.getReadVaultFileTool());
     this.registerTool(this.getSearchVaultTool());
-    this.registerTool(this.getVaultLookupTool());
     this.registerTool(this.getVaultConnectionsTool());
-    this.registerTool(this.getVaultWriteProposalTool());
-    this.registerTool(this.getVaultCommitWriteTool());
-    this.registerTool(this.getVaultSaveTool());
 
-    // Register vault write tools
-    this.registerTool(this.getSuggestJournalEntryTool());
+    // Vault write
     this.registerTool(this.getSaveVaultFileTool());
     this.registerTool(this.getUpdateVaultFileTool());
 
@@ -186,62 +175,6 @@ export class ToolService {
           date: now.toLocaleDateString('en-US'),
           time: now.toLocaleTimeString('en-US'),
         };
-      },
-    };
-  }
-
-  /**
-   * Tool: update_core_memory
-   * Update a core memory block to remember user information
-   */
-  private static getUpdateCoreMemoryTool(): Tool {
-    return {
-      name: 'update_core_memory',
-      description:
-        'Update a core memory block to remember important information about the user. Use this when you learn about user preferences, habits, personality traits, conversation style, current tasks, or relationship context. Core memory is always loaded in every conversation.',
-      parameters: [
-        {
-          name: 'block_name',
-          type: 'string',
-          description: 'The memory block to update',
-          required: true,
-          enum: [
-            'user_profile',
-            'conversation_style',
-            'current_focus',
-            'relationship_context',
-          ],
-        },
-        {
-          name: 'content',
-          type: 'string',
-          description: 'The new content for the memory block',
-          required: true,
-        },
-      ],
-      execute: async (args: Record<string, any>) => {
-        try {
-          const blockName = args.block_name as
-            | 'user_profile'
-            | 'conversation_style'
-            | 'current_focus'
-            | 'relationship_context';
-          const content = args.content as string;
-
-          await MemoryService.updateCoreMemoryBlock(blockName, content);
-
-          return {
-            success: true,
-            block_name: blockName,
-            message: `Core memory block '${blockName}' updated successfully`,
-          };
-        } catch (error) {
-          console.error('Core memory update error:', error);
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Update failed',
-          };
-        }
       },
     };
   }

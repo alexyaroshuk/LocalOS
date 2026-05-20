@@ -8,7 +8,6 @@ import {LlamaConfig, Message, MessageTimings, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId, stripStopwords} from '../utils/helpers';
 import {ToolService} from './ToolService';
-import {ToolRouterService} from './ToolRouterService';
 import {Logger} from '../utils/Logger';
 import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
@@ -1012,107 +1011,59 @@ ${schemas}
 
 # HOW TO CALL A TOOL
 Respond with exactly: [tool_name(param1="value1", param2="value2")]
-For tools with no parameters: [tool_name()]
-Do not announce, explain, or describe the call. Just emit the bracket
-expression alone on its own line. The tool will run and the result
-will be returned. Then write the final natural-language answer.
-
-The function name inside [name()] MUST be a tool from the AVAILABLE TOOLS list above. NEVER use a parameter value or enum label (e.g. user_profile, conversation_style, current_focus, relationship_context) as the function name — those are arguments to update_core_memory, not tools.
+For no-parameter tools: [tool_name()]
+Emit the bracket expression alone on its own line — no preamble. The tool
+runs, the result comes back, then you write the final natural-language
+answer. The name inside [name()] MUST be one of the AVAILABLE TOOLS above.
 
 # BRACKETS ARE FOR TOOL CALLS ONLY
-Plain-text replies must NEVER be wrapped in brackets. "yo." not "[yo.]". "sup." not "[sup.]". Brackets without a function name = wrong format.
+Plain replies must NEVER be wrapped in brackets. "yo." not "[yo.]".
 
-# TOOL POLICY (CRUD framing)
-
-Think of each user message as one of four operations. Pick a tool by
-matching the operation.
-
-READ — user asks for info, recalls something, looks something up.
-  ▸ Info about THE USER (preferences, habits, facts, passwords,
-    locations, possessions, anything they previously told you)
-    → vault_lookup (best single match) or search_vault (multiple).
-  ▸ Vault structure ("what folders / files do I have")
-    → list_vault_structure or list_vault_files.
-  ▸ Specific file you already know by name
-    → read_vault_file.
-  ▸ Time-sensitive / real-time public info — news, weather, prices,
-    scores, recent events, anything after your training → search_web.
-    Stable general knowledge (definitions, how things work, history,
-    concepts, programming) → answer directly, NO tool.
-  ▸ Current time, date, day of week
-    → get_current_datetime.
-
-CREATE — user volunteers a new fact, preference, password, or note.
-  ▸ vault_write_proposal (proposes, does not write).
-  ▸ Then wait for user approval; on "yes", vault_commit_write fires.
-
-UPDATE — user wants to change existing info.
-  ▸ vault_write_proposal with mode that reflects the change.
-  ▸ update_core_memory for in-context memory blocks
-    (user_profile, conversation_style, current_focus,
-    relationship_context).
-
-DELETE — currently not supported; tell the user you cannot delete.
-
-# RULES
-1. Always READ before CREATE — call vault_lookup first to avoid
-   duplicates and to surface diffs.
-2. Never invent tool names. Only call tools listed above. Tool names
-   never start with "suggest_" (except suggest_journal_entry).
-3. When in doubt about USER info, call vault_lookup. Embedding search
-   handles fuzzy queries — "beverages" matches "coffee", "languages"
-   matches "TypeScript", etc.
-4. If no tool fits, answer directly and concisely.
+# WHEN TO USE WHICH TOOL
+- Find anything the user saved in their vault → search_vault.
+- List files/folders in the vault → list_vault_files.
+- Read a specific file you know by name → read_vault_file.
+- See how notes link together (backlinks/links) → get_vault_connections.
+- Save a NEW markdown file → save_vault_file(path, content).
+- Change an EXISTING markdown file → update_vault_file(path, content).
+- Read a specific web page → fetch_web_page(url).
+- Time-sensitive / real-time public info (news, weather, prices, recent
+  events, anything after your training) → search_web. Stable general
+  knowledge (definitions, how things work, history) → answer directly, NO tool.
+- Current date/time → get_current_datetime().
+- No tool fits → answer directly and concisely.
 
 # EXAMPLES
 
-User: What beverages do I enjoy?
-Assistant: [vault_lookup(query="beverages I enjoy")]
-
-User: What programming languages do I use?
-Assistant: [vault_lookup(query="programming languages")]
-
-User: Where do I live?
-Assistant: [vault_lookup(query="where I live")]
-
-User: What music do I like?
-Assistant: [vault_lookup(query="music I like")]
-
-User: What time is it?
-Assistant: [get_current_datetime()]
-
-User: Latest AI news
-Assistant: [search_web(query="latest AI news")]
-
-User: What is React Native?
-Assistant: A framework for building native iOS/Android apps from one React codebase.
-
-User: How does HTTP work?
-Assistant: A request/response protocol — the client sends a request, the server returns a response over TCP.
-
-User: Find notes about React Native
-Assistant: [search_vault(query="React Native")]
-
-User: What folders do I have?
-Assistant: [list_vault_structure()]
-
-User: What do you know about me?
-Assistant: [list_vault_files(folder="personal")]
-
-User: Tell me about myself
-Assistant: [list_vault_files(folder="personal")]
+User: What do I have about cooking?
+Assistant: [search_vault(query="cooking")]
 
 User: What's in my vault?
 Assistant: [list_vault_files()]
 
-User: Read Vector Search.md
-Assistant: [read_vault_file(file_path="Vector Search.md")]
+User: Read Recipe Collection.md
+Assistant: [read_vault_file(file_path="Recipe Collection.md")]
 
-User: I prefer dark mode
-Assistant: [vault_save(topic="dark mode preference", content="# ui preferences\n\nPrefers dark mode\n", path="personal/preferences/ui.md")]
+User: What links to my Fitness note?
+Assistant: [get_vault_connections(file_path="Fitness.md")]
 
-User: My bank password is 123
-Assistant: [vault_save(topic="bank password", content="# bank password\n\nbank password = 123\n", path="personal/passwords/bank.md")]`;
+User: Save a note that I prefer dark mode
+Assistant: [save_vault_file(path="personal/preferences/ui.md", content="# UI preferences\n\nPrefers dark mode\n")]
+
+User: Change my bank note, new password is 456
+Assistant: [update_vault_file(path="personal/passwords/bank.md", content="# bank password\n\nbank password = 456\n")]
+
+User: Latest AI news
+Assistant: [search_web(query="latest AI news")]
+
+User: Summarize https://example.com
+Assistant: [fetch_web_page(url="https://example.com")]
+
+User: What is React Native?
+Assistant: A framework for building native iOS/Android apps from one React codebase.
+
+User: What time is it?
+Assistant: [get_current_datetime()]`;
     }
 
     const persona = `# CHARACTER
@@ -2063,17 +2014,10 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       return {response, usedTool: false, timings: this.lastTimings};
     }
 
-    // PRE-FLIGHT LAYER 2: keyword-driven tool forcing. Runs before BOTH the
-    // native and legacy loops so the abliterated 8B (which often ignores
-    // tool examples and just narrates) still does the right thing on
-    // high-confidence intents like passwords, recall, save-this.
-    if (!this.smartToolDetection) {
-      const preflight = await this.runPreflightTriggers(messages, config, onToken, onToolUsage);
-      if (preflight) {
-        return {...preflight, timings: this.lastTimings};
-      }
-    }
-
+    // Intent-guessing layers (regex preflight, trigger words, embedding
+    // router) removed: the native tool-calling model decides. Safety nets in
+    // the loop (fuzzy name rescue, history sanitize, leak guard, result
+    // narration) catch the weak-quant failure modes.
     const modelConfig = this.modelConfig || getModelConfig(this.currentModelName);
     let result: {response: string; usedTool?: boolean; toolName?: string};
     if (modelConfig.toolFormat === 'transformers-native') {
@@ -2267,12 +2211,28 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     const stop = this.modelConfig?.stopWords ?? llamaConfig.stopSequences;
     const slimSystem = this.getSlimSystemPrompt();
 
+    // Sanitize prior assistant turns: strip any leaked bracket tool-call
+    // fragment (closed OR truncated) before feeding history back. Otherwise
+    // the model reads its own past "[suggest_journal_entry(..." and imitates
+    // it, poisoning every later turn into the same broken call. Drop turns
+    // that are nothing but a stripped fragment so the template stays clean.
+    const stripBracketCalls = (content: string): string =>
+      content
+        .replace(/\[[\w_]+\([\s\S]*?\)\]/g, '') // fully-closed [fn(...)]
+        .replace(/\[\s*\w+\s*\([\s\S]*$/g, '') // unclosed/truncated tail
+        .trim();
+
     // Conversation messages remain frozen at user input. Tool round-trips
     // accumulate into `prefill` instead of new messages, because the llama.rn
     // bridge type cannot represent `tool` role or `tool_calls` on assistant.
     const convo = [
       ...(slimSystem ? [{role: 'system', content: slimSystem}] : []),
-      ...messages.map(m => ({role: m.role, content: m.content})),
+      ...messages
+        .map(m => ({
+          role: m.role,
+          content: m.role === 'assistant' ? stripBracketCalls(m.content) : m.content,
+        }))
+        .filter(m => m.role !== 'assistant' || m.content.length > 0),
     ];
 
     const MAX_ITERS = 5;
@@ -2461,46 +2421,6 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         }
       }
 
-      // TIER-2 FALLBACK: embedding-based intent router.
-      // Model emitted no tool call. Before giving up, ask the router whether
-      // the query semantically matches a tool's description. Deterministic
-      // and reusable across all tools — no per-intent regex needed.
-      // Skip the router if the model produced ANY plain text — that's an
-      // intentional reply, not a bailout. Router was meant to catch silent
-      // failures, not override deliberate answers.
-      const modelText = String(result.content ?? result.text ?? '').trim();
-      const strippedText = modelText.replace(/^\[|\]$/g, '').trim();
-      const hasIntentionalReply = strippedText.length > 0 && !/^\w+\s*\(/.test(strippedText);
-      if (
-        (!toolCalls || toolCalls.length === 0) &&
-        !hasIntentionalReply &&
-        iter === 0 &&
-        this.availableTools.length > 0
-      ) {
-        const lastUser = [...messages].reverse().find(m => m.role === 'user');
-        const userQuery = lastUser?.content?.trim() ?? '';
-        if (userQuery) {
-          try {
-            const routed = await ToolRouterService.route(userQuery, this.availableTools, 0.42, this.smartToolDetection);
-            if (routed) {
-              Logger.info(
-                `🧭 ToolRouter: forcing "${routed.tool.name}" (sim=${routed.similarity.toFixed(3)}) for query "${userQuery.substring(0, 60)}"`,
-              );
-              toolCalls = [{
-                type: 'function',
-                id: generateId(),
-                function: {
-                  name: routed.tool.name,
-                  arguments: JSON.stringify(routed.args),
-                },
-              }];
-            }
-          } catch (routerErr) {
-            Logger.warn('[ToolRouter] route() failed:', routerErr);
-          }
-        }
-      }
-
       if (!toolCalls || toolCalls.length === 0) {
         // Prefer non-empty content; fall back to text or the streamed
         // accumulator. Empty string is treated as absent.
@@ -2512,11 +2432,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         // call after already getting tool data. Rescue failed (unknown name
         // like "read_vault_files" plural). Don't leak the leftover bracket
         // text — force one more turn with an explicit "answer now" nudge.
+        // Bracket-shaped tool-call attempt. Do NOT require a closing ']' —
+        // weak quants frequently emit a truncated/unclosed call
+        // ("[suggest_journal_entry(date=...") which, if leaked, gets saved to
+        // history and the model then imitates it, poisoning every later turn.
         const looksLikeToolCallAttempt =
-          rawContent.length > 2 &&
-          rawContent.startsWith('[') &&
-          rawContent.endsWith(']') &&
-          /^\[\s*\w+\s*\(/.test(rawContent);
+          rawContent.length > 2 && /^\[\s*\w+\s*\(/.test(rawContent);
         if (iter > 0 && usedTool && looksLikeToolCallAttempt) {
           Logger.warn(`⚠️ Iter ${iter + 1}: model emitted bracket call "${rawContent}" after tool result. Forcing synthesis turn.`);
           convo.push({
@@ -2558,7 +2479,13 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         //  2. A plain reply the model wrapped in brackets ("[yo.]") — unwrap.
         if (looksLikeToolCallAttempt) {
           Logger.warn(`⚠️ Unresolved bracket call leaked to output: "${rawContent}". Suppressing.`);
-          const remainder = this.filterToolJson(rawContent);
+          let remainder = this.filterToolJson(rawContent);
+          // filterToolJson only removes fully-closed [fn(...)]. Strip an
+          // unclosed/truncated call from its '[' to end-of-string too, so it
+          // never reaches the user or gets persisted to history.
+          if (/^\[\s*\w+\s*\(/.test(remainder)) {
+            remainder = remainder.replace(/\[\s*\w+\s*\([\s\S]*$/, '').trim();
+          }
           rawContent = remainder || 'hmm, glitched on that — say it once more?';
         } else if (
           rawContent.length > 2 &&
