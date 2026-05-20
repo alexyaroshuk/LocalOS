@@ -309,54 +309,60 @@ export class ToolService {
 
           const html = await response.text();
 
-          // Parse search results from HTML
+          const decodeEntities = (s: string) => s
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+
+          // DDG wraps every result URL in a redirect:
+          //   //duckduckgo.com/l/?uddg=<urlencoded-target>&rut=...
+          // Decode back to the real target so fetch_web_page and the user get
+          // a usable URL instead of a protocol-relative redirect.
+          const decodeDdgUrl = (raw: string): string => {
+            let u = decodeEntities(raw.trim());
+            const m = u.match(/[?&]uddg=([^&]+)/);
+            if (m) {
+              try { u = decodeURIComponent(m[1]); } catch {}
+            }
+            if (u.startsWith('//')) u = 'https:' + u;
+            return u;
+          };
+
+          const stripTags = (s: string) =>
+            decodeEntities(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+
+          // Snippets in document order — paired with results by index.
+          const snippets: string[] = [];
+          const snippetRegex = /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+          let sMatch;
+          while ((sMatch = snippetRegex.exec(html)) !== null) {
+            snippets.push(stripTags(sMatch[1]));
+          }
+
+          // Parse results: <a href="URL" class="result__a">Title</a>
           const results: Array<{title: string; url: string; snippet?: string}> = [];
-
-          // Extract results with URLs and titles
-          // DuckDuckGo result structure: <a href="URL" class="result__a">Title</a>
-          const resultRegex = /<a[^>]*href="([^"]+)"[^>]*class="result__a"[^>]*>([^<]+)<\/a>/g;
-
+          const resultRegex = /<a[^>]*href="([^"]+)"[^>]*class="result__a"[^>]*>([\s\S]*?)<\/a>/g;
           let match;
           let count = 0;
           while ((match = resultRegex.exec(html)) !== null && count < 5) {
-            const rawUrl = match[1].trim();
-            const title = match[2].trim();
-
-            if (title && rawUrl) {
-              // Decode URL entities
-              const url = rawUrl
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'");
-
-              results.push({
-                title,
-                url,
-              });
+            const url = decodeDdgUrl(match[1]);
+            const title = stripTags(match[2]);
+            if (title && url) {
+              results.push({title, url, snippet: snippets[count] || undefined});
               count++;
             }
           }
 
-          // If no results found, try alternative parsing
+          // Fallback: any anchor with a real http target (skip DDG chrome).
           if (results.length === 0) {
-            // Try to find any <a> tags with href that might be results
-            const altRegex = /<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/g;
+            const altRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
             count = 0;
             while ((match = altRegex.exec(html)) !== null && count < 5) {
-              const rawUrl = match[1].trim();
-              const title = match[2].trim();
-
-              // Filter out navigation and empty links
-              if (title && rawUrl && rawUrl.length > 5 && !rawUrl.startsWith('javascript:')) {
-                const url = rawUrl
-                  .replace(/&amp;/g, '&')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#39;/g, "'");
-
+              const url = decodeDdgUrl(match[1]);
+              const title = stripTags(match[2]);
+              if (title && url.startsWith('http') && !url.includes('duckduckgo.com')) {
                 results.push({title, url});
                 count++;
               }
@@ -535,7 +541,10 @@ export class ToolService {
             }
           );
 
-          const summary = extractionResult.response || extractionResult.message || '';
+          // AIService.chatCompletion resolves to a plain string. The old code
+          // read .response/.message off it (always undefined) so summary was
+          // always "" — the page never got summarized.
+          const summary = (extractionResult || '').trim();
 
           console.log(`[FETCH PAGE] ✅ Extraction complete`);
 
