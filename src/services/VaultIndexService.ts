@@ -208,7 +208,7 @@ export class VaultIndexService {
       Logger.info('[VaultIndex] Embedding model not loaded — using keyword fallback');
       const rows = await DatabaseService.keywordSearchVaultChunks(query, topK);
       return rows.map(r => ({
-        path: r.vaultPath,
+        path: this.normalizeAbs(r.vaultPath),
         heading: r.heading,
         snippet: this.truncateSnippet(r.chunkText),
         similarity: 0,
@@ -229,6 +229,24 @@ export class VaultIndexService {
       similarity: r.similarity,
       mtime: r.mtime,
     }));
+  }
+
+  /**
+   * Restore a leading "/" on absolute device paths. The index occasionally
+   * stores vaultPath without it (op-sqlite / scan quirk), which makes
+   * RNFS.readFile throw ENOENT and breaks vaultPath-prefix stripping in the
+   * vault tools. Only prepends for clearly-absolute device paths.
+   */
+  private static normalizeAbs(p: string): string {
+    if (!p || p.startsWith('/')) return p;
+    if (
+      /^(var|data|private|Users|storage)\//.test(p) ||
+      p.includes('/Containers/') ||
+      p.includes('/Documents/')
+    ) {
+      return '/' + p;
+    }
+    return p;
   }
 
   private static truncateSnippet(text: string, maxChars: number = 200): string {

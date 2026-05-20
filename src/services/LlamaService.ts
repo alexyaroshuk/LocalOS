@@ -1791,6 +1791,42 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     return cleaned;
   }
 
+  /** Levenshtein edit distance between two short strings. */
+  private static editDistance(a: string, b: string): number {
+    const m = a.length;
+    const n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    let prev = Array.from({length: n + 1}, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  /**
+   * Nearest registered tool name within edit distance 2. Rescues typo'd
+   * tool names from weak quants (e.g. "fault_lookup" → "vault_lookup")
+   * without matching genuinely different names.
+   */
+  private static nearestToolName(name: string, known: string[]): string | null {
+    let best: string | null = null;
+    let bestD = 3; // accept distance <= 2
+    for (const k of known) {
+      const d = this.editDistance(name, k);
+      if (d < bestD) {
+        bestD = d;
+        best = k;
+      }
+    }
+    return best;
+  }
+
   /**
    * Extract function call from response
    * Supports Pythonic format: [function_name(param="value")]
@@ -2414,6 +2450,17 @@ User: "What's trending" → [search_web(query="trending topics")]`;
             const knownTools = ToolService.getToolsSchema()
               .map((t: any) => t.function?.name)
               .filter(Boolean);
+            // Fuzzy-correct typo'd names before the registry check. The
+            // abliterated Q4 8B mangles tool names (e.g. "fault_lookup" for
+            // "vault_lookup"); accept the nearest known name within edit
+            // distance 2 so a single bad char doesn't drop the call.
+            if (!knownTools.includes(obj.name)) {
+              const near = this.nearestToolName(obj.name, knownTools);
+              if (near) {
+                Logger.info(`🔄 Fuzzy tool name: '${obj.name}' → '${near}'`);
+                obj.name = near;
+              }
+            }
             if (knownTools.includes(obj.name)) {
               Logger.info(`🔄 Rescued Pythonic/XML tool call: ${obj.name}`);
               toolCalls = [{
@@ -2422,7 +2469,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
                 function: {name: obj.name, arguments: JSON.stringify(obj.arguments || {})},
               }];
             } else {
-              Logger.debug(`Rescue ignored — '${obj.name}' not in tool registry`);
+              Logger.debug(`Rescue ignored — '${obj.name}' not in tool registry, no near match`);
             }
           } catch (rescueErr) {
             Logger.debug('Pythonic rescue parse failed:', rescueErr);
@@ -2520,14 +2567,19 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           continue;
         }
 
-        // Strip wrapper brackets from plain-text replies. The model sees
-        // every prompt example as `[tool(...)]` and sometimes echoes the
-        // bracket style on plain answers ("[yo.]"). Strip if not a tool call.
-        if (
+        // Two bracket cases to clean up before showing the reply:
+        //  1. A bracket-shaped tool call that no fallback resolved (unknown or
+        //     typo'd name, uninferable args). NEVER leak "[fn(...)]" to the
+        //     user — strip it; if nothing readable remains, ask for a retry.
+        //  2. A plain reply the model wrapped in brackets ("[yo.]") — unwrap.
+        if (looksLikeToolCallAttempt) {
+          Logger.warn(`⚠️ Unresolved bracket call leaked to output: "${rawContent}". Suppressing.`);
+          const remainder = this.filterToolJson(rawContent);
+          rawContent = remainder || 'hmm, glitched on that — say it once more?';
+        } else if (
           rawContent.length > 2 &&
           rawContent.startsWith('[') &&
-          rawContent.endsWith(']') &&
-          !/^\[\s*\w+\s*\(/.test(rawContent)
+          rawContent.endsWith(']')
         ) {
           rawContent = rawContent.slice(1, -1).trim();
         }
