@@ -10,7 +10,10 @@ import {Platform, PermissionsAndroid} from 'react-native';
 import RNFS from 'react-native-fs';
 import {initWhisper, WhisperContext} from 'whisper.rn';
 import {RealtimeTranscriber} from 'whisper.rn/realtime-transcription';
-import {AudioPcmStreamAdapter} from 'whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter';
+// .js extension is required: whisper.rn's "exports" map points to an
+// extensionless target and Metro's package-exports resolution is exact
+// (no extension probing), so the bare path fails to resolve.
+import {AudioPcmStreamAdapter} from 'whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter.js';
 import {ModelStorageService} from './ModelStorageService';
 import {WHISPER_MODEL} from '../utils/constants';
 import {DownloadStatus} from '../types';

@@ -63,7 +63,13 @@
       "Bash(python -c \"import sys,json; [print\\(f['name'],f['size']\\) for f in json.load\\(sys.stdin\\) if f['type']=='file']\")",
       "Bash(xargs curl -s)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(xargs grep -l \"archival_memory_insert\\\\|archival_memory_search\")"
+      "Bash(xargs grep -l \"archival_memory_insert\\\\|archival_memory_search\")",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(Find-ChildItem -Path \"D:\\\\dev\\\\projects\\\\localOS\\\\src\" -Type f -Name \"*tool*\" -o -Name \"*Tool*\")",
+      "Bash(Select-Object FullName)",
+      "Bash(npm install *)"
     ],
     "deny": [],
     "ask": []

@@ -12,7 +12,7 @@
       "whisper.rn/realtime-transcription": [
         "./node_modules/whisper.rn/lib/typescript/realtime-transcription/index.d.ts"
       ],
-      "whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter": [
+      "whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter.js": [
         "./node_modules/whisper.rn/lib/typescript/realtime-transcription/adapters/AudioPcmStreamAdapter.d.ts"
       ]
     }
