@@ -574,13 +574,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     await SessionService.saveSession(updatedSession);
   };
 
-  // Open the sessions modal: persist the current chat first so it shows up,
-  // then load the full list from SQLite.
+  // Open the sessions modal and load the list from SQLite. The current chat
+  // is already persisted by the auto-save effect, so we must NOT re-save here
+  // — doing so would bump updatedAt and wrongly float the active session to
+  // the top every time the list is opened.
   const openSessions = async () => {
     try {
-      if (currentSession && messages.length > 0) {
-        await saveSession();
-      }
       const sessions = await SessionService.loadSessions();
       setSessionList(sessions);
       setShowSessions(true);
@@ -614,11 +613,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
-  // Start a fresh session from the header / modal.
-  const handleNewSession = async () => {
-    if (currentSession && messages.length > 0) {
-      await saveSession();
-    }
+  // Start a fresh session from the header / modal. The outgoing session is
+  // already persisted by the auto-save effect — no manual save (which would
+  // bump its updatedAt) is needed.
+  const handleNewSession = () => {
     createNewSession();
     setShowSessions(false);
     Logger.info('🆕 New session started');
