@@ -2545,78 +2545,12 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         if (iter === 0 && !usedTool) {
           Logger.debug(`tool_calls field type: ${typeof result.tool_calls}, value: ${JSON.stringify(result.tool_calls)}`);
           Logger.debug(`Raw model content (first 500 chars): ${finalText.substring(0, 500)}`);
-
-          // PERSONAL-QUESTION GUARD: model answered without checking vault.
-          // Structural heuristic (question + personal reference) catches unbounded phrase space.
-          // Skipped when smartToolDetection is ON — LLM owns the decision in that mode.
-          const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content?.trim() ?? '';
-          const isQuestion = /[?]/.test(lastUserMsg) || /^(what|where|when|who|how|which|do|did|have|can|is|are)\b/i.test(lastUserMsg);
-          const isPersonal = /\b(me|my|i |you know|you remember|you saved|you have|about me|tell me)\b/i.test(lastUserMsg);
-          if (!this.smartToolDetection && isQuestion && isPersonal && this.availableTools.some(t => t.name === 'search_vault')) {
-            Logger.warn(`⚠️ Personal question answered without vault check. Forcing search_vault.`);
-            const cleanQ = stripStopwords(lastUserMsg) || 'personal user facts preferences profile';
-            const svArgs = {query: cleanQ};
-            onToolUsage?.('tool_call', 'search_vault', svArgs);
-            const svResult = await ToolService.executeTool({id: generateId(), name: 'search_vault', arguments: svArgs});
-            onToolUsage?.('tool_result', 'search_vault', svArgs, svResult);
-            const svR = svResult.result as any;
-            // search_vault returns `matches` (semantic/keyword path) — older
-            // callers may still produce `results`. Accept both shapes.
-            const guardMatches = (svR?.matches ?? svR?.results ?? []) as Array<{
-              path?: string; heading?: string; snippet?: string; full_content?: string;
-            }>;
-            if (guardMatches.length > 0) {
-              // Re-generate with vault context injected
-              usedTool = true;
-              firstToolName = 'search_vault';
-              const vaultContext = guardMatches
-                .map(r => {
-                  const header = r.heading ? `${r.path} — ${r.heading}` : (r.path ?? '');
-                  const body = r.full_content ?? r.snippet ?? '';
-                  return `[${header}]\n${body}`;
-                })
-                .join('\n\n');
-              const regenMessages = [
-                ...messages,
-                {role: 'assistant' as const, content: `[search_vault result]\n${vaultContext}`},
-                {role: 'user' as const, content: lastUserMsg},
-              ];
-              onToolUsage?.('generating');
-              finalText = await this.chatCompletion(regenMessages, config, onToken);
-              Logger.info(`✅ Personal-question guard: regenerated with ${guardMatches.length} vault results`);
-            }
-          }
-
-          // HALLUCINATION GUARD: model claimed to save/store something but called no tool.
-          // Detect the pattern, re-execute vault_save with inferred args, fix the response.
-          // Skipped when smartToolDetection is ON — LLM owns the decision in that mode.
-          const SAVE_HALLUCINATION = /\b(?:saved?|stored?|updated?|recorded?)\b/i;
-          if (!this.smartToolDetection && SAVE_HALLUCINATION.test(finalText) && this.availableTools.some(t => t.name === 'vault_save')) {
-            const lastUser = [...messages].reverse().find(m => m.role === 'user');
-            if (lastUser?.content) {
-              const parsed = LlamaService.parseWriteIntent(lastUser.content);
-              if (parsed) {
-                Logger.warn(`⚠️ Hallucination: model said saved but called no tool. Forcing vault_save for "${parsed.topic}"`);
-                const saveArgs = {topic: parsed.topic, content: parsed.content, path: parsed.suggestedPath};
-                onToolUsage?.('tool_call', 'vault_save', saveArgs);
-                const saveResult = await ToolService.executeTool({
-                  id: generateId(),
-                  name: 'vault_save',
-                  arguments: saveArgs,
-                });
-                onToolUsage?.('tool_result', 'vault_save', saveArgs, saveResult);
-                usedTool = true;
-                firstToolName = 'vault_save';
-                const r = saveResult.result as any;
-                finalText =
-                  r?.action === 'already_exists' ? `Already saved at \`${parsed.suggestedPath}\`.` :
-                  r?.action === 'updated'        ? `Updated \`${parsed.suggestedPath}\`.` :
-                  r?.action === 'created'        ? `Saved to \`${parsed.suggestedPath}\`.` :
-                  finalText;
-                Logger.info(`✅ Hallucination corrected: vault_save action=${r?.action}`);
-              }
-            }
-          }
+          // Guards removed: the 8B emits its own tool calls. Post-hoc
+          // personal-question / save-hallucination guards used to discard the
+          // model's reply and re-generate without the persona prompt (causing
+          // the "I'd be happy to help" override) and stream a second time on
+          // top of the first (causing duplicated/repeated text). The model's
+          // reply now stands as-is.
         }
         break;
       }
