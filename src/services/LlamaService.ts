@@ -1035,8 +1035,10 @@ READ — user asks for info, recalls something, looks something up.
     → list_vault_structure or list_vault_files.
   ▸ Specific file you already know by name
     → read_vault_file.
-  ▸ Public world info, news, current events
-    → search_web.
+  ▸ Time-sensitive / real-time public info — news, weather, prices,
+    scores, recent events, anything after your training → search_web.
+    Stable general knowledge (definitions, how things work, history,
+    concepts, programming) → answer directly, NO tool.
   ▸ Current time, date, day of week
     → get_current_datetime.
 
@@ -1081,6 +1083,12 @@ Assistant: [get_current_datetime()]
 
 User: Latest AI news
 Assistant: [search_web(query="latest AI news")]
+
+User: What is React Native?
+Assistant: A framework for building native iOS/Android apps from one React codebase.
+
+User: How does HTTP work?
+Assistant: A request/response protocol — the client sends a request, the server returns a response over TCP.
 
 User: Find notes about React Native
 Assistant: [search_vault(query="React Native")]
@@ -1138,65 +1146,15 @@ No tool fits → answer direct. Stay terse.${toolsBlock}`;
   }
 
   /**
-   * Get system prompt with tool definitions
-   * Uses configurable prompt variants for testing
+   * System prompt for the non-native paths (preflight tool narration,
+   * legacy loop, context-stats, debug viewer). Delegates to the slim
+   * prompt so there is ONE persona definition. The SYSTEM_PROMPTS variants
+   * (letta, etc.) are no longer in the runtime path — they carried stale,
+   * contradicting rules ('I don't have that yet', 'public facts →
+   * search_web') that fought the slim prompt depending on which path ran.
    */
   private static getToolSystemPrompt(): string {
-    // 'none' prompt variant: bypass everything for raw base-model testing
-    if (this.currentPromptType === 'none') {
-      return '';
-    }
-
-    // Get core memory
-    let coreMemory = '';
-    try {
-      coreMemory = MemoryService.getFormattedCoreMemory();
-    } catch (error) {
-      Logger.warn('Core memory not available:', error);
-    }
-
-    // If no tools enabled, return just core memory
-    if (!this.toolsEnabled || this.availableTools.length === 0) {
-      return coreMemory;
-    }
-
-    // Get model config to determine if examples are needed
-    const modelConfig = this.modelConfig || getModelConfig(this.currentModelName || '');
-    const needsExamples = modelConfig.needsToolExamples;
-
-    // Create tools JSON schema
-    const toolSchemas = this.availableTools.map(tool => {
-      const properties: Record<string, any> = {};
-      const required: string[] = [];
-
-      tool.parameters.forEach(p => {
-        properties[p.name] = {
-          type: p.type,
-          description: p.description,
-        };
-        if (p.required) {
-          required.push(p.name);
-        }
-      });
-
-      return {
-        name: tool.name,
-        description: tool.description,
-        parameters: {
-          type: 'object',
-          properties,
-          required: required.length > 0 ? required : undefined,
-        },
-      };
-    });
-
-    // Compact JSON - no pretty printing to save ~50% tokens
-    const toolsJson = JSON.stringify(toolSchemas);
-
-    // Use selected prompt variant
-    const promptConfig = SYSTEM_PROMPTS[this.currentPromptType];
-    Logger.debug('Building system prompt with smartToolDetection:', this.smartToolDetection);
-    return promptConfig.getPrompt(coreMemory, toolsJson, needsExamples, this.smartToolDetection);
+    return this.getSlimSystemPrompt();
   }
 
   /**

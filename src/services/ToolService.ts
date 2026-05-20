@@ -254,7 +254,7 @@ export class ToolService {
     return {
       name: 'search_web',
       description:
-        'READ. Search the public web for current events, news, headlines, public facts, tutorials, or documentation. Examples: "latest AI news", "what\'s trending on Twitter", "search for React Native tutorials", "current weather in NYC", "who won the game". Do NOT use this for info about the user themselves — that\'s vault_lookup.',
+        'READ. Search the web ONLY for information that is time-sensitive, real-time, or likely to have changed since training: current events, news, headlines, today\'s weather, prices, sports scores, release dates — or when the user explicitly says "search"/"look up". Examples: "latest AI news", "weather in NYC today", "who won last night". Do NOT use this for stable general knowledge you already know — definitions, concepts, how things work, history, math, programming explanations ("what is React Native", "how does HTTP work"): answer those directly. Do NOT use it for info about the user — that\'s vault_lookup.',
       parameters: [
         {
           name: 'query',
