@@ -54,6 +54,15 @@ export const RECOMMENDED_MODELS = [
   },
 ];
 
+// Whisper speech-to-text model (separate from RECOMMENDED_MODELS, which is GGUF-only)
+export const WHISPER_MODEL = {
+  id: 'whisper-base',
+  name: 'Whisper Base',
+  filename: 'ggml-base.bin',
+  size: 147000000, // ~147MB
+  huggingFaceRepo: 'ggerganov/whisper.cpp',
+};
+
 // Storage keys for AsyncStorage
 export const STORAGE_KEYS = {
   CHAT_SESSIONS: '@localos_chat_sessions',

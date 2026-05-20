@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
@@ -22,6 +23,7 @@ import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage, MessageSource}
 import {AIService} from '../services/AIService';
 import {LMStudioService} from '../services/LMStudioService';
 import {LlamaService} from '../services/LlamaService';
+import {SpeechService} from '../services/SpeechService';
 import {StorageService} from '../services/StorageService';
 import {VaultService} from '../services/VaultService';
 import {generateId, extractVaultSources} from '../utils/helpers';
@@ -29,6 +31,7 @@ import {
   MAX_MESSAGE_LENGTH,
   MAX_CONTEXT_MESSAGES,
   ERROR_MESSAGES,
+  WHISPER_MODEL,
 } from '../utils/constants';
 import {Logger} from '../utils/Logger';
 
@@ -81,6 +84,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     loaded: boolean;
     name: string | null;
   }>({loaded: false, name: null});
+
+  // Speech-to-text (whisper.rn) state
+  const [isRecording, setIsRecording] = useState(false);
+  const [whisperBusy, setWhisperBusy] = useState(false); // downloading or loading model
+  // Text already in the input when recording started; transcript is appended to it.
+  const voiceBaseTextRef = useRef('');
 
   // Track which messages are confirmation questions and what tools they offer
   const [confirmationQuestions, setConfirmationQuestions] = useState<Map<string, {
@@ -359,6 +368,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     initializeAI();
     loadSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tear down any active recording + whisper context on unmount
+  useEffect(() => {
+    return () => {
+      SpeechService.release();
+    };
   }, []);
 
   // Update prompt mode display when it changes
@@ -904,6 +920,75 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
+  // Push-to-talk voice input. First tap: ensure model, then start recording
+  // (transcript streams live into the input). Second tap: stop and finalize.
+  const handleMicPress = useCallback(async () => {
+    // Currently recording -> stop and finalize transcript
+    if (isRecording) {
+      setIsRecording(false);
+      try {
+        const finalText = await SpeechService.stopListening();
+        const base = voiceBaseTextRef.current.trim();
+        const combined = base
+          ? finalText
+            ? `${base} ${finalText}`
+            : base
+          : finalText;
+        setInputText(combined);
+      } catch (error) {
+        Logger.error('Failed to stop transcription:', error);
+      }
+      return;
+    }
+
+    try {
+      // Ensure the Whisper model is downloaded
+      const downloaded = await SpeechService.isModelDownloaded();
+      if (!downloaded) {
+        const proceed = await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Download Voice Model',
+            `Speech-to-text needs the ${WHISPER_MODEL.name} model (~147MB). Download now?`,
+            [
+              {text: 'Cancel', style: 'cancel', onPress: () => resolve(false)},
+              {text: 'Download', onPress: () => resolve(true)},
+            ],
+          );
+        });
+        if (!proceed) {
+          return;
+        }
+
+        setWhisperBusy(true);
+        await SpeechService.downloadModel(p => {
+          if (p.status === 'downloading') {
+            showToastMessage(`Downloading voice model… ${Math.round(p.progress)}%`);
+          }
+        });
+        showToastMessage('Voice model downloaded');
+      }
+
+      // Load context (no-op if already loaded), then start recording
+      setWhisperBusy(true);
+      await SpeechService.loadModel();
+      setWhisperBusy(false);
+
+      voiceBaseTextRef.current = inputText;
+      await SpeechService.startListening(partial => {
+        const base = voiceBaseTextRef.current.trim();
+        setInputText(base ? `${base} ${partial}` : partial);
+      });
+      setIsRecording(true);
+    } catch (error) {
+      Logger.error('Voice input failed:', error);
+      const msg = error instanceof Error ? error.message : 'Voice input failed';
+      Alert.alert('Voice Input', msg);
+      setIsRecording(false);
+    } finally {
+      setWhisperBusy(false);
+    }
+  }, [isRecording, inputText, showToastMessage]);
+
   const handleClearChat = () => {
     Alert.alert('Clear Chat', 'Are you sure you want to clear this chat?', [
       {text: 'Cancel', style: 'cancel'},
@@ -1417,6 +1502,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           maxLength={MAX_MESSAGE_LENGTH}
           editable={!isGenerating}
         />
+        <TouchableOpacity
+          style={[styles.micButton, isRecording && styles.micButtonActive]}
+          onPress={handleMicPress}
+          disabled={isGenerating || whisperBusy}>
+          {whisperBusy ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : (
+            <Text style={styles.micButtonText}>{isRecording ? '⏹' : '🎤'}</Text>
+          )}
+        </TouchableOpacity>
         {isGenerating ? (
           <TouchableOpacity
             style={styles.stopButton}
@@ -1760,6 +1855,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  micButtonActive: {
+    backgroundColor: '#FF3B30',
+  },
+  micButtonText: {
+    fontSize: 18,
   },
   sendButton: {
     backgroundColor: '#007AFF',

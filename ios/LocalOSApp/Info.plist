@@ -49,6 +49,8 @@
 	<string>LocalOS needs access to save AI models</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>LocalOS needs access to read your Obsidian vault files</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LocalOS uses the microphone for on-device speech-to-text.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

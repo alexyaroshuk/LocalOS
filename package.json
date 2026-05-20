@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.78",
+    "@fugood/react-native-audio-pcm-stream": "^1.1.4",
     "@op-engineering/op-sqlite": "^15.0.7",
     "@react-native-ai/apple": "^0.11.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -23,7 +24,8 @@
     "react-native-fs": "^2.20.0",
     "react-native-markdown-display": "^7.0.2",
     "react-native-safe-area-context": "^5.5.2",
-    "web-streams-polyfill": "^4.2.0"
+    "web-streams-polyfill": "^4.2.0",
+    "whisper.rn": "^0.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

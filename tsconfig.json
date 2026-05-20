@@ -1,5 +1,20 @@
 {
   "extends": "@react-native/typescript-config",
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/node_modules", "**/Pods"]
+  "exclude": ["**/node_modules", "**/Pods"],
+  "compilerOptions": {
+    // whisper.rn's package "exports" lists the `types` condition after
+    // `import`/`require`, so TS resolves to the JS-only build dir and finds no
+    // declarations. Point the type-checker straight at the .d.ts files. This is
+    // type-only; Metro resolves the modules at runtime via the react-native condition.
+    "paths": {
+      "whisper.rn": ["./node_modules/whisper.rn/lib/typescript/index.d.ts"],
+      "whisper.rn/realtime-transcription": [
+        "./node_modules/whisper.rn/lib/typescript/realtime-transcription/index.d.ts"
+      ],
+      "whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter": [
+        "./node_modules/whisper.rn/lib/typescript/realtime-transcription/adapters/AudioPcmStreamAdapter.d.ts"
+      ]
+    }
+  }
 }
