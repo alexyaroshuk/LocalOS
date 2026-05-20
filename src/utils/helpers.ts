@@ -220,3 +220,38 @@ export function isValidModelPath(path: string): boolean {
 export function extractModelName(filename: string): string {
   return filename.replace('.gguf', '').replace(/-/g, ' ');
 }
+
+const QUERY_STOPWORDS = new Set([
+  'what', 'whats', 'where', 'when', 'who', 'why', 'how', 'which',
+  'i', 'me', 'my', 'mine', 'myself', 'you', 'your', 'yours', 'we', 'our',
+  'us', 'they', 'them', 'their', 'he', 'she', 'it', 'its',
+  'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being',
+  'do', 'does', 'did', 'have', 'has', 'had', 'will', 'would',
+  'can', 'could', 'should', 'may', 'might', 'must',
+  'a', 'an', 'the', 'this', 'that', 'these', 'those', 'some', 'any',
+  'please', 'just', 'really', 'actually', 'basically', 'simply',
+  'tell', 'show', 'give', 'find', 'search', 'lookup', 'look', 'get',
+  'know', 'remember', 'about', 'for', 'with', 'from', 'into', 'on', 'in',
+  'at', 'to', 'of', 'and', 'or', 'but', 'so', 'if', 'then', 'than',
+  'help', 'cant', 'wont', 'dont', 'didnt', 'havent', 'wasnt', 'isnt',
+  'arent', 'couldnt', 'shouldnt', 'wouldnt',
+  'u', 'ur', 'plz', 'pls', 'thx', 'thanks',
+]);
+
+/**
+ * Reduce a natural-language user utterance to a compact search query.
+ * Lowercases, strips punctuation & contractions, removes stopwords/fillers.
+ * Falls back to the trimmed original if stripping yields an empty string.
+ */
+export function stripStopwords(text: string): string {
+  if (!text) return '';
+  const cleaned = text
+    .toLowerCase()
+    .replace(/[''`]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(w => w && !QUERY_STOPWORDS.has(w))
+    .join(' ')
+    .trim();
+  return cleaned || text.trim();
+}

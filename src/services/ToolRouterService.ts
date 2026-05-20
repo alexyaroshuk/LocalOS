@@ -13,6 +13,7 @@ import {Tool} from '../types';
 import {EmbeddingService} from './EmbeddingService';
 import {DatabaseService} from './DatabaseService';
 import {Logger as L} from '../utils/Logger';
+import {stripStopwords} from '../utils/helpers';
 
 export interface RouteResult {
   tool: Tool;
@@ -192,17 +193,11 @@ export class ToolRouterService {
 
   /**
    * Light cleanup on user query before passing as a tool arg.
-   * Strips leading interrogatives and trailing punctuation so the
-   * embedding match aligns with stored chunk topics.
+   * Delegates to shared stripStopwords so embedding match aligns with
+   * stored chunk topics regardless of filler/pronouns/interrogatives.
    */
   private static cleanQuery(text: string): string {
-    return text
-      .replace(
-        /^(what['']?s|what is|what|how|where|when|which|do i|did i|tell me|can you|please)\s+/i,
-        '',
-      )
-      .replace(/\?+\s*$/, '')
-      .trim();
+    return stripStopwords(text);
   }
 
   /**

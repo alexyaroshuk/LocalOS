@@ -6,7 +6,7 @@ import {Platform} from 'react-native';
 import RNFS from 'react-native-fs';
 import {LlamaConfig, Message, MessageTimings, Tool} from '../types';
 import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
-import {getChatTemplate, generateId} from '../utils/helpers';
+import {getChatTemplate, generateId, stripStopwords} from '../utils/helpers';
 import {ToolService} from './ToolService';
 import {ToolRouterService} from './ToolRouterService';
 import {Logger} from '../utils/Logger';
@@ -1428,7 +1428,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
     }
 
     if ((hasMdFile || findVerbs.test(content)) && hasTool('search_vault')) {
-      const q = mdMatch ? mdMatch[1].trim() : content.replace(/^(where is|where can i find|find|locate)\s+/i, '').replace(/\?.*$/, '').trim();
+      const q = mdMatch ? mdMatch[1].trim() : stripStopwords(content);
       Logger.info(`🔍 PREFLIGHT: search_vault "${q}"`);
       return await this.runTriggerTool('search_vault', {query: q}, messages, config, onToken, onToolUsage);
     }
@@ -1452,10 +1452,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       /\bam\s+i\s+\w+\b/i,                   // "am I vegetarian"
     ];
     if (recallPatterns.some(re => re.test(content)) && hasTool('vault_lookup')) {
-      const q = content
-        .replace(/^(what['']?s|what is|what|do i have|did i|where did i|where do i|which|tell me)\s+/i, '')
-        .replace(/\?.*$/, '')
-        .trim();
+      const q = stripStopwords(content);
       Logger.info(`🧠 PREFLIGHT: vault_lookup (recall) "${q}"`);
       return await this.runTriggerTool('vault_lookup', {query: q}, messages, config, onToken, onToolUsage);
     }
@@ -1477,7 +1474,8 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
     // VAULT KNOWLEDGE RECALL — "tell me about my X project / vault / notes".
     if (/\btell me about my\b/i.test(content) && hasTool('search_vault')) {
-      const q = content.replace(/^.*\btell me about my\b\s*/i, '').replace(/\?.*$/, '').trim();
+      const tail = content.replace(/^.*\btell me about my\b\s*/i, '').replace(/\?.*$/, '').trim();
+      const q = stripStopwords(tail);
       if (q) {
         Logger.info(`📖 PREFLIGHT: search_vault (project recall) "${q}"`);
         return await this.runTriggerTool('search_vault', {query: q}, messages, config, onToken, onToolUsage);
@@ -2550,12 +2548,13 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
           // PERSONAL-QUESTION GUARD: model answered without checking vault.
           // Structural heuristic (question + personal reference) catches unbounded phrase space.
+          // Skipped when smartToolDetection is ON — LLM owns the decision in that mode.
           const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content?.trim() ?? '';
           const isQuestion = /[?]/.test(lastUserMsg) || /^(what|where|when|who|how|which|do|did|have|can|is|are)\b/i.test(lastUserMsg);
           const isPersonal = /\b(me|my|i |you know|you remember|you saved|you have|about me|tell me)\b/i.test(lastUserMsg);
-          if (isQuestion && isPersonal && this.availableTools.some(t => t.name === 'search_vault')) {
+          if (!this.smartToolDetection && isQuestion && isPersonal && this.availableTools.some(t => t.name === 'search_vault')) {
             Logger.warn(`⚠️ Personal question answered without vault check. Forcing search_vault.`);
-            const cleanQ = lastUserMsg.replace(/^(what|where|when|how|which|do|did|have|can)\s+(i|you|do i|do you|did i|did you|have you|have i)\s+/i, '').replace(/[?]+$/, '').trim() || 'personal user facts preferences profile';
+            const cleanQ = stripStopwords(lastUserMsg) || 'personal user facts preferences profile';
             const svArgs = {query: cleanQ};
             onToolUsage?.('tool_call', 'search_vault', svArgs);
             const svResult = await ToolService.executeTool({id: generateId(), name: 'search_vault', arguments: svArgs});
@@ -2590,8 +2589,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
           // HALLUCINATION GUARD: model claimed to save/store something but called no tool.
           // Detect the pattern, re-execute vault_save with inferred args, fix the response.
+          // Skipped when smartToolDetection is ON — LLM owns the decision in that mode.
           const SAVE_HALLUCINATION = /\b(?:saved?|stored?|updated?|recorded?)\b/i;
-          if (SAVE_HALLUCINATION.test(finalText) && this.availableTools.some(t => t.name === 'vault_save')) {
+          if (!this.smartToolDetection && SAVE_HALLUCINATION.test(finalText) && this.availableTools.some(t => t.name === 'vault_save')) {
             const lastUser = [...messages].reverse().find(m => m.role === 'user');
             if (lastUser?.content) {
               const parsed = LlamaService.parseWriteIntent(lastUser.content);
@@ -2781,12 +2781,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
 
       const isWhereQuery = findVerbs.test(userMessage.content);
       if ((hasMdFile || isWhereQuery) && this.availableTools.some(t => t.name === 'search_vault')) {
-        let searchQuery = userMessage.content;
-        if (mdMatch) {
-          searchQuery = mdMatch[1].trim();
-        } else {
-          searchQuery = searchQuery.replace(/^(where is|where can i find|find|locate)\s+/i, '').replace(/\?.*$/, '').trim();
-        }
+        const searchQuery = mdMatch ? mdMatch[1].trim() : stripStopwords(userMessage.content);
         Logger.info(`🔍 VAULT FILE SEARCH TRIGGER - Searching vault for: "${searchQuery}"`);
         return await this.runTriggerTool('search_vault', {query: searchQuery}, messages, config, onToken, onToolUsage);
       }
@@ -2809,13 +2804,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       if (hasTrigger && !isVaultQuery && this.availableTools.some(t => t.name === 'search_web')) {
         Logger.info('🔧 TRIGGER DETECTED - Forcing search_web call, bypassing model');
 
-        // Extract query from user message
-        let query = userMessage.content;
-        // Remove common prefixes
-        query = query.replace(/^(search|find|look up|get|show me|tell me about)\s+(for\s+)?(the\s+)?/i, '').trim();
-        // If query is too generic, use original
+        let query = stripStopwords(userMessage.content);
         if (query.length < 3) {
-          query = userMessage.content;
+          query = userMessage.content.trim();
         }
 
         Logger.info(`📝 Extracted query: "${query}"`);
@@ -2894,11 +2885,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         const searchTool = this.availableTools.find(t => t.name === 'search_vault');
         const tool = lookupTool || searchTool;
         if (tool) {
-          // Strip leading interrogatives so the embedding query reflects the topic.
-          const query = userMessage.content
-            .replace(/^(what['']?s|what is|what|do i have|did i|where did i|where do i|which|tell me)\s+/i, '')
-            .replace(/\?.*$/, '')
-            .trim();
+          const query = stripStopwords(userMessage.content);
           Logger.info(`🧠 RECALL TRIGGER DETECTED - Forcing ${tool.name} with query: "${query}"`);
           return await this.runTriggerTool(tool.name, {query}, messages, config, onToken, onToolUsage);
         }
@@ -2920,8 +2907,7 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         const searchTool = this.availableTools.find(t => t.name === 'search_vault');
         const tool = lookupTool || searchTool;
         if (tool) {
-          // Use the whole utterance as the search query — embedding handles fuzziness.
-          const query = userMessage.content.replace(/\?.*$/, '').trim();
+          const query = stripStopwords(userMessage.content);
           Logger.info(`💾 SAVE TRIGGER DETECTED - Pre-flight ${tool.name} for diff check: "${query}"`);
           return await this.runTriggerTool(tool.name, {query}, messages, config, onToken, onToolUsage);
         }
