@@ -135,6 +135,7 @@ export class ModelStorageService {
     url: string,
     filename: string,
     onProgress?: (progress: DownloadStatus) => void,
+    expectedSizeBytes: number = 2 * 1024 * 1024 * 1024, // default 2GB (GGUF chat models)
   ): Promise<string> {
     const downloadPath = this.getModelPath(filename);
 
@@ -146,10 +147,16 @@ export class ModelStorageService {
         return downloadPath;
       }
 
-      // Check available space (rough estimate)
-      const hasSpace = await this.hasEnoughSpace(2 * 1024 * 1024 * 1024); // 2GB estimate
-      if (!hasSpace) {
-        throw new Error('Insufficient storage space');
+      // Check available space against the actual model size (+ buffer)
+      const available = await this.getAvailableSpace();
+      const buffer = 500 * 1024 * 1024;
+      if (available < expectedSizeBytes + buffer) {
+        const toMB = (b: number) => Math.round(b / (1024 * 1024));
+        throw new Error(
+          `Insufficient storage space: need ${toMB(
+            expectedSizeBytes + buffer,
+          )}MB, have ${toMB(available)}MB free`,
+        );
       }
 
       console.log('Starting download:', url);

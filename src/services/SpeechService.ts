@@ -43,6 +43,7 @@ class SpeechServiceClass {
       url,
       WHISPER_MODEL.filename,
       onProgress,
+      WHISPER_MODEL.size,
     );
   }
 
