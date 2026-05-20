@@ -9,7 +9,7 @@
     // type-only; Metro resolves the modules at runtime via the react-native condition.
     "paths": {
       "whisper.rn": ["./node_modules/whisper.rn/lib/typescript/index.d.ts"],
-      "whisper.rn/realtime-transcription": [
+      "whisper.rn/realtime-transcription/index.js": [
         "./node_modules/whisper.rn/lib/typescript/realtime-transcription/index.d.ts"
       ],
       "whisper.rn/realtime-transcription/adapters/AudioPcmStreamAdapter.js": [

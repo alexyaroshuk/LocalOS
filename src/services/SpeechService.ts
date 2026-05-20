@@ -9,7 +9,7 @@
 import {Platform, PermissionsAndroid} from 'react-native';
 import RNFS from 'react-native-fs';
 import {initWhisper, WhisperContext} from 'whisper.rn';
-import {RealtimeTranscriber} from 'whisper.rn/realtime-transcription';
+import {RealtimeTranscriber} from 'whisper.rn/realtime-transcription/index.js';
 // .js extension is required: whisper.rn's "exports" map points to an
 // extensionless target and Metro's package-exports resolution is exact
 // (no extension probing), so the bare path fails to resolve.
