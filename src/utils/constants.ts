@@ -72,6 +72,7 @@ export const STORAGE_KEYS = {
   CURRENT_MODEL: '@localos_current_model',
   EMBEDDING_MODEL: '@localos_embedding_model',
   RECENT_MODELS: '@localos_recent_models',
+  SESSIONS_MIGRATED_SQLITE: '@localos_sessions_migrated_sqlite',
 };
 
 // File paths

@@ -85,6 +85,12 @@ function AppContent() {
       DatabaseProxy.setUsingSQLite(true);
       Logger.info('✅ SQLite database initialized');
 
+      // Migrate any legacy AsyncStorage chat sessions into SQLite (one-time)
+      Logger.info('💬 Initializing session service...');
+      const {SessionService} = require('./src/services/SessionService');
+      await SessionService.initialize();
+      Logger.info('✅ Session service initialized');
+
       // Initialize tool service (registers all tools)
       Logger.info('🔧 Initializing tool service...');
       const {ToolService} = require('./src/services/ToolService');

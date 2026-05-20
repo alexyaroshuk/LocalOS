@@ -12,6 +12,7 @@ import type {
   UserFact,
 } from './MockDatabaseService';
 import {Logger} from '../utils/Logger';
+import type {ChatSession, ChatItem} from '../types';
 
 // Re-export types for external use
 export type {
@@ -233,6 +234,21 @@ export class DatabaseService {
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_source ON vault_links(source_path);');
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_resolved ON vault_links(resolved_path);');
 
+    // Chat sessions table — one row per conversation. The full message list
+    // (including action/tool messages) is stored as a JSON blob in `messages`
+    // to preserve the rich ChatItem union without a brittle relational schema.
+    this.db.executeSync(`
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        model_id TEXT,
+        messages TEXT NOT NULL DEFAULT '[]',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `);
+    this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);');
+
     console.log('[Database] Tables created successfully');
   }
 
@@ -372,6 +388,29 @@ export class DatabaseService {
         console.log('[Database] Migration 4 -> 5 completed');
       } catch (error) {
         console.error('[Database] Migration 4 -> 5 failed:', error);
+        throw error;
+      }
+    }
+
+    // Migration 5 -> 6: Add chat_sessions table
+    if (currentVersion < 6) {
+      console.log('[Database] Running migration 5 -> 6: Adding chat_sessions table...');
+      try {
+        this.db.executeSync(`
+          CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            model_id TEXT,
+            messages TEXT NOT NULL DEFAULT '[]',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+          );
+        `);
+        this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);');
+        this.db.executeSync('UPDATE schema_version SET version = 6, applied_at = ?;', [Date.now()]);
+        console.log('[Database] Migration 5 -> 6 completed');
+      } catch (error) {
+        console.error('[Database] Migration 5 -> 6 failed:', error);
         throw error;
       }
     }
@@ -1089,6 +1128,73 @@ export class DatabaseService {
     return result.rowsAffected > 0;
   }
 
+  // ============== CHAT SESSION OPERATIONS ==============
+
+  private static rowToSession(row: any): ChatSession {
+    let messages: ChatItem[] = [];
+    try {
+      messages = row.messages ? JSON.parse(row.messages) : [];
+    } catch (e) {
+      console.warn(`[Database] Failed to parse messages for session ${row.id}`);
+    }
+    return {
+      id: row.id,
+      title: row.title,
+      modelId: row.model_id || '',
+      messages,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  /**
+   * Get all chat sessions, most recently updated first.
+   */
+  static async getChatSessions(): Promise<ChatSession[]> {
+    const result = this.db.executeSync(
+      'SELECT id, title, model_id, messages, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC;'
+    );
+    return (result.rows || []).map((row: any) => this.rowToSession(row));
+  }
+
+  static async getChatSession(id: string): Promise<ChatSession | null> {
+    const result = this.db.executeSync(
+      'SELECT id, title, model_id, messages, created_at, updated_at FROM chat_sessions WHERE id = ?;',
+      [id]
+    );
+    const row = result.rows?.[0];
+    return row ? this.rowToSession(row) : null;
+  }
+
+  /**
+   * Insert or update a chat session by id (idempotent upsert).
+   */
+  static async upsertChatSession(session: ChatSession): Promise<void> {
+    this.db.executeSync(
+      `INSERT INTO chat_sessions (id, title, model_id, messages, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         model_id = excluded.model_id,
+         messages = excluded.messages,
+         updated_at = excluded.updated_at;`,
+      [
+        session.id,
+        session.title,
+        session.modelId || '',
+        JSON.stringify(session.messages || []),
+        session.createdAt,
+        session.updatedAt,
+      ]
+    );
+  }
+
+  static async deleteChatSession(id: string): Promise<boolean> {
+    const result = this.db.executeSync('DELETE FROM chat_sessions WHERE id = ?;', [id]);
+    console.log(`[Database] Deleted chat session ${id}`);
+    return result.rowsAffected > 0;
+  }
+
   // ============== UTILITY ==============
 
   static async clear(): Promise<void> {
@@ -1104,6 +1210,11 @@ export class DatabaseService {
     }
     try {
       this.db.executeSync('DELETE FROM vault_links;');
+    } catch (e) {
+      // table may not exist on older DBs prior to migration
+    }
+    try {
+      this.db.executeSync('DELETE FROM chat_sessions;');
     } catch (e) {
       // table may not exist on older DBs prior to migration
     }

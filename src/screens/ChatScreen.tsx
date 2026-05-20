@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Clipboard,
 } from 'react-native';
 import {ChatMessage} from '../components/ChatMessage';
 import {TypingIndicator} from '../components/TypingIndicator';
@@ -19,12 +20,13 @@ import {DebugTestPrompts} from '../components/DebugTestPrompts';
 import {LogViewerScreen} from './LogViewerScreen';
 import {Toast} from '../components/Toast';
 import {NoteProposalModal} from '../components/NoteProposalModal';
+import {SessionListModal} from '../components/SessionListModal';
 import {Message, ChatSession, ModelInfo, ChatItem, ActionMessage, MessageSource} from '../types';
 import {AIService} from '../services/AIService';
 import {LMStudioService} from '../services/LMStudioService';
 import {LlamaService} from '../services/LlamaService';
 import {SpeechService} from '../services/SpeechService';
-import {StorageService} from '../services/StorageService';
+import {SessionService} from '../services/SessionService';
 import {VaultService} from '../services/VaultService';
 import {generateId, extractVaultSources} from '../utils/helpers';
 import {
@@ -61,6 +63,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [aiBackend, setAiBackend] = useState<'apple' | 'llama' | 'lmstudio' | 'none'>('llama');
   const [backendInfo, setBackendInfo] = useState<string>('Initializing...');
   const [showLogs, setShowLogs] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
+  const [sessionList, setSessionList] = useState<ChatSession[]>([]);
   const [showLMStudioUrlModal, setShowLMStudioUrlModal] = useState(false);
   const [lmStudioUrlInput, setLMStudioUrlInput] = useState('');
   const [promptMode, setPromptMode] = useState<'langchain' | 'legacy'>('langchain');
@@ -506,10 +510,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const loadSession = async () => {
     try {
-      const sessionId = await StorageService.loadCurrentSessionId();
+      const sessionId = await SessionService.loadCurrentSessionId();
       if (sessionId) {
-        const sessions = await StorageService.loadSessions();
-        const session = sessions.find(s => s.id === sessionId);
+        const session = await SessionService.getSession(sessionId);
         if (session) {
           setCurrentSession(session);
           setMessages(session.messages);
@@ -535,25 +538,119 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     };
     setCurrentSession(newSession);
     setMessages([]);
-    StorageService.saveCurrentSessionId(newSession.id);
+    SessionService.saveCurrentSessionId(newSession.id);
   };
 
   const saveSession = async () => {
     if (!currentSession) return;
 
+    // Auto-generate title from the first user message the first time the
+    // session gets content (title stays "New Chat" until then).
+    const firstUserMsg = messages.find(m => m.role === 'user') as
+      | Message
+      | undefined;
     const updatedSession: ChatSession = {
       ...currentSession,
       messages,
       updatedAt: Date.now(),
-      // Auto-generate title from first user message
       title:
-        messages.length > 0 && currentSession.title === 'New Chat'
-          ? messages[0].content.substring(0, 50) + '...'
+        currentSession.title === 'New Chat' && firstUserMsg?.content
+          ? firstUserMsg.content.substring(0, 50)
           : currentSession.title,
     };
 
     setCurrentSession(updatedSession);
-    await StorageService.updateSession(updatedSession);
+    await SessionService.saveSession(updatedSession);
+  };
+
+  // Open the sessions modal: persist the current chat first so it shows up,
+  // then load the full list from SQLite.
+  const openSessions = async () => {
+    try {
+      if (currentSession && messages.length > 0) {
+        await saveSession();
+      }
+      const sessions = await SessionService.loadSessions();
+      setSessionList(sessions);
+      setShowSessions(true);
+    } catch (error) {
+      Logger.error('Failed to load sessions:', error);
+      showToastMessage('Failed to load sessions');
+    }
+  };
+
+  // Switch to a different session, loading its full conversation history.
+  const handleSelectSession = async (sessionId: string) => {
+    if (sessionId === currentSession?.id) {
+      setShowSessions(false);
+      return;
+    }
+    try {
+      const session = await SessionService.getSession(sessionId);
+      if (!session) {
+        showToastMessage('Session not found');
+        return;
+      }
+      setCurrentSession(session);
+      setMessages(session.messages);
+      await SessionService.saveCurrentSessionId(session.id);
+      setShowSessions(false);
+      Logger.info(`📂 Switched to session ${session.id} (${session.messages.length} items)`);
+    } catch (error) {
+      Logger.error('Failed to switch session:', error);
+      showToastMessage('Failed to open session');
+    }
+  };
+
+  // Start a fresh session from the header / modal.
+  const handleNewSession = async () => {
+    if (currentSession && messages.length > 0) {
+      await saveSession();
+    }
+    createNewSession();
+    setShowSessions(false);
+    Logger.info('🆕 New session started');
+  };
+
+  // Delete a session; if it was the active one, fall back to a new session.
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await SessionService.deleteSession(sessionId);
+      const sessions = await SessionService.loadSessions();
+      setSessionList(sessions);
+      if (sessionId === currentSession?.id) {
+        createNewSession();
+      }
+      showToastMessage('Session deleted');
+    } catch (error) {
+      Logger.error('Failed to delete session:', error);
+      showToastMessage('Failed to delete session');
+    }
+  };
+
+  // Copy the current conversation to the clipboard as a plain-text transcript.
+  const handleExportSession = () => {
+    const lines = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant' || m.role === 'system')
+      .map(m => {
+        const msg = m as Message;
+        const label =
+          msg.role === 'user' ? 'You' : msg.role === 'assistant' ? 'Assistant' : 'System';
+        return `${label}:\n${msg.content}`;
+      });
+
+    if (lines.length === 0) {
+      showToastMessage('Nothing to export');
+      return;
+    }
+
+    const title = currentSession?.title || 'Chat';
+    const date = new Date(currentSession?.createdAt || Date.now()).toLocaleString();
+    const transcript = `${title}\n${date}\n\n${lines.join('\n\n')}`;
+
+    Clipboard.setString(transcript);
+    showToastMessage('Session copied to clipboard');
+    Logger.info(`📤 Exported session "${title}" (${lines.length} messages) to clipboard`);
   };
 
 
@@ -1360,6 +1457,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </View>
         </View>
 
+        {/* Session controls */}
+        <View style={styles.sessionRow}>
+          <TouchableOpacity style={styles.sessionButton} onPress={openSessions}>
+            <Text style={styles.sessionButtonText}>☰ Sessions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.sessionButton} onPress={handleNewSession}>
+            <Text style={styles.sessionButtonText}>＋ New</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sessionButton}
+            onPress={handleExportSession}
+            disabled={messages.length === 0}>
+            <Text
+              style={[
+                styles.sessionButtonText,
+                messages.length === 0 && styles.sessionButtonTextDisabled,
+              ]}>
+              ⬆ Export
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Row 2: Prompt mode + context stats */}
         <View style={styles.headerRow2}>
           {aiBackend === 'llama' && toolsEnabled && (
@@ -1608,6 +1727,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         onSave={handleSaveNote}
         onRefine={handleRefineNote}
       />
+
+      {/* Sessions Modal */}
+      <SessionListModal
+        visible={showSessions}
+        sessions={sessionList}
+        currentSessionId={currentSession?.id || null}
+        onSelect={handleSelectSession}
+        onNew={handleNewSession}
+        onDelete={handleDeleteSession}
+        onClose={() => setShowSessions(false)}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -1676,6 +1806,26 @@ const styles = StyleSheet.create({
   embeddingModelRow: {
     marginTop: 6,
     marginBottom: 2,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sessionButton: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#EEF2F7',
+    alignItems: 'center',
+  },
+  sessionButtonText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  sessionButtonTextDisabled: {
+    color: '#BBB',
   },
   embeddingBadge: {
     backgroundColor: '#F0F0F0',
