@@ -548,12 +548,23 @@ export class ToolService {
 
           console.log(`[FETCH PAGE] ✅ Extraction complete`);
 
+          // Keep the model-visible payload lean: the summary is the
+          // deliverable. Dumping the full page body (6k+ chars) into an
+          // already-large prompt drowns the on-device model (seen as 40s+
+          // TTFT and garbage output). Expose a short preview; content_length
+          // still reports the true size.
+          const PREVIEW_CHARS = 1500;
+          const contentPreview =
+            plainText.length > PREVIEW_CHARS
+              ? plainText.slice(0, PREVIEW_CHARS) + '…'
+              : plainText;
+
           return {
             success: true,
             url: urlStr,
             title: pageTitle || 'Untitled',
             summary,
-            full_content: plainText,
+            content_preview: contentPreview,
             content_length: plainText.length,
             extraction_method: 'local_llm',
             note: contentForExtraction.length === 2000 ? 'Content truncated to 2000 characters for processing' : undefined,

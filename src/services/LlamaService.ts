@@ -1773,8 +1773,9 @@ User: "What's trending" → [search_web(query="trending topics")]`;
    * without matching genuinely different names.
    */
   private static nearestToolName(name: string, known: string[]): string | null {
+    // Pass 1: edit distance <= 2 — single-char typos ("fault_lookup").
     let best: string | null = null;
-    let bestD = 3; // accept distance <= 2
+    let bestD = 3;
     for (const k of known) {
       const d = this.editDistance(name, k);
       if (d < bestD) {
@@ -1782,7 +1783,32 @@ User: "What's trending" → [search_web(query="trending topics")]`;
         best = k;
       }
     }
-    return best;
+    if (best) return best;
+
+    // Pass 2: token-set overlap — semantic renames the model invents
+    // ("support_web_fetch" → "fetch_web_page"). Require >=2 shared
+    // underscore tokens AND a unique winner so ambiguous names don't match.
+    const toks = (s: string) =>
+      new Set(s.toLowerCase().split(/[_\s]+/).filter(Boolean));
+    const nameToks = toks(name);
+    let topK: string | null = null;
+    let top = 0;
+    let second = 0;
+    for (const k of known) {
+      const kToks = toks(k);
+      let shared = 0;
+      nameToks.forEach(t => {
+        if (kToks.has(t)) shared++;
+      });
+      if (shared > top) {
+        second = top;
+        top = shared;
+        topK = k;
+      } else if (shared > second) {
+        second = shared;
+      }
+    }
+    return topK && top >= 2 && top > second ? topK : null;
   }
 
   /**
