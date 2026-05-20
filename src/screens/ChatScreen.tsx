@@ -110,6 +110,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const currentRunSourcesRef = useRef<MessageSource[]>([]);
   // Track if generation was stopped by user
   const generationStoppedRef = useRef<boolean>(false);
+  // Set when messages change from loading/switching a session (not user
+  // activity), so the auto-save effect skips one cycle and doesn't bump
+  // updatedAt — which would wrongly reorder the session list.
+  const skipNextSaveRef = useRef<boolean>(false);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -502,6 +506,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   // Save session whenever messages change
   useEffect(() => {
+    // Skip saves triggered by loading/switching a session — those carry
+    // already-persisted messages and must not bump updatedAt.
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     if (currentSession && messages.length > 0) {
       saveSession();
     }
@@ -514,6 +524,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       if (sessionId) {
         const session = await SessionService.getSession(sessionId);
         if (session) {
+          skipNextSaveRef.current = true;
           setCurrentSession(session);
           setMessages(session.messages);
           return;
@@ -591,6 +602,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         showToastMessage('Session not found');
         return;
       }
+      skipNextSaveRef.current = true;
       setCurrentSession(session);
       setMessages(session.messages);
       await SessionService.saveCurrentSessionId(session.id);
