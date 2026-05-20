@@ -1712,15 +1712,14 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       Logger.info(`🔧 ${toolName} result: ${resultStr.substring(0, 500)}`);
     } catch {}
 
-    if (toolResult.error) {
-      return {response: `Tool error: ${toolResult.error}`, usedTool: true, toolName};
-    }
-
-    // Detect empty-result cases so the model is told clearly to acknowledge
-    // the gap instead of giving a generic "happy to help" response.
+    // Classify outcome: hard failure (no internet, file not found) vs empty
+    // search vs a real hit. Each narrates differently. Errors are routed
+    // through the model too, so the user hears "looks like no internet"
+    // instead of a raw "Tool error: ..." dump.
     const r = toolResult.result as any;
+    const hadError = !!toolResult.error || (r && r.success === false);
     const isEmpty =
-      r &&
+      !hadError && r &&
       (r.found === false ||
         (Array.isArray(r.matches) && r.matches.length === 0) ||
         r.total_matches === 0);
@@ -1734,9 +1733,14 @@ User: "What's trending" → [search_web(query="trending topics")]`;
       timestamp: Date.now(),
     };
 
-    const instruction = isEmpty
-      ? `RESULT: ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nThe lookup found nothing. Tell the user directly that you don't have that info saved yet, and ask if they'd like to tell you. Do NOT pretend to know. Do NOT say "happy to help". NO tool syntax.`
-      : `RESULT (vault data — this is real, treat as ground truth): ${PromptBuilder.truncateToolResult(toolResult.result)}\n\nThe RESULT above contains the user's actual stored info. Each match has a "full_content" or "snippet" field — read either and summarize specifics (file names, facts, preferences). Do NOT say "I don't have that" or "nothing on that yet" — the data is right there. Do NOT call another tool. NO tool syntax. 1–2 short sentences, plain prose.`;
+    const resultText = PromptBuilder.truncateToolResult(
+      toolResult.error ? {error: toolResult.error} : toolResult.result,
+    );
+    const instruction = hadError
+      ? `RESULT: ${resultText}\n\nThe tool FAILED. Read the "error"/"reason" field and tell the user plainly what went wrong in ONE short sentence (e.g. "looks like no internet", "no file named that", "couldn't reach search"). Do NOT invent an answer or claim it worked. NO tool syntax.`
+      : isEmpty
+      ? `RESULT: ${resultText}\n\nThe lookup found nothing. Tell the user directly that you don't have that info saved yet, and ask if they'd like to tell you. Do NOT pretend to know. Do NOT say "happy to help". NO tool syntax.`
+      : `RESULT (vault data — this is real, treat as ground truth): ${resultText}\n\nThe RESULT above contains the user's actual stored info. Each match has a "full_content" or "snippet" field — read either and summarize specifics (file names, facts, preferences). Do NOT say "I don't have that" or "nothing on that yet" — the data is right there. Do NOT call another tool. NO tool syntax. 1–2 short sentences, plain prose.`;
 
     const toolResultMessage: Message = {
       id: 'tool-result',
@@ -2615,14 +2619,35 @@ User: "What's trending" → [search_web(query="trending topics")]`;
           const payload = toolResult.error ? {error: toolResult.error} : toolResult.result;
           const resultText = PromptBuilder.truncateToolResult(payload, TOKEN_BUDGETS.toolResult);
           Logger.info(`🔧 ↪ ${toolName} model-visible (${resultText.length} chars):\n${resultText}`);
+
+          // Classify the result so the model narrates the real outcome —
+          // a failure (no internet, file not found) reads differently from
+          // an empty search, which reads differently from a hit.
+          const r: any = toolResult.result;
+          const hadError = !!toolResult.error || (r && r.success === false);
+          const isEmpty =
+            !hadError && r &&
+            (r.found === false ||
+              r.total_matches === 0 ||
+              (Array.isArray(r.matches) && r.matches.length === 0) ||
+              (Array.isArray(r.results) && r.results.length === 0));
+
+          const guidance = hadError
+            ? `The tool FAILED — read the "error"/"reason" field and tell the user plainly ` +
+              `what went wrong in ONE short sentence (e.g. "looks like no internet", ` +
+              `"no file named that", "couldn't reach search"). Do NOT invent an answer or ` +
+              `claim it worked.`
+            : isEmpty
+            ? `The tool returned NO results. Say you couldn't find anything on that in ONE ` +
+              `short sentence. If it was the user's own saved info, offer to save it.`
+            : `Read the result and answer the user's last message in 1–2 short sentences, ` +
+              `stating the specific facts from the result. No framing like "based on the vault".`;
+
           convo.push({
             role: 'system',
             content:
-              `Tool result for ${toolName}:\n${resultText}\n\n` +
-              `You now have the data you need. Write the final natural-language ` +
-              `answer to the user's last message in 1–2 short sentences. ` +
-              `DO NOT call another tool. DO NOT emit any [bracket(...)] call. ` +
-              `Plain prose only. If the result is empty, reply "nothing on that yet."`,
+              `Tool result for ${toolName}:\n${resultText}\n\n${guidance}\n` +
+              `DO NOT call another tool. DO NOT emit any [bracket(...)] call. Plain prose only.`,
           });
         }
         try {
