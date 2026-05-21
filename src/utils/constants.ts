@@ -95,3 +95,8 @@ export const ERROR_MESSAGES = {
 // UI Constants
 export const MAX_MESSAGE_LENGTH = 4000;
 export const MAX_CONTEXT_MESSAGES = 20; // Keep last 20 messages - iPhone 17 can handle it
+
+// Master toggle for developer-only UI (backend switcher, tools toggle, logs,
+// clear, prompt-mode badge, quick-test prompts, note-proposal test button).
+// Hidden for the v1 release; a Settings screen will expose this later.
+export const DEBUG_UI = false;

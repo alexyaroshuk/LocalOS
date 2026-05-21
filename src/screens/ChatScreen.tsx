@@ -34,6 +34,7 @@ import {
   MAX_CONTEXT_MESSAGES,
   ERROR_MESSAGES,
   WHISPER_MODEL,
+  DEBUG_UI,
 } from '../utils/constants';
 import {Logger} from '../utils/Logger';
 
@@ -84,10 +85,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     date: string;
   } | null>(null);
   const [showNoteProposal, setShowNoteProposal] = useState(false);
-  const [embeddingModelInfo, setEmbeddingModelInfo] = useState<{
-    loaded: boolean;
-    name: string | null;
-  }>({loaded: false, name: null});
 
   // Speech-to-text (whisper.rn) state
   const [isRecording, setIsRecording] = useState(false);
@@ -400,37 +397,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
     return () => clearInterval(interval);
   }, []);
-
-  // Monitor embedding model status
-  useEffect(() => {
-    const checkEmbeddingModel = () => {
-      const isLoaded = LlamaService.isEmbeddingModelLoaded();
-      const modelInfo = LlamaService.getEmbeddingModelInfo();
-      setEmbeddingModelInfo({
-        loaded: isLoaded,
-        name: modelInfo?.name || null,
-      });
-    };
-
-    // Check initially
-    checkEmbeddingModel();
-
-    // Check periodically (in case it's changed from ModelsScreen)
-    // Use longer interval to avoid excessive re-renders
-    const interval = setInterval(checkEmbeddingModel, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Also check embedding model status whenever messages change (e.g., after tool execution)
-  useEffect(() => {
-    const isLoaded = LlamaService.isEmbeddingModelLoaded();
-    const modelInfo = LlamaService.getEmbeddingModelInfo();
-    setEmbeddingModelInfo({
-      loaded: isLoaded,
-      name: modelInfo?.name || null,
-    });
-  }, [messages]);
 
   const initializeAI = async () => {
     try {
@@ -1113,61 +1079,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     ]);
   };
 
-  // TEST: Mock suggest_journal_entry tool call for debugging
-  const handleTestNoteProposal = () => {
-    console.log('[TEST] Creating mock suggest_journal_entry action...');
-
-    const mockToolResult = {
-      id: 'tool-test-' + Date.now(),
-      name: 'suggest_journal_entry',
-      result: {
-        success: true,
-        proposal: {
-          title: '2024-10-28.md',
-          folder: 'Personal/Journal/2024',
-          relativePath: 'Personal/Journal/2024/2024-10-28.md',
-          content: '# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of \'Sapiens\'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project',
-          date: '2024-10-28',
-        },
-        message: 'Journal entry proposal created. Review and save when ready.',
-      },
-    };
-
-    const mockActionMessage: ActionMessage = {
-      id: 'action-test-' + Date.now(),
-      role: 'action',
-      actionType: 'tool_call',
-      content: 'Used suggest_journal_entry for 0.5s',
-      timestamp: Date.now(),
-      startTime: Date.now() - 500,
-      endTime: Date.now(),
-      duration: 500,
-      toolName: 'suggest_journal_entry',
-      toolArgs: {
-        date: '2024-10-28',
-        content: '# Daily Update\n\n**Reading**\n- Finished chapters 3-5 of \'Sapiens\'\n\n**Work**\n- Had lunch meeting with team about Q4 goals\n\n**Exercise**\n- Worked out at the gym for an hour\n\n**Learning**\n- Explored vector databases for the LocalOS project',
-        folder: 'Personal/Journal',
-      },
-      toolResult: mockToolResult,
-      isComplete: true,
-    };
-
-    console.log('[TEST] Mock action message created:', mockActionMessage);
-    setMessages(prev => [...prev, mockActionMessage]);
-
-    // Also add a mock assistant response
-    const mockAssistantMessage: Message = {
-      id: 'msg-test-' + Date.now(),
-      role: 'assistant',
-      content: 'I\'ve created a journal entry proposal for you. Click the button above to review and edit it!',
-      timestamp: Date.now(),
-    };
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, mockAssistantMessage]);
-    }, 100);
-  };
-
   const toggleTools = () => {
     const newToolsState = !toolsEnabled;
     setToolsEnabled(newToolsState);
@@ -1440,8 +1351,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       {/* Header */}
       <View style={styles.header}>
-        {/* Row 1: Model Info + Langchain */}
-        {/* Row 1: Model name + status */}
+        {/* Row 1: Model name + session controls */}
         <View style={styles.headerRow1}>
           <View style={styles.modelInfoRow}>
             <Text
@@ -1456,119 +1366,112 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </View>
             )}
           </View>
-        </View>
-
-        {/* Embedding Model Status */}
-        <View style={styles.embeddingModelRow}>
-          <View style={[styles.embeddingBadge, embeddingModelInfo.loaded && styles.embeddingBadgeLoaded]}>
-            <Text style={styles.embeddingBadgeText}>
-              {embeddingModelInfo.loaded ? '✅' : '⊘'} {embeddingModelInfo.name ? embeddingModelInfo.name.split('.').pop() : 'Embedding'}
-            </Text>
+          <View style={styles.sessionIcons}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={openSessions}
+              hitSlop={{top: 8, bottom: 8, left: 6, right: 6}}>
+              <Text style={styles.iconButtonText}>☰</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleNewSession}
+              hitSlop={{top: 8, bottom: 8, left: 6, right: 6}}>
+              <Text style={styles.iconButtonText}>＋</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleExportSession}
+              disabled={messages.length === 0}
+              hitSlop={{top: 8, bottom: 8, left: 6, right: 6}}>
+              <Text
+                style={[
+                  styles.iconButtonText,
+                  messages.length === 0 && styles.iconButtonTextDisabled,
+                ]}>
+                ⬆
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Session controls */}
-        <View style={styles.sessionRow}>
-          <TouchableOpacity style={styles.sessionButton} onPress={openSessions}>
-            <Text style={styles.sessionButtonText}>☰ Sessions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sessionButton} onPress={handleNewSession}>
-            <Text style={styles.sessionButtonText}>＋ New</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sessionButton}
-            onPress={handleExportSession}
-            disabled={messages.length === 0}>
-            <Text
-              style={[
-                styles.sessionButtonText,
-                messages.length === 0 && styles.sessionButtonTextDisabled,
-              ]}>
-              ⬆ Export
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 2: Prompt mode + context stats */}
-        <View style={styles.headerRow2}>
-          {aiBackend === 'llama' && toolsEnabled && (
-            <View style={styles.promptModeContainer}>
-              <View style={[
-                styles.promptModeBadge,
-                promptMode === 'langchain' ? styles.promptModeLangchain : styles.promptModeLegacy
-              ]}>
-                <Text style={styles.promptModeText}>
-                  {promptMode === 'langchain' ? '🔗 Langchain' : '📝 Legacy'}
+        {/* Row 2: Prompt mode + context stats (debug-only) */}
+        {DEBUG_UI && (
+          <View style={styles.headerRow2}>
+            {aiBackend === 'llama' && toolsEnabled && (
+              <View style={styles.promptModeContainer}>
+                <View style={[
+                  styles.promptModeBadge,
+                  promptMode === 'langchain' ? styles.promptModeLangchain : styles.promptModeLegacy
+                ]}>
+                  <Text style={styles.promptModeText}>
+                    {promptMode === 'langchain' ? '🔗 Langchain' : '📝 Legacy'}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {contextStats && (
+              <View style={styles.contextMeterContainer}>
+                <View style={styles.contextMeterBar}>
+                  <View
+                    style={[
+                      styles.contextMeterFill,
+                      {
+                        width: `${Math.min(contextStats.usagePercent, 100)}%`,
+                        backgroundColor:
+                          contextStats.usagePercent < 50
+                            ? '#34C759'
+                            : contextStats.usagePercent < 80
+                            ? '#FF9500'
+                            : '#FF3B30',
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.contextMeterText}>
+                  {contextStats.totalTokens.toLocaleString()}
+                  {' / '}
+                  {(contextStats.totalTokens + contextStats.remainingTokens).toLocaleString()}
+                  {' tokens ('}
+                  {contextStats.usagePercent.toFixed(0)}
+                  {'%)'}
                 </Text>
               </View>
-            </View>
-          )}
-          {contextStats && (
-            <View style={styles.contextMeterContainer}>
-              <View style={styles.contextMeterBar}>
-                <View
-                  style={[
-                    styles.contextMeterFill,
-                    {
-                      width: `${Math.min(contextStats.usagePercent, 100)}%`,
-                      backgroundColor:
-                        contextStats.usagePercent < 50
-                          ? '#34C759'
-                          : contextStats.usagePercent < 80
-                          ? '#FF9500'
-                          : '#FF3B30',
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.contextMeterText}>
-                {contextStats.totalTokens.toLocaleString()}
-                {' / '}
-                {(contextStats.totalTokens + contextStats.remainingTokens).toLocaleString()}
-                {' tokens ('}
-                {contextStats.usagePercent.toFixed(0)}
-                {'%)'}
-              </Text>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        )}
 
-        {/* Row 3: Control buttons */}
-        <View style={styles.headerRow3}>
-          <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
-            <Text style={styles.backendButtonText}>
-              {aiBackend === 'apple' ? '⚡ Apple' : aiBackend === 'lmstudio' ? '🖥 LM Studio' : '🦙 Llama'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
-            <Text
-              style={[
-                styles.toolsButtonText,
-                toolsEnabled && styles.toolsButtonActive,
-              ]}>
-              Tools {toolsEnabled ? 'ON' : 'OFF'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowLogs(true)}>
-            <Text style={styles.logsButton}>📋 Logs</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleClearChat}>
-            <Text style={styles.clearButton}>Clear</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Row 3: Control buttons (debug-only) */}
+        {DEBUG_UI && (
+          <View style={styles.headerRow3}>
+            <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
+              <Text style={styles.backendButtonText}>
+                {aiBackend === 'apple' ? '⚡ Apple' : aiBackend === 'lmstudio' ? '🖥 LM Studio' : '🦙 Llama'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleTools} style={styles.toolsButton}>
+              <Text
+                style={[
+                  styles.toolsButtonText,
+                  toolsEnabled && styles.toolsButtonActive,
+                ]}>
+                Tools {toolsEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowLogs(true)}>
+              <Text style={styles.logsButton}>📋 Logs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClearChat}>
+              <Text style={styles.clearButton}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {aiBackend === 'llama' && !AIService.isReady() && (
           <TouchableOpacity onPress={onModelSelect}>
             <Text style={styles.selectModelLink}>Load Model</Text>
           </TouchableOpacity>
         )}
-      </View>
-
-      {/* Test Button Row */}
-      <View style={styles.testButtonRow}>
-        <TouchableOpacity onPress={handleTestNoteProposal} style={styles.testButtonContainer}>
-          <Text style={styles.testButtonText}>🧪 Test Note Proposal</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -1598,11 +1501,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }
       />
 
-      {/* Debug Test Prompts */}
-      <DebugTestPrompts
-        onPromptSelect={prompt => setInputText(prompt)}
-        disabled={isGenerating}
-      />
+      {/* Debug Test Prompts (debug-only) */}
+      {DEBUG_UI && (
+        <DebugTestPrompts
+          onPromptSelect={prompt => setInputText(prompt)}
+          disabled={isGenerating}
+        />
+      )}
 
       {/* Edit Mode Banner */}
       {editingMessage && (
@@ -1813,46 +1718,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  embeddingModelRow: {
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  sessionRow: {
+  sessionIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
-  sessionButton: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#EEF2F7',
-    alignItems: 'center',
+  iconButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  sessionButtonText: {
-    fontSize: 13,
+  iconButtonText: {
+    fontSize: 20,
     color: '#007AFF',
     fontWeight: '600',
   },
-  sessionButtonTextDisabled: {
-    color: '#BBB',
-  },
-  embeddingBadge: {
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#D0D0D0',
-  },
-  embeddingBadgeLoaded: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#34C759',
-  },
-  embeddingBadgeText: {
-    fontSize: 10,
-    color: '#666',
-    fontWeight: '500',
+  iconButtonTextDisabled: {
+    color: '#C7C7CC',
   },
   selectModelLink: {
     fontSize: 13,
@@ -1958,25 +1839,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FF3B30',
     fontWeight: '500',
-  },
-  testButtonRow: {
-    backgroundColor: '#FFF9E6',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFD700',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  testButtonContainer: {
-    backgroundColor: '#FF9500',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   messageList: {
     flex: 1,
