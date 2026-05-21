@@ -30,6 +30,19 @@ A React Native app that runs large language models entirely on-device. No cloud,
 - iOS 18+ (for Apple Intelligence) or iOS 14+
 - Android device with 6GB+ RAM recommended
 
+## Models
+
+Add models from the Models tab — either download by name, or import a
+`.gguf` / `ggml` file you already have via the file picker. Defaults:
+
+| Role | Model | Quant | Size | Source |
+|------|-------|-------|------|--------|
+| Chat | Llama 3.1 8B Instruct (abliterated) | Q4_K_M | ~4.9 GB | [mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated-GGUF](https://huggingface.co/mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated-GGUF) |
+| Embedding | Nomic Embed Text v1.5 | Q8_0 | ~130 MB | [nomic-ai/nomic-embed-text-v1.5-GGUF](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF) |
+| Speech | Whisper base | — | ~147 MB | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) |
+
+Chat and embedding models run simultaneously. Smaller chat models (Llama 3.2 3B, Phi-3 Mini, Gemma 2B) also selectable for low-RAM devices.
+
 ## Quick Start
 
 ```bash
