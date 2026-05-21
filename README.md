@@ -1,5 +1,7 @@
 # LocalOS
 
+<img src="icon.png" width="120" alt="LocalOS icon" />
+
 A React Native app that runs large language models entirely on-device. No cloud, no API keys — inference runs locally via llama.cpp on Android/iOS, or Apple's Neural Engine on iOS 18+.
 
 **What it does:** Chat with a local AI that can read, search, and write your Obsidian vault — semantic search via local embeddings, tool calling, multi-step web research.
