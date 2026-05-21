@@ -34,8 +34,8 @@ import {
   MAX_CONTEXT_MESSAGES,
   ERROR_MESSAGES,
   WHISPER_MODEL,
-  DEBUG_UI,
 } from '../utils/constants';
+import {useSettings} from '../contexts/SettingsContext';
 import {Logger} from '../utils/Logger';
 
 interface ChatScreenProps {
@@ -49,6 +49,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onModelSelect,
   onOpenVaultFile,
 }) => {
+  const {debugUI, inference} = useSettings();
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -216,7 +217,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         const result = await AIService.chatCompletionWithTools(
           contextMessages,
           [],
-          {},
+          inference,
           token => {
             setStreamingText(prev => prev + token);
           },
@@ -732,7 +733,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         const result = await AIService.chatCompletionWithTools(
           contextMessages,
           [], // Tools are auto-registered in AIService
-          {},
+          inference,
           token => {
             // Streaming callback
             fullResponse += token;
@@ -880,7 +881,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         // Regular chat completion without tools
         const completion = await AIService.chatCompletionWithTimings(
           contextMessages,
-          {},
+          inference,
           token => {
             // Streaming callback
             fullResponse += token;
@@ -1396,7 +1397,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
 
         {/* Row 2: Prompt mode + context stats (debug-only) */}
-        {DEBUG_UI && (
+        {debugUI && (
           <View style={styles.headerRow2}>
             {aiBackend === 'llama' && toolsEnabled && (
               <View style={styles.promptModeContainer}>
@@ -1442,7 +1443,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         )}
 
         {/* Row 3: Control buttons (debug-only) */}
-        {DEBUG_UI && (
+        {debugUI && (
           <View style={styles.headerRow3}>
             <TouchableOpacity onPress={switchBackend} style={styles.backendButton}>
               <Text style={styles.backendButtonText}>
@@ -1502,7 +1503,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       />
 
       {/* Debug Test Prompts (debug-only) */}
-      {DEBUG_UI && (
+      {debugUI && (
         <DebugTestPrompts
           onPromptSelect={prompt => setInputText(prompt)}
           disabled={isGenerating}

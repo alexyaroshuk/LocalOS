@@ -73,7 +73,14 @@ export const STORAGE_KEYS = {
   EMBEDDING_MODEL: '@localos_embedding_model',
   RECENT_MODELS: '@localos_recent_models',
   SESSIONS_MIGRATED_SQLITE: '@localos_sessions_migrated_sqlite',
+  DEBUG_UI: '@localos_debug_ui',
+  INFERENCE_SETTINGS: '@localos_inference_settings',
+  PROMPT_TYPE: '@localos_prompt_type',
+  THINKING_ENABLED: '@localos_thinking_enabled',
 };
+
+// App version, surfaced in Settings > About
+export const APP_VERSION = '1.0.0';
 
 // File paths
 export const MODEL_STORAGE_DIR = 'models';
@@ -96,7 +103,8 @@ export const ERROR_MESSAGES = {
 export const MAX_MESSAGE_LENGTH = 4000;
 export const MAX_CONTEXT_MESSAGES = 20; // Keep last 20 messages - iPhone 17 can handle it
 
-// Master toggle for developer-only UI (backend switcher, tools toggle, logs,
-// clear, prompt-mode badge, quick-test prompts, note-proposal test button).
-// Hidden for the v1 release; a Settings screen will expose this later.
-export const DEBUG_UI = false;
+// Default for the developer-only UI toggle (backend switcher, tools toggle,
+// logs, clear, prompt-mode badge, quick-test prompts, plus the Tools/Vector/
+// Files tabs). Off by default; toggled at runtime via Settings and persisted.
+// Read the live value through useSettings().debugUI, not this constant.
+export const DEFAULT_DEBUG_UI = false;

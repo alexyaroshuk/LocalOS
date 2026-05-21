@@ -19,9 +19,14 @@ import {Tool, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
 import {Logger} from '../utils/Logger';
 import {ModelType, MODEL_CONFIGS} from '../types/modelConfig';
-import {SystemPromptType, SYSTEM_PROMPTS} from '../services/SystemPrompts';
+import {SYSTEM_PROMPTS} from '../services/SystemPrompts';
+import {useSettings} from '../contexts/SettingsContext';
 
 export const ToolTestScreen: React.FC = () => {
+  // Inference params + system prompt now live in Settings; read them here so
+  // tool tests run with the same config the chat uses.
+  const {inference, promptType} = useSettings();
+
   const [tools, setTools] = useState<Tool[]>([]);
   const [testResults, setTestResults] = useState<Map<string, ToolResult>>(
     new Map(),
@@ -29,15 +34,8 @@ export const ToolTestScreen: React.FC = () => {
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [backendInfo, setBackendInfo] = useState<string>('');
   const [modelMode, setModelMode] = useState<ModelType>('llama-3.2-1b-function-calling');
-  const [promptType, setPromptType] = useState<SystemPromptType>('letta');
   const [toolParams, setToolParams] = useState<Map<string, Record<string, string>>>(new Map());
   const [toolAvailability, setToolAvailability] = useState<Map<string, {available: boolean; reason?: string}>>(new Map());
-
-  // Inference settings state (for final response)
-  const [temperature, setTemperature] = useState<number>(0.7);
-  const [maxTokens, setMaxTokens] = useState<number>(512);
-  const [topP, setTopP] = useState<number>(0.9);
-  const [topK, setTopK] = useState<number>(40);
 
   // Model config overrides (for tool detection phase)
   const [toolDetectionTemp, setToolDetectionTemp] = useState<number>(
@@ -49,11 +47,6 @@ export const ToolTestScreen: React.FC = () => {
 
   // Prompt viewer state
   const [showPromptViewer, setShowPromptViewer] = useState<boolean>(false);
-
-  // Thinking mode (off by default - strips chain-of-thought from output)
-  const [thinkingEnabled, setThinkingEnabledState] = useState<boolean>(
-    LlamaService.isThinkingEnabled(),
-  );
 
   // Embedding model debug state
   const [embeddingModelStatus, setEmbeddingModelStatus] = useState<{
@@ -78,11 +71,6 @@ export const ToolTestScreen: React.FC = () => {
     const info = AIService.getBackendInfo();
     setBackendInfo(`${info.backend} - ${info.modelName}`);
     Logger.info('Tools supported?', AIService.areToolsSupported());
-
-    // Get current prompt type from LlamaService to persist selection
-    const currentPromptType = LlamaService.getPromptType();
-    setPromptType(currentPromptType);
-    Logger.info('📝 Current prompt type:', currentPromptType);
 
     // Check availability for all tools
     checkAllToolsAvailability(allTools);
@@ -225,19 +213,6 @@ export const ToolTestScreen: React.FC = () => {
       `Temperature: ${config.toolDetectionTemp}\n` +
       `Max Tokens: ${config.toolDetectionMaxTokens}\n\n` +
       `⚠️ Note: This doesn't change your loaded model, only the test settings. Your actual model is still loaded.`,
-    );
-  };
-
-  const handlePromptTypeChange = (newType: SystemPromptType) => {
-    setPromptType(newType);
-    LlamaService.setPromptType(newType);
-
-    const config = SYSTEM_PROMPTS[newType];
-    Logger.info(`Switched to ${config.name} system prompt`);
-
-    Alert.alert(
-      'System Prompt Changed',
-      `${config.name}\n\n${config.description}\n\nTest the tools to see if this prompt works better!`,
     );
   };
 
@@ -403,7 +378,7 @@ export const ToolTestScreen: React.FC = () => {
       Logger.info('═══════════════════════════════════════════════════════════');
       Logger.info(`Tool being tested: ${tool.name}`);
       Logger.info(`Test prompt: "${testPrompt}"`);
-      Logger.info(`Inference settings - Temp: ${temperature}, MaxTokens: ${maxTokens}, TopP: ${topP}, TopK: ${topK}`);
+      Logger.info(`Inference settings - Temp: ${inference.temperature}, MaxTokens: ${inference.maxTokens}, TopP: ${inference.topP}, TopK: ${inference.topK}`);
 
       // Create messages with very explicit system prompt for tool testing
       const messages: Message[] = [
@@ -420,11 +395,11 @@ export const ToolTestScreen: React.FC = () => {
         messages,
         [tool],
         {
-          // Final response generation settings
-          temperature,
-          maxTokens,
-          topP,
-          topK,
+          // Final response generation settings (from Settings)
+          temperature: inference.temperature,
+          maxTokens: inference.maxTokens,
+          topP: inference.topP,
+          topK: inference.topK,
           // Tool detection phase overrides
           toolDetectionTemp,
           toolDetectionMaxTokens,
@@ -664,32 +639,22 @@ export const ToolTestScreen: React.FC = () => {
         </View>
 
         <View style={styles.promptSelectorCard}>
-          <Text style={styles.promptSelectorTitle}>System Prompt Variant</Text>
+          <View style={styles.inferenceHeader}>
+            <Text style={styles.promptSelectorTitle}>System Prompt (read-only)</Text>
+            <TouchableOpacity
+              style={styles.clearContextButton}
+              onPress={handleClearContext}>
+              <Text style={styles.clearContextButtonText}>🗑️ Clear Context</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.promptSelectorSubtitle}>
             {SYSTEM_PROMPTS[promptType].name}
           </Text>
           <Text style={styles.promptSelectorDesc}>
-            {SYSTEM_PROMPTS[promptType].description}
+            Active variant + inference params are set in Settings. Temp{' '}
+            {inference.temperature} · MaxTokens {inference.maxTokens} · TopP{' '}
+            {inference.topP} · TopK {inference.topK}
           </Text>
-          <View style={styles.promptButtonRow}>
-            {(Object.keys(SYSTEM_PROMPTS) as SystemPromptType[]).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.promptButton,
-                  promptType === type && styles.promptButtonActive,
-                ]}
-                onPress={() => handlePromptTypeChange(type)}>
-                <Text
-                  style={[
-                    styles.promptButtonText,
-                    promptType === type && styles.promptButtonTextActive,
-                  ]}>
-                  {SYSTEM_PROMPTS[type].name.split(' ')[0]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           {/* Prompt Viewer Toggle */}
           <TouchableOpacity
@@ -723,110 +688,6 @@ export const ToolTestScreen: React.FC = () => {
               </View>
             );
           })()}
-        </View>
-
-        <View style={styles.inferenceSettingsCard}>
-          <View style={styles.inferenceHeader}>
-            <Text style={styles.inferenceTitle}>Inference Settings</Text>
-            <TouchableOpacity
-              style={styles.clearContextButton}
-              onPress={handleClearContext}>
-              <Text style={styles.clearContextButtonText}>🗑️ Clear Context</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.inferenceSubtitle}>
-            Adjust generation parameters (affects tool calling behavior)
-          </Text>
-
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Temperature: {temperature.toFixed(2)}</Text>
-            <View style={styles.settingInputRow}>
-              <TextInput
-                style={styles.settingInput}
-                value={temperature.toString()}
-                onChangeText={(text) => {
-                  const val = parseFloat(text);
-                  if (!isNaN(val) && val >= 0 && val <= 2) setTemperature(val);
-                }}
-                keyboardType="numeric"
-                placeholder="0.7"
-              />
-              <Text style={styles.settingRange}>0.0 - 2.0</Text>
-            </View>
-          </View>
-
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Max Tokens: {maxTokens}</Text>
-            <View style={styles.settingInputRow}>
-              <TextInput
-                style={styles.settingInput}
-                value={maxTokens.toString()}
-                onChangeText={(text) => {
-                  const val = parseInt(text);
-                  if (!isNaN(val) && val > 0) setMaxTokens(val);
-                }}
-                keyboardType="numeric"
-                placeholder="512"
-              />
-              <Text style={styles.settingRange}>1 - 4096</Text>
-            </View>
-          </View>
-
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Top P: {topP.toFixed(2)}</Text>
-            <View style={styles.settingInputRow}>
-              <TextInput
-                style={styles.settingInput}
-                value={topP.toString()}
-                onChangeText={(text) => {
-                  const val = parseFloat(text);
-                  if (!isNaN(val) && val >= 0 && val <= 1) setTopP(val);
-                }}
-                keyboardType="numeric"
-                placeholder="0.9"
-              />
-              <Text style={styles.settingRange}>0.0 - 1.0</Text>
-            </View>
-          </View>
-
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Top K: {topK}</Text>
-            <View style={styles.settingInputRow}>
-              <TextInput
-                style={styles.settingInput}
-                value={topK.toString()}
-                onChangeText={(text) => {
-                  const val = parseInt(text);
-                  if (!isNaN(val) && val > 0) setTopK(val);
-                }}
-                keyboardType="numeric"
-                placeholder="40"
-              />
-              <Text style={styles.settingRange}>1 - 100</Text>
-            </View>
-          </View>
-
-          <View style={styles.thinkingRow}>
-            <View style={styles.thinkingInfo}>
-              <Text style={styles.settingLabel}>Thinking Mode</Text>
-              <Text style={styles.thinkingHint}>
-                Off = strip {'<|channel>thought<channel|>'} / {'<think>'} blocks from output. On = pass through (useful for debugging reasoning models).
-              </Text>
-            </View>
-            <Switch
-              value={thinkingEnabled}
-              onValueChange={(val) => {
-                setThinkingEnabledState(val);
-                LlamaService.setThinkingEnabled(val);
-              }}
-              trackColor={{false: '#D1D1D6', true: '#9C27B0'}}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <Text style={styles.inferenceHint}>
-            💡 Lower temperature (0.1-0.3) may help with tool calling accuracy. Higher values increase creativity but reduce reliability.
-          </Text>
         </View>
 
         <View style={styles.modelConfigCard}>

@@ -19,11 +19,12 @@ import {
 import {ChatScreen} from './src/screens/ChatScreen';
 import {ModelsScreen} from './src/screens/ModelsScreen';
 import {ToolTestScreen} from './src/screens/ToolTestScreen';
-import {MemoryViewerScreen} from './src/screens/MemoryViewerScreen';
 import {VectorSearchTestScreen} from './src/screens/VectorSearchTestScreen';
 import {VaultBrowserScreen} from './src/screens/VaultBrowserScreen';
 import {FileSystemTestScreen} from './src/screens/FileSystemTestScreen';
+import {SettingsScreen} from './src/screens/SettingsScreen';
 import {ModelInfo} from './src/types';
+import {SettingsProvider, useSettings} from './src/contexts/SettingsContext';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import MemoryService from './src/services/MemoryService';
@@ -31,14 +32,16 @@ import {DatabaseProxy} from './src/services/DatabaseProxy';
 import {Logger} from './src/utils/Logger';
 import RNFS from 'react-native-fs';
 
-type Screen = 'chat' | 'models' | 'tools' | 'memory' | 'vector' | 'vault' | 'filesystem';
+type Screen = 'chat' | 'models' | 'tools' | 'vector' | 'vault' | 'filesystem' | 'settings';
 
 function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
-        <AppContent />
+        <SettingsProvider>
+          <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+          <AppContent />
+        </SettingsProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
@@ -46,7 +49,21 @@ function App() {
 
 function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
+  const {debugUI} = useSettings();
   const [currentScreen, setCurrentScreen] = useState<Screen>('chat');
+
+  // If debug mode is turned off while viewing a debug-only screen, fall back
+  // to chat so the user isn't stranded on a now-hidden tab.
+  useEffect(() => {
+    if (
+      !debugUI &&
+      (currentScreen === 'tools' ||
+        currentScreen === 'vector' ||
+        currentScreen === 'filesystem')
+    ) {
+      setCurrentScreen('chat');
+    }
+  }, [debugUI, currentScreen]);
   const [currentModel, setCurrentModel] = useState<ModelInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   // Set when a chat-message source chip requests opening a vault file.
@@ -225,12 +242,6 @@ function AppContent() {
           </View>
         )}
 
-        {currentScreen === 'memory' && (
-          <View style={styles.screenContainer}>
-            <MemoryViewerScreen />
-          </View>
-        )}
-
         {currentScreen === 'tools' && (
           <View style={styles.screenContainer}>
             <ToolTestScreen />
@@ -255,6 +266,12 @@ function AppContent() {
         {currentScreen === 'filesystem' && (
           <View style={styles.screenContainer}>
             <FileSystemTestScreen />
+          </View>
+        )}
+
+        {currentScreen === 'settings' && (
+          <View style={styles.screenContainer}>
+            <SettingsScreen />
           </View>
         )}
       </View>
@@ -291,50 +308,39 @@ function AppContent() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            currentScreen === 'tools' && styles.navButtonActive,
-          ]}
-          onPress={() => setCurrentScreen('tools')}>
-          <Text
+        {debugUI && (
+          <TouchableOpacity
             style={[
-              styles.navButtonText,
-              currentScreen === 'tools' && styles.navButtonTextActive,
-            ]}>
-            Tools
-          </Text>
-        </TouchableOpacity>
+              styles.navButton,
+              currentScreen === 'tools' && styles.navButtonActive,
+            ]}
+            onPress={() => setCurrentScreen('tools')}>
+            <Text
+              style={[
+                styles.navButtonText,
+                currentScreen === 'tools' && styles.navButtonTextActive,
+              ]}>
+              Tools
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            currentScreen === 'memory' && styles.navButtonActive,
-          ]}
-          onPress={() => setCurrentScreen('memory')}>
-          <Text
+        {debugUI && (
+          <TouchableOpacity
             style={[
-              styles.navButtonText,
-              currentScreen === 'memory' && styles.navButtonTextActive,
-            ]}>
-            Memory
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            currentScreen === 'vector' && styles.navButtonActive,
-          ]}
-          onPress={() => setCurrentScreen('vector')}>
-          <Text
-            style={[
-              styles.navButtonText,
-              currentScreen === 'vector' && styles.navButtonTextActive,
-            ]}>
-            Vector
-          </Text>
-        </TouchableOpacity>
+              styles.navButton,
+              currentScreen === 'vector' && styles.navButtonActive,
+            ]}
+            onPress={() => setCurrentScreen('vector')}>
+            <Text
+              style={[
+                styles.navButtonText,
+                currentScreen === 'vector' && styles.navButtonTextActive,
+              ]}>
+              Vector
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[
@@ -351,6 +357,7 @@ function AppContent() {
           </Text>
         </TouchableOpacity>
 
+        {debugUI && (
         <TouchableOpacity
           style={[
             styles.navButton,
@@ -363,6 +370,22 @@ function AppContent() {
               currentScreen === 'filesystem' && styles.navButtonTextActive,
             ]}>
             Files
+          </Text>
+        </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.navButton,
+            currentScreen === 'settings' && styles.navButtonActive,
+          ]}
+          onPress={() => setCurrentScreen('settings')}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentScreen === 'settings' && styles.navButtonTextActive,
+            ]}>
+            Settings
           </Text>
         </TouchableOpacity>
       </View>
