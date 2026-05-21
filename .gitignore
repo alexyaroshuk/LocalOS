@@ -85,3 +85,6 @@ sample-vault/
 #tools
 .claude/
 .opencode/
+# llama.rn Hexagon HTP libs - auto-copied from node_modules by gradle
+# syncRNLlamaHtpAssets task on every Android build. Regenerated, not source.
+android/app/src/main/assets/ggml-hexagon/
