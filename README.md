@@ -1,31 +1,32 @@
-# LocalOS - Local AI Chat App
+# LocalOS
 
-A React Native mobile application that runs AI language models completely offline using llama.cpp and optional Apple Intelligence integration on iOS 18+.
+A React Native app that runs large language models entirely on-device. No cloud, no API keys — inference runs locally via llama.cpp on Android/iOS, or Apple's Neural Engine on iOS 18+.
 
-## Features
+**What it does:** Chat with a local AI that can read, search, and write your Obsidian vault — semantic search via local embeddings, tool calling, multi-step web research.
 
-- **Completely Offline** - All inference happens on-device
-- **Apple Intelligence** - Uses Neural Engine on iOS 18+ devices
-- **Local Models** - Support for Llama 3.2, Phi-3, Gemma, and GGUF models
-- **GPU Acceleration** - Metal (iOS) and OpenCL (Android)
-- **Streaming Responses** - Token-by-token generation
-- **Memory System** - Letta-style core + archival memory
-- **Semantic Search** - Vector embeddings with FTS5 search
-- **Tool Calling** - Function calling with Pythonic and XML formats
+## Highlights
+
+- **Three inference backends** — llama.cpp, Apple Intelligence (Neural Engine), LM Studio
+- **Obsidian vault integration** — chunk, embed, and semantically search markdown notes on-device
+- **Tool calling with orchestration** — web search → fetch → synthesize in one response
+- **Dual-model support** — run chat and embedding models simultaneously (Llama 3.1 8B + Nomic Embed)
+- **Voice input** — speech-to-text via Whisper (ggml-base)
+- **GPU acceleration** — Metal (iOS) and OpenCL (Android)
+- **Chat sessions** — conversation history persisted in SQLite
 
 ## Tech Stack
 
 - **Framework**: React Native 0.82.1
-- **AI Engine**: llama.cpp via llama.rn + Apple Intelligence
-- **Database**: @op-engineering/op-sqlite with FTS5
-- **AI SDK**: Vercel AI SDK (Apple Intelligence)
+- **AI Engine**: llama.cpp via llama.rn + Apple Intelligence (iOS 18+)
+- **Database**: SQLite (op-sqlite) with FTS5 + cosine similarity vector search
+- **AI SDK**: Vercel AI SDK (Apple Intelligence tool calling)
 - **Language**: TypeScript
 
 ## Requirements
 
 - Node.js 20+
 - iOS 18+ (for Apple Intelligence) or iOS 14+
-- Android device with 6GB+ RAM
+- Android device with 6GB+ RAM recommended
 
 ## Quick Start
 
@@ -48,13 +49,18 @@ npm run android
 
 ```
 src/
-├── services/            # Business logic
-│   ├── AIService.ts            # Unified AI interface
-│   ├── LlamaService.ts         # llama.cpp wrapper
+├── services/
+│   ├── AIService.ts            # Unified AI interface (llama / Apple / LM Studio)
+│   ├── LlamaService.ts         # llama.cpp wrapper with dual-instance support
+│   ├── LMStudioService.ts      # LM Studio OpenAI-compatible client
 │   ├── AppleIntelligenceService.ts
-│   ├── MemoryService.ts        # Core memory blocks
-│   ├── DatabaseService.ts      # SQLite + vector search
-│   └── ToolService.ts          # Tool registry
+│   ├── VaultService.ts         # Obsidian vault scanning and markdown parsing
+│   ├── VaultIndexService.ts    # Semantic search index (vault_chunks)
+│   ├── DatabaseService.ts      # SQLite + FTS5 + vector search
+│   ├── SessionService.ts       # Chat session persistence
+│   ├── ToolService.ts          # Tool registry and execution
+│   ├── OrchestrationService.ts # Multi-step web search workflows
+│   └── EmbeddingService.ts     # Embedding generation and backfill
 ├── screens/             # App screens
 ├── components/          # UI components
 ├── types/               # TypeScript definitions

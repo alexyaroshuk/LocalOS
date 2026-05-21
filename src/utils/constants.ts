@@ -17,6 +17,15 @@ export const DEFAULT_LLAMA_CONFIG = {
 // Recommended models for mobile devices
 export const RECOMMENDED_MODELS = [
   {
+    id: 'llama-3.1-8b-abliterated-q4',
+    name: 'Llama 3.1 8B Instruct (Q4)',
+    filename: 'meta-llama-3.1-8b-instruct-abliterated.Q4_K_M.gguf',
+    size: 4920000000, // ~4.9GB
+    quantization: 'Q4_K_M',
+    downloaded: false,
+    huggingFaceRepo: 'mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated-GGUF',
+  },
+  {
     id: 'llama-3.2-3b-q4',
     name: 'Llama 3.2 3B (Q4)',
     filename: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf',

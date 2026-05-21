@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LocalOS is a React Native mobile application that runs local AI models on-device using llama.cpp (via llama.rn). The app supports both Android and iOS, with optional Apple Intelligence integration on iOS 18+. It features a chat interface with tool calling, memory management (inspired by Letta), vector embeddings, and semantic search.
+LocalOS is a React Native mobile app for local AI inference. Supports on-device chat (llama.cpp via llama.rn), Apple Intelligence (iOS 18+), and LM Studio (OpenAI-compatible local server). Key features: Obsidian vault integration with semantic search, tool calling with multi-step orchestration, voice input via Whisper, and chat session persistence.
 
 ## Key Technologies
 
@@ -59,39 +59,47 @@ adb devices
 The app uses a unified `AIService` (src/services/AIService.ts) that auto-detects and routes to the best available backend:
 
 1. **Apple Intelligence** (iOS 18+) - On-device Foundation Models via Neural Engine
-2. **Llama.cpp** (fallback) - Local GGUF models via llama.rn
+2. **Llama.cpp** (cross-platform fallback) - Local GGUF models via llama.rn
+3. **LM Studio** - OpenAI-compatible local server (`LMStudioService.ts`). Configure base URL in Settings.
 
 **Important**: `LlamaService` supports **dual instances** - you can run a chat model AND a separate embedding model simultaneously. The embedding model runs alongside the chat model for semantic search.
 
 ### Service Architecture
 
-- **AIService.ts** - Unified interface, auto-detects backend (Apple Intelligence vs Llama.cpp)
+- **AIService.ts** - Unified interface, auto-detects and routes to best backend
 - **LlamaService.ts** - Manages llama.cpp contexts (chat + embedding dual instances)
+- **LMStudioService.ts** - OpenAI-compatible client for LM Studio; configurable base URL
 - **AppleIntelligenceService.ts** - Apple Intelligence wrapper using AI SDK
+- **VaultService.ts** - Obsidian vault management: folder selection, disk scan, markdown parsing, wiki link extraction
+- **VaultIndexService.ts** - Semantic index over vault files: chunk by heading, embed, store in `vault_chunks` SQLite table
+- **OrchestrationService.ts** - Multi-step web search workflows: intent → search → evaluate → fetch → synthesize
+- **SessionService.ts** - Chat session persistence in SQLite; one-time migration from AsyncStorage
 - **ToolService.ts** - Function calling registry and execution
-- **MemoryService.ts** - Core memory blocks (in-context memory)
-- **DatabaseService.ts** - SQLite persistence for archival memory, facts, tasks
-- **EmbeddingService.ts** - Semantic search via local embedding models
+- **DatabaseService.ts** - SQLite persistence for vault index, sessions, facts, tasks
+- **EmbeddingService.ts** - Embedding generation and backfill
+- **PromptBuilder.ts** - Assembles system prompts from vault context and tool schemas
+- **StorageService.ts** - AsyncStorage KV for model selection and app preferences
 
-### Memory System (Letta-Inspired)
+### Vault System
 
-The app implements a Letta-style memory architecture:
+The Vault is the primary persistent knowledge layer. Users point the app at an Obsidian-style folder.
 
-**Core Memory** (src/services/MemoryService.ts):
-- Always loaded in system prompt
-- 4 blocks: `user_profile`, `conversation_style`, `current_focus`, `relationship_context`
-- Stored in AsyncStorage
-- Updated via `core_memory_append` / `core_memory_replace` tools
+**VaultService.ts** — Scans folder tree, parses frontmatter, extracts `[[wiki links]]` and inline tags.
 
-**Archival Memory** (src/services/DatabaseService.ts):
-- Long-term facts, events, preferences stored in SQLite
-- Vector embeddings for semantic search (requires embedding model loaded)
-- Tools: `archival_memory_insert`, `archival_memory_search`
+**VaultIndexService.ts** — Chunks each file by heading (~256 tokens), generates embeddings, stores in `vault_chunks` SQLite table. Link graph stored in `vault_links`. Index is idempotent (hash-based, rebuilt only on file change).
 
-**Conversation Search** (src/services/DatabaseService.ts):
-- Past conversations stored with summaries
-- Full-text search via SQLite FTS5
-- Tool: `conversation_search`
+**Vault tools** (registered in `ToolService.ts`):
+- `vault_lookup` — find single best fact via semantic search
+- `search_vault` — top-k semantic search with snippets
+- `list_vault_files` — inventory with previews
+- `read_vault_file` — open specific file by path
+- `get_vault_connections` — forward/backlinks graph
+- `vault_save` — write/append content to a vault file
+- `update_vault_file` — full file overwrite
+
+### Memory System (Inactive)
+
+> **Note:** A Letta-style core/archival memory system exists (`MemoryService.ts`, `LettaMemoryTools.ts`) but is not currently active. The Vault system is the primary persistent knowledge layer.
 
 ### Tool Calling System
 
@@ -110,33 +118,47 @@ The app implements a Letta-style memory architecture:
 - 8B models have native tool support with XML format
 - Context sizes vary (2048-8192 tokens)
 
+**Registered Tools**:
+- Time + Web: `get_current_datetime`, `search_web`, `fetch_web_page`
+- Vault (read): `vault_lookup`, `search_vault`, `list_vault_files`, `read_vault_file`, `get_vault_connections`
+- Vault (write): `vault_save`, `update_vault_file`
+
 ### Database Schema
 
-SQLite database with FTS5 full-text search:
+SQLite database with FTS5 full-text search (schema v6):
 
 **Tables**:
-- `core_memory` - Core memory blocks
-- `archive_memories` - Long-term memories with embeddings
+- `vault_chunks` - Semantic index chunks over vault markdown files (with embeddings)
+- `vault_links` - Wiki link graph edges extracted from vault files
+- `chat_sessions` - Persisted chat sessions as JSON blobs
+- `conversations` - Past conversation summaries
 - `user_facts` - Structured facts about the user
 - `tasks` - Task tracking
-- `conversation_summaries` - Past conversation summaries
-- `archive_memories_fts` - FTS5 virtual table for text search
+- `core_memory` - Core memory blocks (inactive)
+- `memories` - Archive memories with embeddings (inactive; was `archive_memories`)
+- `memories_fts` - FTS5 virtual table for memories (inactive)
 
-**Vector Search**: Cosine similarity search on embeddings stored as JSON arrays.
+**Vector Search**: Cosine similarity on embeddings stored as base64-encoded TEXT columns.
 
 ### Screen Architecture
 
 **Navigation** (App.tsx):
-- Bottom tab navigation with 5 screens
-- ChatScreen stays mounted (prevents generation interruption)
-- Other screens mount/unmount on navigation
+- Custom bottom tab. 4 always-visible tabs: Chat, Models, Vault, Settings
+- 3 debug-only tabs (gated by `debugUI` toggle in Settings): Tools, Vector, Files
+- ChatScreen stays mounted (opacity hide) to prevent interrupting ongoing generation
+- Disabling `debugUI` while on a debug tab redirects to Chat
 
 **Screens**:
-- `ChatScreen.tsx` - Main chat interface
-- `ModelsScreen.tsx` - Model download/selection
-- `ToolTestScreen.tsx` - Tool testing UI
-- `MemoryViewerScreen.tsx` - View/manage memory
-- `VectorSearchTestScreen.tsx` - Test semantic search
+- `ChatScreen.tsx` - Main chat interface; handles vault file deep-links
+- `ModelsScreen.tsx` - Download/select chat + embedding models
+- `VaultBrowserScreen.tsx` - Browse vault folder tree, read/write markdown
+- `SettingsScreen.tsx` - `debugUI` toggle, LM Studio URL, inference params
+- `DebugInfoScreen.tsx` - Diagnostics (accessible from Settings)
+- `LogViewerScreen.tsx` - In-app logs (accessible from DebugInfoScreen)
+- `ToolTestScreen.tsx` - Tool testing (debug only)
+- `VectorSearchTestScreen.tsx` - Semantic search testing (debug only)
+- `FileSystemTestScreen.tsx` - File system testing (debug only)
+- `MemoryViewerScreen.tsx` - View memory blocks (inactive)
 
 ### Type System
 
@@ -153,6 +175,10 @@ Model-specific configs in `src/types/modelConfig.ts`:
 - Detects model type from filename
 - Provides context size, tool format, temperature presets
 - Function: `getModelConfig(modelName: string): ModelConfig`
+
+Additional type files:
+- `src/types/memory.ts` - `Memory`, `MarkdownNote`, `SearchResult`, `VaultStats`
+- `src/types/vault.ts` - `VaultFile`, `VaultFolder`, `VaultConfig`, `VaultScanResult`
 
 ## Important Patterns
 
@@ -176,6 +202,9 @@ await AIService.switchBackend('apple');
 
 // Switch to Llama.cpp
 await AIService.switchBackend('llama');
+
+// Switch to LM Studio (configure base URL in Settings first)
+await AIService.switchBackend('lmstudio');
 ```
 
 ### Tool Calling
@@ -211,7 +240,12 @@ LlamaService.setPromptType('concise');
 
 ## Model Configuration
 
-**Context Sizes**:
+**Featured models** (defined in `src/utils/constants.ts`):
+- Chat: `meta-llama-3.1-8b-instruct-abliterated.Q4_K_M.gguf` (~4.9GB) — `mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated-GGUF`
+- Embedding: `nomic-embed-text-v1.5.Q8_0.gguf` (~130MB) — `nomic-ai/nomic-embed-text-v1.5-GGUF`
+- Speech (Whisper): `ggml-base.bin` (~147MB) — `ggerganov/whisper.cpp`
+
+**Context Sizes** (auto-detected via `getModelConfig()`):
 - 1B models: 2048 tokens
 - 3B models: 4096 tokens
 - 8B models: 8192 tokens
@@ -220,15 +254,17 @@ LlamaService.setPromptType('concise');
 - 1B: High temp (1.2), needs examples in prompt
 - 8B: Lower temp (0.6), XML format, no examples needed
 
-Auto-detected from model filename via `getModelConfig()`.
-
 ## Database Initialization
 
 App.tsx initializes in order:
 1. ModelStorageService - Model registry
-2. MemoryService - Core memory blocks
-3. DatabaseService - SQLite with schema creation
-4. Load last used model (if any)
+2. MemoryService - Core memory blocks (inactive)
+3. DatabaseService - SQLite with schema creation and migrations (v1-v6)
+4. SessionService - Chat session persistence; one-time migration from AsyncStorage
+5. ToolService - Registers all tools
+6. VaultService - Loads vault config, sets active vault path
+7. Load last used chat model (if any)
+8. Load last used embedding model (if any)
 
 ## Debugging
 
