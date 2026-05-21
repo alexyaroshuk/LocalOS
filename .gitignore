@@ -78,8 +78,9 @@ plan.md
 docs/ai-web-search-implementation.md
 .claude/settings.local.json
 
-#dev
-dev/
+#local scratch
+_local/
+sample-vault/
 
 #tools
 .claude/
