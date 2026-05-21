@@ -560,14 +560,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'monospace',
   },
-  dualModelText: {
-    fontSize: 14,
-    color: '#34C759',
-    marginTop: 8,
-    marginBottom: 4,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
   button: {
     backgroundColor: '#007AFF',
     padding: 14,

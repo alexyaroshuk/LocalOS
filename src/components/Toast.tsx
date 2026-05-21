@@ -16,6 +16,16 @@ export const Toast: React.FC<ToastProps> = ({
 }) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(-20)).current;
+  // Track the current opacity value without reaching into Animated.Value's
+  // private `_value` field (not in the public types).
+  const opacityValue = React.useRef(0);
+
+  useEffect(() => {
+    const id = opacity.addListener(({value}) => {
+      opacityValue.current = value;
+    });
+    return () => opacity.removeListener(id);
+  }, [opacity]);
 
   useEffect(() => {
     if (visible) {
@@ -55,7 +65,7 @@ export const Toast: React.FC<ToastProps> = ({
     }
   }, [visible, duration, opacity, translateY, onHide]);
 
-  if (!visible && opacity._value === 0) {
+  if (!visible && opacityValue.current === 0) {
     return null;
   }
 

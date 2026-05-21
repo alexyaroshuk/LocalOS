@@ -4,7 +4,10 @@
  */
 
 import {Platform, Alert, PermissionsAndroid} from 'react-native';
-import DocumentPicker from '@react-native-documents/picker';
+import DocumentPicker, {
+  errorCodes,
+  isErrorWithCode,
+} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 import {Logger} from '../utils/Logger';
 
@@ -124,7 +127,7 @@ export class FolderPickerService {
         return null;
       }
     } catch (err) {
-      if (DocumentPicker.isCancel(err)) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
         Logger.info('User cancelled folder picker');
         return null;
       }

@@ -581,6 +581,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   centerContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -609,10 +610,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
-  },
-  centerContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
   },
   setupCard: {
     backgroundColor: '#FFFFFF',
