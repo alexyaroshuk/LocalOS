@@ -210,7 +210,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
                 Alert.alert('Success', 'Model downloaded successfully!');
               } catch (error) {
-                console.error('Download failed:', error);
+                Logger.error('Download failed:', error);
                 setDownloadingModels(prev => {
                   const newMap = new Map(prev);
                   newMap.delete(model.id);
@@ -226,7 +226,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         ],
       );
     } catch (error) {
-      console.error('Download error:', error);
+      Logger.error('Download error:', error);
       Alert.alert('Error', 'Failed to start download');
     }
   };
@@ -427,7 +427,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
               Alert.alert('Success', 'Model deleted successfully');
             } catch (error) {
-              console.error('Delete failed:', error);
+              Logger.error('Delete failed:', error);
               Alert.alert('Error', 'Failed to delete model');
             }
           },
@@ -449,12 +449,12 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
       const file = result[0];
 
-      console.log('File picker result:', JSON.stringify(file, null, 2));
+      Logger.log('File picker result:', JSON.stringify(file, null, 2));
 
       // Get filename from either name or uri
       const fileName = file.name || file.uri?.split('/').pop() || '';
 
-      console.log('Extracted filename:', fileName);
+      Logger.log('Extracted filename:', fileName);
 
       // Check if it's a GGUF file
       if (!fileName.toLowerCase().endsWith('.gguf')) {
@@ -490,9 +490,9 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
                 try {
                   const stat = await RNFS.stat(destPath);
                   actualSize = Number(stat.size);
-                  console.log('Actual file size:', actualSize);
+                  Logger.log('Actual file size:', actualSize);
                 } catch (err) {
-                  console.warn('Could not get file size, using picker size:', err);
+                  Logger.warn('Could not get file size, using picker size:', err);
                 }
 
                 // Check if model with this path already exists
@@ -531,7 +531,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
 
                 Alert.alert('Success', 'Model imported successfully!');
               } catch (error) {
-                console.error('Import failed:', error);
+                Logger.error('Import failed:', error);
                 Alert.alert('Error', 'Failed to import model');
               } finally {
                 setLoadingModel(null);
@@ -541,7 +541,7 @@ export const ModelsScreen: React.FC<ModelsScreenProps> = ({
         ],
       );
     } catch (error) {
-      console.error('File picker error:', error);
+      Logger.error('File picker error:', error);
       Alert.alert('Error', 'Failed to open file picker');
     }
   };

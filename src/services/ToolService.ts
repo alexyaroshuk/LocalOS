@@ -3,6 +3,7 @@
  */
 import {Tool, ToolCall, ToolResult, Message} from '../types';
 import {generateId} from '../utils/helpers';
+import {Logger} from '../utils/Logger';
 import {VaultService} from './VaultService';
 import {VaultIndexService} from './VaultIndexService';
 import {DatabaseService} from './DatabaseService';
@@ -37,7 +38,7 @@ export class ToolService {
     this.registerTool(this.getUpdateVaultFileTool());
 
     this.initialized = true;
-    console.log(`ToolService initialized with ${this.tools.size} tools`);
+    Logger.log(`ToolService initialized with ${this.tools.size} tools`);
   }
 
   /**
@@ -45,7 +46,7 @@ export class ToolService {
    */
   static registerTool(tool: Tool): void {
     this.tools.set(tool.name, tool);
-    console.log(`Tool registered: ${tool.name}`);
+    Logger.log(`Tool registered: ${tool.name}`);
   }
 
   /**
@@ -78,9 +79,9 @@ export class ToolService {
     }
 
     try {
-      console.log(`Executing tool: ${toolCall.name}`, toolCall.arguments);
+      Logger.log(`Executing tool: ${toolCall.name}`, toolCall.arguments);
       const result = await tool.execute(toolCall.arguments);
-      console.log(`Tool result for ${toolCall.name}:`, result);
+      Logger.log(`Tool result for ${toolCall.name}:`, result);
 
       return {
         id: toolCall.id,
@@ -88,7 +89,7 @@ export class ToolService {
         result,
       };
     } catch (error) {
-      console.error(`Tool execution error for ${toolCall.name}:`, error);
+      Logger.error(`Tool execution error for ${toolCall.name}:`, error);
       return {
         id: toolCall.id,
         name: toolCall.name,
@@ -223,7 +224,7 @@ export class ToolService {
       execute: async (args: Record<string, any>) => {
         try {
           const query = args.query as string;
-          console.log(`[WEB SEARCH] Query: ${query}`);
+          Logger.log(`[WEB SEARCH] Query: ${query}`);
 
           // Use DuckDuckGo HTML scraping (no API key required)
           const encodedQuery = encodeURIComponent(query);
@@ -327,7 +328,7 @@ export class ToolService {
             count: results.length,
           };
         } catch (error) {
-          console.error('Web search error:', error);
+          Logger.error('Web search error:', error);
           return {
             success: false,
             error: error instanceof Error ? error.message : 'Search failed',
@@ -367,8 +368,8 @@ export class ToolService {
           const urlStr = args.url as string;
           const extractPrompt = (args.extract_prompt as string) || 'Provide a concise summary of the main content in 2-3 sentences.';
 
-          console.log(`[FETCH PAGE] URL: ${urlStr}`);
-          console.log(`[FETCH PAGE] Extraction prompt: ${extractPrompt}`);
+          Logger.log(`[FETCH PAGE] URL: ${urlStr}`);
+          Logger.log(`[FETCH PAGE] Extraction prompt: ${extractPrompt}`);
 
           // Validate URL
           let url: URL;
@@ -452,10 +453,10 @@ export class ToolService {
           // Limit content to 2000 chars for LLM processing (balance: enough context, manageable tokens)
           const contentForExtraction = plainText.substring(0, 2000);
 
-          console.log(`[FETCH PAGE] Content fetched: ${contentForExtraction.length} characters`);
+          Logger.log(`[FETCH PAGE] Content fetched: ${contentForExtraction.length} characters`);
 
           // Use local LLM to extract/summarize
-          console.log(`[FETCH PAGE] Calling local LLM for intelligent extraction...`);
+          Logger.log(`[FETCH PAGE] Calling local LLM for intelligent extraction...`);
 
           const extractionMessages: Message[] = [
             {
@@ -479,7 +480,7 @@ export class ToolService {
           // always "" — the page never got summarized.
           const summary = (extractionResult || '').trim();
 
-          console.log(`[FETCH PAGE] ✅ Extraction complete`);
+          Logger.log(`[FETCH PAGE] ✅ Extraction complete`);
 
           // Keep the model-visible payload lean: the summary is the
           // deliverable. Dumping the full page body (6k+ chars) into an
@@ -503,7 +504,7 @@ export class ToolService {
             note: contentForExtraction.length === 2000 ? 'Content truncated to 2000 characters for processing' : undefined,
           };
         } catch (error) {
-          console.error('Fetch page error:', error);
+          Logger.error('Fetch page error:', error);
           return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to fetch page',
@@ -1560,7 +1561,7 @@ export class ToolService {
         }
       }
     } catch (error) {
-      console.error('Error parsing tool calls:', error);
+      Logger.error('Error parsing tool calls:', error);
     }
 
     return toolCalls;

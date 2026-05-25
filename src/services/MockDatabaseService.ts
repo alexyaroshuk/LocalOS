@@ -4,6 +4,7 @@
  */
 
 import {generateId} from '../utils/helpers';
+import {Logger} from '../utils/Logger';
 
 // Database types based on newplan.md schema
 
@@ -72,7 +73,7 @@ export class MockDatabaseService {
       return;
     }
 
-    console.log('[MockDB] Initializing database...');
+    Logger.log('[MockDB] Initializing database...');
 
     // Initialize core memory blocks (these will be loaded by MemoryService)
     // NOTE: Core memory should INFLUENCE BEHAVIOR, not store facts
@@ -268,12 +269,12 @@ export class MockDatabaseService {
     ];
 
     this.initialized = true;
-    console.log('[MockDB] Database initialized with mock data');
-    console.log(`  - Core memory blocks: ${this.coreMemory.length}`);
-    console.log(`  - Archive memories: ${this.archiveMemories.length}`);
-    console.log(`  - Tasks: ${this.tasks.length}`);
-    console.log(`  - Conversations: ${this.conversations.length}`);
-    console.log(`  - User facts: ${this.userFacts.length}`);
+    Logger.log('[MockDB] Database initialized with mock data');
+    Logger.log(`  - Core memory blocks: ${this.coreMemory.length}`);
+    Logger.log(`  - Archive memories: ${this.archiveMemories.length}`);
+    Logger.log(`  - Tasks: ${this.tasks.length}`);
+    Logger.log(`  - Conversations: ${this.conversations.length}`);
+    Logger.log(`  - User facts: ${this.userFacts.length}`);
   }
 
   // ============== CORE MEMORY OPERATIONS ==============
@@ -291,7 +292,7 @@ export class MockDatabaseService {
     if (block) {
       block.content = content;
       block.last_updated = Date.now();
-      console.log(`[MockDB] Updated core memory block: ${blockName}`);
+      Logger.log(`[MockDB] Updated core memory block: ${blockName}`);
     }
   }
 
@@ -312,7 +313,7 @@ export class MockDatabaseService {
       metadata: JSON.stringify(metadata || {}),
     };
     this.archiveMemories.push(memory);
-    console.log(`[MockDB] Saved archive memory: ${content.substring(0, 50)}...`);
+    Logger.log(`[MockDB] Saved archive memory: ${content.substring(0, 50)}...`);
     return memory;
   }
 
@@ -357,7 +358,7 @@ export class MockDatabaseService {
       completed_at: null,
     };
     this.tasks.push(task);
-    console.log(`[MockDB] Created task: ${title}`);
+    Logger.log(`[MockDB] Created task: ${title}`);
     return task;
   }
 
@@ -366,7 +367,7 @@ export class MockDatabaseService {
     if (!task) return null;
 
     Object.assign(task, updates);
-    console.log(`[MockDB] Updated task: ${task.title}`);
+    Logger.log(`[MockDB] Updated task: ${task.title}`);
     return task;
   }
 
@@ -376,7 +377,7 @@ export class MockDatabaseService {
 
     task.status = 'completed';
     task.completed_at = Date.now();
-    console.log(`[MockDB] Completed task: ${task.title}`);
+    Logger.log(`[MockDB] Completed task: ${task.title}`);
     return task;
   }
 
@@ -426,7 +427,7 @@ export class MockDatabaseService {
       message_count: messageCount,
     };
     this.conversations.push(conversation);
-    console.log(`[MockDB] Saved conversation summary`);
+    Logger.log(`[MockDB] Saved conversation summary`);
     return conversation;
   }
 
@@ -453,7 +454,7 @@ export class MockDatabaseService {
       last_confirmed: Date.now(),
     };
     this.userFacts.push(userFact);
-    console.log(`[MockDB] Saved user fact: ${fact.substring(0, 50)}...`);
+    Logger.log(`[MockDB] Saved user fact: ${fact.substring(0, 50)}...`);
     return userFact;
   }
 
@@ -473,7 +474,7 @@ export class MockDatabaseService {
 
     fact.confidence = confidence;
     fact.last_confirmed = Date.now();
-    console.log(`[MockDB] Updated user fact confidence: ${fact.fact.substring(0, 50)}...`);
+    Logger.log(`[MockDB] Updated user fact confidence: ${fact.fact.substring(0, 50)}...`);
     return fact;
   }
 
@@ -486,7 +487,7 @@ export class MockDatabaseService {
 
     Object.assign(fact, updates);
     fact.last_confirmed = Date.now();
-    console.log(`[MockDB] Updated user fact: ${fact.fact.substring(0, 50)}...`);
+    Logger.log(`[MockDB] Updated user fact: ${fact.fact.substring(0, 50)}...`);
     return fact;
   }
 
@@ -498,7 +499,7 @@ export class MockDatabaseService {
     if (!memory) return null;
 
     Object.assign(memory, updates);
-    console.log(`[MockDB] Updated archive memory: ${memory.content.substring(0, 50)}...`);
+    Logger.log(`[MockDB] Updated archive memory: ${memory.content.substring(0, 50)}...`);
     return memory;
   }
 
@@ -508,12 +509,12 @@ export class MockDatabaseService {
   static async deleteArchiveMemory(id: number): Promise<boolean> {
     const index = this.archiveMemories.findIndex(m => m.id === id);
     if (index === -1) {
-      console.log(`[MockDB] Archive memory ${id} not found`);
+      Logger.log(`[MockDB] Archive memory ${id} not found`);
       return false;
     }
 
     this.archiveMemories.splice(index, 1);
-    console.log(`[MockDB] Deleted archive memory ${id}`);
+    Logger.log(`[MockDB] Deleted archive memory ${id}`);
     return true;
   }
 
@@ -523,12 +524,12 @@ export class MockDatabaseService {
   static async deleteTask(id: number): Promise<boolean> {
     const index = this.tasks.findIndex(t => t.id === id);
     if (index === -1) {
-      console.log(`[MockDB] Task ${id} not found`);
+      Logger.log(`[MockDB] Task ${id} not found`);
       return false;
     }
 
     this.tasks.splice(index, 1);
-    console.log(`[MockDB] Deleted task ${id}`);
+    Logger.log(`[MockDB] Deleted task ${id}`);
     return true;
   }
 
@@ -538,12 +539,12 @@ export class MockDatabaseService {
   static async deleteUserFact(id: number): Promise<boolean> {
     const index = this.userFacts.findIndex(f => f.id === id);
     if (index === -1) {
-      console.log(`[MockDB] User fact ${id} not found`);
+      Logger.log(`[MockDB] User fact ${id} not found`);
       return false;
     }
 
     this.userFacts.splice(index, 1);
-    console.log(`[MockDB] Deleted user fact ${id}`);
+    Logger.log(`[MockDB] Deleted user fact ${id}`);
     return true;
   }
 
@@ -557,7 +558,7 @@ export class MockDatabaseService {
     this.userFacts = [];
     this.nextId = 1;
     this.initialized = false;
-    console.log('[MockDB] Database cleared');
+    Logger.log('[MockDB] Database cleared');
   }
 
   static async getStats() {

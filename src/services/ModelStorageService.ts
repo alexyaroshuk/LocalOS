@@ -26,7 +26,7 @@ export class ModelStorageService {
       }
     } catch (error) {
       Logger.error('Failed to initialize model directory:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to initialize model directory:', error);
+      Logger.error('Failed to initialize model directory:', error);
       throw error;
     }
   }
@@ -62,7 +62,7 @@ export class ModelStorageService {
       const stat = await RNFS.stat(path);
       return Number(stat.size);
     } catch (error) {
-      console.error('Failed to get model size:', error);
+      Logger.error('Failed to get model size:', error);
       return 0;
     }
   }
@@ -75,7 +75,7 @@ export class ModelStorageService {
       const freeSpace = await RNFS.getFSInfo();
       return freeSpace.freeSpace;
     } catch (error) {
-      console.error('Failed to get available space:', error);
+      Logger.error('Failed to get available space:', error);
       return 0;
     }
   }
@@ -106,7 +106,7 @@ export class ModelStorageService {
         .filter(file => file.isFile() && isValidModelPath(file.name))
         .map(file => file.name);
     } catch (error) {
-      console.error('Failed to list models:', error);
+      Logger.error('Failed to list models:', error);
       return [];
     }
   }
@@ -120,10 +120,10 @@ export class ModelStorageService {
       const exists = await RNFS.exists(path);
       if (exists) {
         await RNFS.unlink(path);
-        console.log('Model deleted:', filename);
+        Logger.log('Model deleted:', filename);
       }
     } catch (error) {
-      console.error('Failed to delete model:', error);
+      Logger.error('Failed to delete model:', error);
       throw error;
     }
   }
@@ -143,7 +143,7 @@ export class ModelStorageService {
       // Check if file already exists
       const exists = await this.modelExists(filename);
       if (exists) {
-        console.log('Model already downloaded:', filename);
+        Logger.log('Model already downloaded:', filename);
         return downloadPath;
       }
 
@@ -159,8 +159,8 @@ export class ModelStorageService {
         );
       }
 
-      console.log('Starting download:', url);
-      console.log('Saving to:', downloadPath);
+      Logger.log('Starting download:', url);
+      Logger.log('Saving to:', downloadPath);
 
       const download = RNFS.downloadFile({
         fromUrl: url,
@@ -181,7 +181,7 @@ export class ModelStorageService {
       const result = await download.promise;
 
       if (result.statusCode === 200) {
-        console.log('Download completed:', filename);
+        Logger.log('Download completed:', filename);
         onProgress?.({
           modelId: filename,
           progress: 100,
@@ -194,7 +194,7 @@ export class ModelStorageService {
         throw new Error(`Download failed with status: ${result.statusCode}`);
       }
     } catch (error) {
-      console.error('Download error:', error);
+      Logger.error('Download error:', error);
       // Clean up partial download
       try {
         const exists = await RNFS.exists(downloadPath);
@@ -202,7 +202,7 @@ export class ModelStorageService {
           await RNFS.unlink(downloadPath);
         }
       } catch (cleanupError) {
-        console.error('Failed to clean up partial download:', cleanupError);
+        Logger.error('Failed to clean up partial download:', cleanupError);
       }
 
       onProgress?.({
@@ -239,15 +239,15 @@ export class ModelStorageService {
       // Check if file already exists
       const exists = await this.modelExists(filename);
       if (exists) {
-        console.log('Model already exists, skipping copy');
+        Logger.log('Model already exists, skipping copy');
         return destPath;
       }
 
       await RNFS.copyFile(sourcePath, destPath);
-      console.log('Model copied to storage:', filename);
+      Logger.log('Model copied to storage:', filename);
       return destPath;
     } catch (error) {
-      console.error('Failed to copy model:', error);
+      Logger.error('Failed to copy model:', error);
       throw error;
     }
   }

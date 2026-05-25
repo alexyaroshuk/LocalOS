@@ -17,7 +17,7 @@ export class StorageService {
         JSON.stringify(sessions),
       );
     } catch (error) {
-      console.error('Failed to save sessions:', error);
+      Logger.error('Failed to save sessions:', error);
       throw error;
     }
   }
@@ -30,7 +30,7 @@ export class StorageService {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.CHAT_SESSIONS);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('Failed to load sessions:', error);
+      Logger.error('Failed to load sessions:', error);
       return [];
     }
   }
@@ -46,7 +46,7 @@ export class StorageService {
         await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_SESSION);
       }
     } catch (error) {
-      console.error('Failed to save current session:', error);
+      Logger.error('Failed to save current session:', error);
     }
   }
 
@@ -57,7 +57,7 @@ export class StorageService {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_SESSION);
     } catch (error) {
-      console.error('Failed to load current session:', error);
+      Logger.error('Failed to load current session:', error);
       return null;
     }
   }
@@ -102,7 +102,7 @@ export class StorageService {
       Logger.debug('Models saved to AsyncStorage');
     } catch (error) {
       Logger.error('Failed to save downloaded models:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to save downloaded models:', error);
+      Logger.error('Failed to save downloaded models:', error);
       throw error;
     }
   }
@@ -143,7 +143,7 @@ export class StorageService {
       return deduplicated;
     } catch (error) {
       Logger.error('Failed to load downloaded models:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to load downloaded models:', error);
+      Logger.error('Failed to load downloaded models:', error);
       return [];
     }
   }
@@ -158,7 +158,7 @@ export class StorageService {
         JSON.stringify(config),
       );
     } catch (error) {
-      console.error('Failed to save llama config:', error);
+      Logger.error('Failed to save llama config:', error);
       throw error;
     }
   }
@@ -171,7 +171,7 @@ export class StorageService {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.LLAMA_CONFIG);
       return data ? JSON.parse(data) : DEFAULT_LLAMA_CONFIG;
     } catch (error) {
-      console.error('Failed to load llama config:', error);
+      Logger.error('Failed to load llama config:', error);
       return DEFAULT_LLAMA_CONFIG;
     }
   }
@@ -195,7 +195,7 @@ export class StorageService {
       }
     } catch (error) {
       Logger.error('Failed to save current model:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to save current model:', error);
+      Logger.error('Failed to save current model:', error);
     }
   }
 
@@ -216,7 +216,7 @@ export class StorageService {
       }
     } catch (error) {
       Logger.error('Failed to load current model:', error instanceof Error ? error.message : String(error));
-      console.error('Failed to load current model:', error);
+      Logger.error('Failed to load current model:', error);
       return null;
     }
   }
@@ -239,7 +239,7 @@ export class StorageService {
         JSON.stringify(updated),
       );
     } catch (error) {
-      console.error('Failed to save recent model:', error);
+      Logger.error('Failed to save recent model:', error);
     }
   }
 
@@ -251,7 +251,7 @@ export class StorageService {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.RECENT_MODELS);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('Failed to load recent models:', error);
+      Logger.error('Failed to load recent models:', error);
       return [];
     }
   }
@@ -263,7 +263,7 @@ export class StorageService {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.RECENT_MODELS);
     } catch (error) {
-      console.error('Failed to clear recent models:', error);
+      Logger.error('Failed to clear recent models:', error);
     }
   }
 
@@ -316,9 +316,9 @@ export class StorageService {
   static async clearAll(): Promise<void> {
     try {
       await AsyncStorage.clear();
-      console.log('All data cleared');
+      Logger.log('All data cleared');
     } catch (error) {
-      console.error('Failed to clear data:', error);
+      Logger.error('Failed to clear data:', error);
       throw error;
     }
   }
@@ -338,7 +338,7 @@ export class StorageService {
         await this.saveCurrentSessionId(null);
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      Logger.error('Failed to delete session:', error);
       throw error;
     }
   }
@@ -359,7 +359,7 @@ export class StorageService {
 
       await this.saveSessions(sessions);
     } catch (error) {
-      console.error('Failed to update session:', error);
+      Logger.error('Failed to update session:', error);
       throw error;
     }
   }

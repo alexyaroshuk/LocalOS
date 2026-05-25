@@ -38,7 +38,7 @@ export class DatabaseService {
       return;
     }
 
-    console.log('[Database] Initializing SQLite database...');
+    Logger.log('[Database] Initializing SQLite database...');
 
     try {
       // Open database (uses default location)
@@ -46,7 +46,7 @@ export class DatabaseService {
         name: 'localos.db',
       });
 
-      console.log('[Database] Database opened successfully');
+      Logger.log('[Database] Database opened successfully');
 
       // Create tables
       await this.createTables();
@@ -58,9 +58,9 @@ export class DatabaseService {
       await this.initializeDefaultData();
 
       this.initialized = true;
-      console.log('[Database] Database initialized successfully');
+      Logger.log('[Database] Database initialized successfully');
     } catch (error) {
-      console.error('[Database] Failed to initialize:', error);
+      Logger.error('[Database] Failed to initialize:', error);
       throw error;
     }
   }
@@ -69,7 +69,7 @@ export class DatabaseService {
    * Create all tables and indices
    */
   private static async createTables(): Promise<void> {
-    console.log('[Database] Creating tables...');
+    Logger.log('[Database] Creating tables...');
 
     // Schema version table
     this.db.executeSync(`
@@ -147,9 +147,9 @@ export class DatabaseService {
         END;
       `);
 
-      console.log('[Database] FTS5 full-text search enabled');
+      Logger.log('[Database] FTS5 full-text search enabled');
     } catch (ftsError) {
-      console.warn('[Database] FTS5 not available, using LIKE search fallback');
+      Logger.warn('[Database] FTS5 not available, using LIKE search fallback');
     }
 
     // Tasks table
@@ -249,7 +249,7 @@ export class DatabaseService {
     `);
     this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);');
 
-    console.log('[Database] Tables created successfully');
+    Logger.log('[Database] Tables created successfully');
   }
 
   /**
@@ -259,11 +259,11 @@ export class DatabaseService {
     const versionResult = this.db.executeSync('SELECT version FROM schema_version LIMIT 1;');
     const currentVersion = versionResult.rows?.[0]?.version || 1;
 
-    console.log(`[Database] Current schema version: ${currentVersion}`);
+    Logger.log(`[Database] Current schema version: ${currentVersion}`);
 
     // Migration 1 -> 2: Add embedding column to memories table
     if (currentVersion < 2) {
-      console.log('[Database] Running migration 1 -> 2: Adding embedding column...');
+      Logger.log('[Database] Running migration 1 -> 2: Adding embedding column...');
       try {
         // Check if column already exists
         const tableInfo = this.db.executeSync('PRAGMA table_info(memories);');
@@ -271,23 +271,23 @@ export class DatabaseService {
 
         if (!hasEmbedding) {
           this.db.executeSync('ALTER TABLE memories ADD COLUMN embedding TEXT;');
-          console.log('[Database] Added embedding TEXT column to memories table');
+          Logger.log('[Database] Added embedding TEXT column to memories table');
         } else {
-          console.log('[Database] Embedding column already exists');
+          Logger.log('[Database] Embedding column already exists');
         }
 
         // Update schema version
         this.db.executeSync('UPDATE schema_version SET version = 2, applied_at = ?;', [Date.now()]);
-        console.log('[Database] Migration 1 -> 2 completed');
+        Logger.log('[Database] Migration 1 -> 2 completed');
       } catch (error) {
-        console.error('[Database] Migration 1 -> 2 failed:', error);
+        Logger.error('[Database] Migration 1 -> 2 failed:', error);
         throw error;
       }
     }
 
     // Migration 2 -> 3: Change embedding from BLOB to TEXT (for op-sqlite compatibility)
     if (currentVersion < 3) {
-      console.log('[Database] Running migration 2 -> 3: Converting embedding to TEXT...');
+      Logger.log('[Database] Running migration 2 -> 3: Converting embedding to TEXT...');
       try {
         // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
         // But if the column was just added as TEXT in migration 2, we're fine
@@ -295,7 +295,7 @@ export class DatabaseService {
         const embeddingCol = tableInfo.rows?.find((row: any) => row.name === 'embedding');
 
         if (embeddingCol && embeddingCol.type === 'BLOB') {
-          console.log('[Database] Recreating memories table with TEXT embedding...');
+          Logger.log('[Database] Recreating memories table with TEXT embedding...');
 
           // Create new table with TEXT embedding
           this.db.executeSync(`
@@ -330,23 +330,23 @@ export class DatabaseService {
           this.db.executeSync('CREATE INDEX idx_memories_importance ON memories(importance DESC);');
           this.db.executeSync('CREATE INDEX idx_memories_created_at ON memories(created_at DESC);');
 
-          console.log('[Database] Table recreated with TEXT embedding (old BLOB embeddings dropped)');
+          Logger.log('[Database] Table recreated with TEXT embedding (old BLOB embeddings dropped)');
         } else {
-          console.log('[Database] Embedding is already TEXT or newly created');
+          Logger.log('[Database] Embedding is already TEXT or newly created');
         }
 
         // Update schema version
         this.db.executeSync('UPDATE schema_version SET version = 3, applied_at = ?;', [Date.now()]);
-        console.log('[Database] Migration 2 -> 3 completed');
+        Logger.log('[Database] Migration 2 -> 3 completed');
       } catch (error) {
-        console.error('[Database] Migration 2 -> 3 failed:', error);
+        Logger.error('[Database] Migration 2 -> 3 failed:', error);
         throw error;
       }
     }
 
     // Migration 3 -> 4: Add vault_chunks table for vault embedding index
     if (currentVersion < 4) {
-      console.log('[Database] Running migration 3 -> 4: Adding vault_chunks table...');
+      Logger.log('[Database] Running migration 3 -> 4: Adding vault_chunks table...');
       try {
         this.db.executeSync(`
           CREATE TABLE IF NOT EXISTS vault_chunks (
@@ -362,16 +362,16 @@ export class DatabaseService {
         this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_path ON vault_chunks(vault_path);');
         this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_chunks_mtime ON vault_chunks(mtime DESC);');
         this.db.executeSync('UPDATE schema_version SET version = 4, applied_at = ?;', [Date.now()]);
-        console.log('[Database] Migration 3 -> 4 completed');
+        Logger.log('[Database] Migration 3 -> 4 completed');
       } catch (error) {
-        console.error('[Database] Migration 3 -> 4 failed:', error);
+        Logger.error('[Database] Migration 3 -> 4 failed:', error);
         throw error;
       }
     }
 
     // Migration 4 -> 5: Add vault_links table for wiki-link graph
     if (currentVersion < 5) {
-      console.log('[Database] Running migration 4 -> 5: Adding vault_links table...');
+      Logger.log('[Database] Running migration 4 -> 5: Adding vault_links table...');
       try {
         this.db.executeSync(`
           CREATE TABLE IF NOT EXISTS vault_links (
@@ -385,16 +385,16 @@ export class DatabaseService {
         this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_source ON vault_links(source_path);');
         this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_vault_links_resolved ON vault_links(resolved_path);');
         this.db.executeSync('UPDATE schema_version SET version = 5, applied_at = ?;', [Date.now()]);
-        console.log('[Database] Migration 4 -> 5 completed');
+        Logger.log('[Database] Migration 4 -> 5 completed');
       } catch (error) {
-        console.error('[Database] Migration 4 -> 5 failed:', error);
+        Logger.error('[Database] Migration 4 -> 5 failed:', error);
         throw error;
       }
     }
 
     // Migration 5 -> 6: Add chat_sessions table
     if (currentVersion < 6) {
-      console.log('[Database] Running migration 5 -> 6: Adding chat_sessions table...');
+      Logger.log('[Database] Running migration 5 -> 6: Adding chat_sessions table...');
       try {
         this.db.executeSync(`
           CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -408,14 +408,14 @@ export class DatabaseService {
         `);
         this.db.executeSync('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);');
         this.db.executeSync('UPDATE schema_version SET version = 6, applied_at = ?;', [Date.now()]);
-        console.log('[Database] Migration 5 -> 6 completed');
+        Logger.log('[Database] Migration 5 -> 6 completed');
       } catch (error) {
-        console.error('[Database] Migration 5 -> 6 failed:', error);
+        Logger.error('[Database] Migration 5 -> 6 failed:', error);
         throw error;
       }
     }
 
-    console.log('[Database] All migrations completed');
+    Logger.log('[Database] All migrations completed');
   }
 
   /**
@@ -427,11 +427,11 @@ export class DatabaseService {
     const count = result.rows?.[0]?.count || 0;
 
     if (count > 0) {
-      console.log('[Database] Data already exists, skipping initialization');
+      Logger.log('[Database] Data already exists, skipping initialization');
       return;
     }
 
-    console.log('[Database] Initializing default data...');
+    Logger.log('[Database] Initializing default data...');
     const now = Date.now();
 
     // Initialize core memory blocks
@@ -465,7 +465,7 @@ export class DatabaseService {
       );
     }
 
-    console.log('[Database] Default data initialized');
+    Logger.log('[Database] Default data initialized');
   }
 
   // ============== CORE MEMORY OPERATIONS ==============
@@ -485,7 +485,7 @@ export class DatabaseService {
       'UPDATE core_memory SET content = ?, last_updated = ? WHERE block_name = ?;',
       [content, Date.now(), blockName]
     );
-    console.log(`[Database] Updated core memory block: ${blockName}`);
+    Logger.log(`[Database] Updated core memory block: ${blockName}`);
   }
 
   // ============== VECTOR UTILITIES ==============
@@ -529,7 +529,7 @@ export class DatabaseService {
       const float32Array = new Float32Array(uint8Array.buffer);
       return Array.from(float32Array);
     } catch (error) {
-      console.error('[Database] base64ToVector error:', error);
+      Logger.error('[Database] base64ToVector error:', error);
       return [];
     }
   }
@@ -540,7 +540,7 @@ export class DatabaseService {
    */
   static cosineSimilarity(vecA: number[], vecB: number[]): number {
     if (vecA.length !== vecB.length) {
-      console.error(
+      Logger.error(
         `[Database] Vector dimension mismatch: ${vecA.length}D vs ${vecB.length}D. ` +
         `This means you have embeddings from different models in your database. ` +
         `Clear your database and reload test data with the current embedding model.`
@@ -578,17 +578,17 @@ export class DatabaseService {
 
     let result;
     if (embedding) {
-      console.log(`[Database] Saving memory WITH embedding (${embedding.length}D)...`);
+      Logger.log(`[Database] Saving memory WITH embedding (${embedding.length}D)...`);
       const embeddingBase64 = this.vectorToBase64(embedding);
-      console.log(`[Database] Converted to base64: ${embeddingBase64.length} chars`);
+      Logger.log(`[Database] Converted to base64: ${embeddingBase64.length} chars`);
 
       result = this.db.executeSync(
         'INSERT INTO memories (content, category, importance, created_at, metadata, embedding) VALUES (?, ?, ?, ?, ?, ?);',
         [content, category, importance, now, JSON.stringify(metadata || {}), embeddingBase64]
       );
-      console.log(`[Database] Inserted with ID: ${result.insertId}`);
+      Logger.log(`[Database] Inserted with ID: ${result.insertId}`);
     } else {
-      console.log(`[Database] Saving memory WITHOUT embedding...`);
+      Logger.log(`[Database] Saving memory WITHOUT embedding...`);
       result = this.db.executeSync(
         'INSERT INTO memories (content, category, importance, created_at, metadata) VALUES (?, ?, ?, ?, ?);',
         [content, category, importance, now, JSON.stringify(metadata || {})]
@@ -605,16 +605,16 @@ export class DatabaseService {
     );
     const memory = selectResult.rows?.[0];
 
-    console.log(`[Database] Retrieved memory ${insertId} (without BLOB)`);
+    Logger.log(`[Database] Retrieved memory ${insertId} (without BLOB)`);
 
     // If we had an embedding, attach it back from our original data
     // (Since we just inserted it, we know what it was)
     if (embedding) {
       memory.embedding = Array.isArray(embedding) ? embedding : Array.from(embedding);
-      console.log(`[Database] Attached original embedding: ${memory.embedding.length}D`);
+      Logger.log(`[Database] Attached original embedding: ${memory.embedding.length}D`);
     }
 
-    console.log(`[Database] Saved archive memory: ${content.substring(0, 50)}...`);
+    Logger.log(`[Database] Saved archive memory: ${content.substring(0, 50)}...`);
     return memory;
   }
 
@@ -666,7 +666,7 @@ export class DatabaseService {
   static async updateMemoryEmbedding(id: number, embedding: number[] | Float32Array): Promise<void> {
     const embeddingBase64 = this.vectorToBase64(embedding);
     this.db.executeSync('UPDATE memories SET embedding = ? WHERE id = ?;', [embeddingBase64, id]);
-    console.log(`[Database] Updated embedding for memory ${id}`);
+    Logger.log(`[Database] Updated embedding for memory ${id}`);
   }
 
   /**
@@ -687,21 +687,21 @@ export class DatabaseService {
     // Debug: Check total memories and those with embeddings
     const totalResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories;');
     const totalCount = totalResult.rows?.[0]?.count || 0;
-    console.log(`[Database] Total memories in DB: ${totalCount}`);
+    Logger.log(`[Database] Total memories in DB: ${totalCount}`);
 
     const withEmbedResult = this.db.executeSync('SELECT COUNT(*) as count FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
     const withEmbedCount = withEmbedResult.rows?.[0]?.count || 0;
-    console.log(`[Database] Memories with non-empty embeddings: ${withEmbedCount}`);
-    console.log(`[Database] Query vector dimensions: ${queryVector.length}D`);
+    Logger.log(`[Database] Memories with non-empty embeddings: ${withEmbedCount}`);
+    Logger.log(`[Database] Query vector dimensions: ${queryVector.length}D`);
 
     // Get all memories with embeddings
     const result = this.db.executeSync('SELECT id, content, category, importance, created_at, updated_at, metadata, embedding FROM memories WHERE embedding IS NOT NULL AND embedding != "";');
     const memories = result.rows || [];
 
-    console.log(`[Database] Vector search: Found ${memories.length} memories with embeddings`);
+    Logger.log(`[Database] Vector search: Found ${memories.length} memories with embeddings`);
 
     if (memories.length === 0) {
-      console.log(`[Database] No memories with embeddings found`);
+      Logger.log(`[Database] No memories with embeddings found`);
       return [];
     }
 
@@ -710,7 +710,7 @@ export class DatabaseService {
     for (let i = 0; i < Math.min(3, memories.length); i++) {
       const embedding = this.base64ToVector(memories[i].embedding);
       if (embedding.length !== queryVector.length) {
-        console.error(`[Database] ⚠️ DIMENSION MISMATCH! Memory ${memories[i].id} has ${embedding.length}D but query is ${queryVector.length}D`);
+        Logger.error(`[Database] ⚠️ DIMENSION MISMATCH! Memory ${memories[i].id} has ${embedding.length}D but query is ${queryVector.length}D`);
         dimensionMismatch = true;
       }
     }
@@ -722,7 +722,7 @@ export class DatabaseService {
     const memoriesWithSimilarity = memories
       .map((memory: any, index: number) => {
         if (!memory.embedding) {
-          console.warn(`[Database] Memory ${memory.id} has NULL embedding despite WHERE clause!`);
+          Logger.warn(`[Database] Memory ${memory.id} has NULL embedding despite WHERE clause!`);
           return null;
         }
 
@@ -731,11 +731,11 @@ export class DatabaseService {
 
         // Debug first embedding
         if (index === 0) {
-          console.log(`[Database] First memory embedding: base64 string (${memory.embedding.length} chars) -> ${embedding.length}D vector`);
+          Logger.log(`[Database] First memory embedding: base64 string (${memory.embedding.length} chars) -> ${embedding.length}D vector`);
         }
 
         if (embedding.length === 0) {
-          console.error(`[Database] Memory ${memory.id} has 0D embedding after conversion!`);
+          Logger.error(`[Database] Memory ${memory.id} has 0D embedding after conversion!`);
           return null;
         }
 
@@ -743,7 +743,7 @@ export class DatabaseService {
 
         // Log first few similarities for debugging
         if (index < 3) {
-          console.log(`[Database] Memory ${memory.id} similarity: ${similarity.toFixed(4)}, content: "${memory.content.substring(0, 50)}..."`);
+          Logger.log(`[Database] Memory ${memory.id} similarity: ${similarity.toFixed(4)}, content: "${memory.content.substring(0, 50)}..."`);
         }
 
         return {
@@ -756,10 +756,10 @@ export class DatabaseService {
       .sort((a: any, b: any) => b.similarity - a.similarity)
       .slice(0, limit);
 
-    console.log(`[Database] Vector search found ${memoriesWithSimilarity.length} results`);
+    Logger.log(`[Database] Vector search found ${memoriesWithSimilarity.length} results`);
     if (memoriesWithSimilarity.length > 0) {
-      console.log(`[Database] Top result: similarity=${memoriesWithSimilarity[0].similarity.toFixed(4)}, content="${memoriesWithSimilarity[0].content.substring(0, 50)}..."`);
-      console.log(`[Database] Last result: similarity=${memoriesWithSimilarity[memoriesWithSimilarity.length - 1].similarity.toFixed(4)}`);
+      Logger.log(`[Database] Top result: similarity=${memoriesWithSimilarity[0].similarity.toFixed(4)}, content="${memoriesWithSimilarity[0].content.substring(0, 50)}..."`);
+      Logger.log(`[Database] Last result: similarity=${memoriesWithSimilarity[memoriesWithSimilarity.length - 1].similarity.toFixed(4)}`);
     }
     return memoriesWithSimilarity;
   }
@@ -801,7 +801,7 @@ export class DatabaseService {
       .sort((a: any, b: any) => (b.similarity || 0) - (a.similarity || 0))
       .slice(0, limit);
 
-    console.log(`[Database] Hybrid search: ${ftsResults.length} FTS candidates -> ${resultsWithSimilarity.length} final results`);
+    Logger.log(`[Database] Hybrid search: ${ftsResults.length} FTS candidates -> ${resultsWithSimilarity.length} final results`);
     return resultsWithSimilarity;
   }
 
@@ -843,7 +843,7 @@ export class DatabaseService {
 
         if (dims.size > 1) {
           dimensionMismatch = true;
-          console.warn(`[Database] Found embeddings with different dimensions: ${Array.from(dims).join(', ')}D`);
+          Logger.warn(`[Database] Found embeddings with different dimensions: ${Array.from(dims).join(', ')}D`);
         }
 
         dimensions = Array.from(dims)[0] || null;
@@ -880,7 +880,7 @@ export class DatabaseService {
 
     if (fields.length > 1) {
       this.db.executeSync(`UPDATE memories SET ${fields.join(', ')} WHERE id = ?;`, values);
-      console.log(`[Database] Updated archive memory: ${id}`);
+      Logger.log(`[Database] Updated archive memory: ${id}`);
 
       const result = this.db.executeSync('SELECT * FROM memories WHERE id = ?;', [id]);
       return result.rows?.[0] || null;
@@ -891,7 +891,7 @@ export class DatabaseService {
 
   static async deleteArchiveMemory(id: number): Promise<boolean> {
     const result = this.db.executeSync('DELETE FROM memories WHERE id = ?;', [id]);
-    console.log(`[Database] Deleted archive memory ${id}`);
+    Logger.log(`[Database] Deleted archive memory ${id}`);
     return result.rowsAffected > 0;
   }
 
@@ -900,7 +900,7 @@ export class DatabaseService {
    */
   static async clearAllMemories(): Promise<void> {
     this.db.executeSync('DELETE FROM memories;');
-    console.log('[Database] Cleared all archive memories');
+    Logger.log('[Database] Cleared all archive memories');
   }
 
   // ============== TASK OPERATIONS ==============
@@ -920,7 +920,7 @@ export class DatabaseService {
     const insertId = result.insertId;
     const selectResult = this.db.executeSync('SELECT * FROM tasks WHERE id = ?;', [insertId]);
     const task = selectResult.rows?.[0];
-    console.log(`[Database] Created task: ${title}`);
+    Logger.log(`[Database] Created task: ${title}`);
     return task;
   }
 
@@ -961,7 +961,7 @@ export class DatabaseService {
 
     if (fields.length > 0) {
       this.db.executeSync(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?;`, values);
-      console.log(`[Database] Updated task: ${id}`);
+      Logger.log(`[Database] Updated task: ${id}`);
 
       const result = this.db.executeSync('SELECT * FROM tasks WHERE id = ?;', [id]);
       return result.rows?.[0] || null;
@@ -1017,7 +1017,7 @@ export class DatabaseService {
 
   static async deleteTask(id: number): Promise<boolean> {
     const result = this.db.executeSync('DELETE FROM tasks WHERE id = ?;', [id]);
-    console.log(`[Database] Deleted task ${id}`);
+    Logger.log(`[Database] Deleted task ${id}`);
     return result.rowsAffected > 0;
   }
 
@@ -1036,7 +1036,7 @@ export class DatabaseService {
     const insertId = result.insertId;
     const selectResult = this.db.executeSync('SELECT * FROM conversations WHERE id = ?;', [insertId]);
     const conversation = selectResult.rows?.[0];
-    console.log('[Database] Saved conversation summary');
+    Logger.log('[Database] Saved conversation summary');
     return conversation;
   }
 
@@ -1061,7 +1061,7 @@ export class DatabaseService {
     const insertId = result.insertId;
     const selectResult = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [insertId]);
     const userFact = selectResult.rows?.[0];
-    console.log(`[Database] Saved user fact: ${fact.substring(0, 50)}...`);
+    Logger.log(`[Database] Saved user fact: ${fact.substring(0, 50)}...`);
     return userFact;
   }
 
@@ -1086,7 +1086,7 @@ export class DatabaseService {
 
     const result = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [id]);
     const fact = result.rows?.[0];
-    console.log(`[Database] Updated user fact confidence: ${fact?.fact?.substring(0, 50)}...`);
+    Logger.log(`[Database] Updated user fact confidence: ${fact?.fact?.substring(0, 50)}...`);
     return fact || null;
   }
 
@@ -1113,7 +1113,7 @@ export class DatabaseService {
 
     if (fields.length > 1) {
       this.db.executeSync(`UPDATE user_facts SET ${fields.join(', ')} WHERE id = ?;`, values);
-      console.log(`[Database] Updated user fact: ${id}`);
+      Logger.log(`[Database] Updated user fact: ${id}`);
 
       const result = this.db.executeSync('SELECT * FROM user_facts WHERE id = ?;', [id]);
       return result.rows?.[0] || null;
@@ -1124,7 +1124,7 @@ export class DatabaseService {
 
   static async deleteUserFact(id: number): Promise<boolean> {
     const result = this.db.executeSync('DELETE FROM user_facts WHERE id = ?;', [id]);
-    console.log(`[Database] Deleted user fact ${id}`);
+    Logger.log(`[Database] Deleted user fact ${id}`);
     return result.rowsAffected > 0;
   }
 
@@ -1135,7 +1135,7 @@ export class DatabaseService {
     try {
       messages = row.messages ? JSON.parse(row.messages) : [];
     } catch (e) {
-      console.warn(`[Database] Failed to parse messages for session ${row.id}`);
+      Logger.warn(`[Database] Failed to parse messages for session ${row.id}`);
     }
     return {
       id: row.id,
@@ -1191,7 +1191,7 @@ export class DatabaseService {
 
   static async deleteChatSession(id: string): Promise<boolean> {
     const result = this.db.executeSync('DELETE FROM chat_sessions WHERE id = ?;', [id]);
-    console.log(`[Database] Deleted chat session ${id}`);
+    Logger.log(`[Database] Deleted chat session ${id}`);
     return result.rowsAffected > 0;
   }
 
@@ -1218,7 +1218,7 @@ export class DatabaseService {
     } catch (e) {
       // table may not exist on older DBs prior to migration
     }
-    console.log('[Database] Database cleared');
+    Logger.log('[Database] Database cleared');
   }
 
   // ============== VAULT CHUNK OPERATIONS ==============
@@ -1429,9 +1429,9 @@ export class DatabaseService {
     if (!this.initialized) {
       throw new Error('Database not initialized. Call initialize() first.');
     }
-    console.log('[Database] Running migrations manually...');
+    Logger.log('[Database] Running migrations manually...');
     await this.runMigrations();
-    console.log('[Database] Manual migration completed');
+    Logger.log('[Database] Manual migration completed');
   }
 
   static async getStats() {
@@ -1455,7 +1455,7 @@ export class DatabaseService {
       this.db.close();
       this.db = null;
       this.initialized = false;
-      console.log('[Database] Database closed');
+      Logger.log('[Database] Database closed');
     }
   }
 }
