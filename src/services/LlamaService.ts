@@ -9,7 +9,6 @@ import {DEFAULT_LLAMA_CONFIG} from '../utils/constants';
 import {getChatTemplate, generateId, stripStopwords} from '../utils/helpers';
 import {ToolService} from './ToolService';
 import {Logger} from '../utils/Logger';
-import MemoryService from './MemoryService';
 import {getModelConfig, ModelConfig} from '../types/modelConfig';
 import {SYSTEM_PROMPTS, SystemPromptType} from './SystemPrompts';
 import {PromptBuilder, TOKEN_BUDGETS} from './PromptBuilder';
@@ -982,13 +981,6 @@ export class LlamaService {
       return '';
     }
 
-    let coreMemory = '';
-    try {
-      coreMemory = MemoryService.getFormattedCoreMemory();
-    } catch (error) {
-      Logger.warn('Core memory not available:', error);
-    }
-
     // Inject tool schemas directly. The jinja template in many GGUFs
     // (abliterated fine-tunes especially) silently drops the `tools` param,
     // so we never rely on the template to expose the tool list. We also
@@ -1086,14 +1078,12 @@ HARD BAN — never emit these phrases:
 - Any self-introduction past message #1 of the session
 - Echoing the user's question back at them
 
-CORE MEMORY at the top may carry an old style hint — IGNORE it. THIS section is the source of truth.
-
 # TOOL USAGE
 Call tools when they beat your own knowledge — current time/date, real-time facts, web search, the user's stored data. Never tell the user to check their clock or the web themselves. Just call the tool. Never claim you can't access something a tool provides.
 
 No tool fits → answer direct. Stay terse.${toolsBlock}`;
 
-    return coreMemory ? `${coreMemory}\n\n${persona}` : persona;
+    return persona;
   }
 
   /**

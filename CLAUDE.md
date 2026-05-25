@@ -97,9 +97,9 @@ The Vault is the primary persistent knowledge layer. Users point the app at an O
 - `vault_save` — write/append content to a vault file
 - `update_vault_file` — full file overwrite
 
-### Memory System (Inactive)
+### Memory System (Removed)
 
-> **Note:** A Letta-style core/archival memory system exists (`MemoryService.ts`, `LettaMemoryTools.ts`) but is not currently active. The Vault system is the primary persistent knowledge layer.
+> **Note:** A Letta-style core/archival memory system was previously scaffolded but never activated; it was removed. The Vault system is the primary persistent knowledge layer. The unused `core_memory` / `memories` SQLite tables remain as no-ops for backward compatibility.
 
 ### Tool Calling System
 
@@ -158,7 +158,6 @@ SQLite database with FTS5 full-text search (schema v6):
 - `ToolTestScreen.tsx` - Tool testing (debug only)
 - `VectorSearchTestScreen.tsx` - Semantic search testing (debug only)
 - `FileSystemTestScreen.tsx` - File system testing (debug only)
-- `MemoryViewerScreen.tsx` - View memory blocks (inactive)
 
 ### Type System
 
@@ -258,13 +257,12 @@ LlamaService.setPromptType('concise');
 
 App.tsx initializes in order:
 1. ModelStorageService - Model registry
-2. MemoryService - Core memory blocks (inactive)
-3. DatabaseService - SQLite with schema creation and migrations (v1-v6)
-4. SessionService - Chat session persistence; one-time migration from AsyncStorage
-5. ToolService - Registers all tools
-6. VaultService - Loads vault config, sets active vault path
-7. Load last used chat model (if any)
-8. Load last used embedding model (if any)
+2. DatabaseService - SQLite with schema creation and migrations (v1-v6)
+3. SessionService - Chat session persistence; one-time migration from AsyncStorage
+4. ToolService - Registers all tools
+5. VaultService - Loads vault config, sets active vault path
+6. Load last used chat model (if any)
+7. Load last used embedding model (if any)
 
 ## Debugging
 

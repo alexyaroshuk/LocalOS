@@ -27,7 +27,6 @@ import {ModelInfo} from './src/types';
 import {SettingsProvider, useSettings} from './src/contexts/SettingsContext';
 import {ModelStorageService} from './src/services/ModelStorageService';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
-import MemoryService from './src/services/MemoryService';
 import {DatabaseProxy} from './src/services/DatabaseProxy';
 import {Logger} from './src/utils/Logger';
 import RNFS from 'react-native-fs';
@@ -89,11 +88,6 @@ function AppContent() {
       Logger.info('📁 Initializing model storage...');
       await ModelStorageService.initialize();
       Logger.info('✅ Model storage initialized');
-
-      // Initialize memory service
-      Logger.info('💾 Initializing memory service...');
-      await MemoryService.initialize();
-      Logger.info('✅ Memory service initialized');
 
       // Initialize SQLite database
       Logger.info('🗄️ Initializing SQLite database...');
